@@ -239,14 +239,14 @@
     const html = `<div class="panel" id="journey"><div class="row"><b>Buffer journey</b>
       <button id="fplay" class="primary">${flowTimer ? '❚❚ Pause' : '▶ Autoplay whole lifecycle'}</button><span class="small muted">token = where the code of the current step runs</span></div>
       <div class="jgrid">
-      <div style="position:relative;max-width:${W}px">
+      <div class="jscroll"><div class="jinner" style="max-width:${W}px">
         <svg viewBox="0 0 ${W} ${28 + 3 * RH + 4}" width="100%">
           ${PHASE_ORDER.map((p, c) => `<text x="${cx(c)}" y="18" text-anchor="middle" font-size="12" font-weight="${c === col ? 700 : 400}" fill="${c === col ? 'var(--accent)' : 'var(--muted)'}">${p}</text>`).join('')}
           ${LANES.map((t, l) => `<rect x="0" y="${28 + l * RH}" width="${W}" height="${RH - 4}" rx="6" fill="${l === lane ? 'var(--accent-soft)' : 'var(--code)'}"/><text x="8" y="${28 + l * RH + RH / 2 + 2}" font-size="12" fill="currentColor">${t}</text>`).join('')}
           ${PHASE_ORDER.map((p, c) => CF.paths[p].map((sid, k) => { const ln = (J[sid] || [0])[0]; const x = LW + c * CW + 10 + (k + 0.5) * (CW - 20) / CF.paths[p].length; return `<a href="#/flow?p=${p}&amp;s=${k}"><circle cx="${x}" cy="${cy(ln) - 2}" r="${sid === id && p === phase ? 5 : 3}" fill="${p === phase && k <= cur ? 'var(--accent)' : 'var(--muted)'}" opacity="${p === phase ? 1 : .45}"><title>${esc(CF.steps.find((s) => s.id === sid).title)}</title></circle></a>`; }).join('')).join('')}
         </svg>
         <div class="token" id="ftok" style="left:${(lastTok ? lastTok[0] : cx(col)) / W * 100}%;top:${lastTok ? lastTok[1] : cy(lane) - 2}px"></div>
-      </div>
+      </div></div>
       <div class="small">${st ? `<table class="statetab">${names.map((n, k) => `<tr class="${prevSt && prevSt[k] !== st.s[k] ? 'flash' : ''}"><td class="muted">${n}</td><td>${esc(st.s[k])}</td></tr>`).join('')}</table><div class="muted">state after <i>${esc(CF.steps.find((s) => s.id === st.id).title)}</i> ${src(st.s[6])}</div>` : ''}</div></div></div>`;
     const grid = document.querySelector('.flowgrid');
     if (grid) grid.insertAdjacentHTML('beforebegin', html);
@@ -336,6 +336,63 @@
   const GPU_AFBC = Object.assign({}, E.DEFAULT_FLAGS, { MALI_GPU_SUPPORT_AFBC_BASIC: true, MALI_GPU_SUPPORT_AFBC_YUV_WRITE: true, MALI_GPU_SUPPORT_AFBC_SPLITBLK: true, MALI_GPU_SUPPORT_AFBC_WIDEBLK: true, MALI_GPU_SUPPORT_AFBC_TILED_HEADERS: true });
   const fl = (name) => `<a class="mono" href="#/format/${encodeURIComponent(name)}">${esc(shortName(name))}</a>`;
 
+
+  /* 4:2:0 chroma-sharing animation (Learn ch. 2). Standard BT.709 equations, unquantised — illustration only. */
+  function sub420Html() {
+    return `<div class="panel" id="sub420w"><div class="row"><b>Animation: how 4:2:0 stores a 2×2 block</b>
+      <button class="primary" data-s="play">▶ Play</button><button data-s="0">original</button><button data-s="1">1 split</button><button data-s="2">2 share</button><button data-s="3">3 rebuild</button></div>
+      <div class="row" style="align-items:flex-start;gap:24px"><div class="sub420" id="sub420"></div>
+      <div class="small" style="max-width:420px"><div id="sub420cap" class="caption"></div>
+      <div class="muted">Uses the standard BT.709 equations without quantisation, for illustration (not in this repo). In NV12 the four Y values go to plane 0 and the single Cb/Cr pair to plane 1 (${src(L(P.MMD, 192, 199), 'NV12 components')}); hsub = vsub = 2 (${src(byName.get('MALI_GRALLOC_FORMAT_INTERNAL_NV12').row, 'formats[]')}).</div></div></div></div>`;
+  }
+  function bindSub420() {
+    const box = document.getElementById('sub420');
+    if (!box) return;
+    const cols = [[235, 16, 16], [235, 235, 16], [16, 16, 235], [235, 235, 235]];
+    const kr = 0.2126, kb = 0.0722;
+    const ycc = ([r, g, b]) => { const R = r / 255, Gg = g / 255, B = b / 255, Y = kr * R + (1 - kr - kb) * Gg + kb * B; return [Y, (B - Y) / (2 * (1 - kb)), (R - Y) / (2 * (1 - kr))]; };
+    const rgb = (Y, Cb, Cr) => { const R = Y + 2 * (1 - kr) * Cr, B = Y + 2 * (1 - kb) * Cb, Gg = (Y - kr * R - kb * B) / (1 - kr - kb); return [R, Gg, B].map((v) => Math.max(0, Math.min(255, Math.round(v * 255)))); };
+    const css = (c) => `rgb(${c.join(',')})`;
+    const Y = cols.map((c) => ycc(c));
+    const avg = [Y.reduce((a, c) => a + c[1], 0) / 4, Y.reduce((a, c) => a + c[2], 0) / 4];
+    const pos = [[10, 10], [76, 10], [10, 76], [76, 76]];
+    box.innerHTML = pos.map(([x, y], i) => `<div class="px" data-i="${i}" style="left:${x}px;top:${y}px"></div>`).join('') +
+      pos.map(([x, y], i) => `<div class="dot" data-d="${i}" style="left:${x + 19}px;top:${y + 19}px;opacity:0"></div>`).join('') +
+      `<div style="position:absolute;left:170px;top:10px" class="small muted">original</div>` +
+      pos.map(([x, y], i) => `<div style="position:absolute;left:${170 + x / 2}px;top:${30 + y / 2}px;width:30px;height:30px;border-radius:4px;background:${css(cols[i])}"></div>`).join('');
+    const pxs = [...box.querySelectorAll('.px')], dots = [...box.querySelectorAll('.dot')];
+    const cap = document.getElementById('sub420cap');
+    const caps = [
+      'Four neighbouring pixels: red, yellow, blue, white.',
+      '<b>Split</b>: each pixel becomes a brightness value <b>Y</b> (grey square) and a colour pair <b>Cb/Cr</b> (dot). Y is kept for every pixel.',
+      '<b>Share</b>: the four Cb/Cr pairs are averaged into <b>one</b> pair — 4 Y + 1 Cb + 1 Cr = 6 samples instead of 12, i.e. 12 bits per pixel at 8 bits per sample.',
+      '<b>Rebuild</b>: a reader combines each pixel’s own Y with the shared Cb/Cr. Brightness survives, but the four colours collapse towards their average — this is the colour bleeding you see in the Pixel storage tab.',
+    ];
+    function show(step) {
+      cap.innerHTML = caps[step];
+      pxs.forEach((el, i) => {
+        const g = Math.round(Math.max(0, Math.min(1, Y[i][0])) * 255);
+        el.style.background = step === 0 ? css(cols[i]) : step === 3 ? css(rgb(Y[i][0], avg[0], avg[1])) : `rgb(${g},${g},${g})`;
+        el.textContent = step === 1 || step === 2 ? `Y ${(Y[i][0] * 100).toFixed(0)}%` : '';
+      });
+      dots.forEach((d, i) => {
+        const [x, y] = pos[i];
+        if (step === 1) Object.assign(d.style, { opacity: 1, left: (x + 19) + 'px', top: (y + 19) + 'px', background: css(rgb(0.5, Y[i][1], Y[i][2])) });
+        else if (step === 2) Object.assign(d.style, { opacity: 1, left: '60px', top: '60px', background: css(rgb(0.5, avg[0], avg[1])) });
+        else Object.assign(d.style, { opacity: 0 });
+      });
+    }
+    let t = null;
+    const root = document.getElementById('sub420w');
+    root.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', () => {
+      if (t) { clearInterval(t); t = null; }
+      if (b.dataset.s !== 'play') return show(Number(b.dataset.s));
+      let k = 0; show(0);
+      t = setInterval(() => { if (!document.body.contains(root) || k >= 3) { clearInterval(t); t = null; return; } show(++k); }, 1700);
+    }));
+    show(0);
+  }
+
   const CHAPTERS = [
     {
       title: 'A buffer is planes, strides and padding',
@@ -366,12 +423,14 @@
           <li><b>4:4:4</b> (<code>hsub=vsub=1</code>): e.g. ${fl('MALI_GRALLOC_FORMAT_INTERNAL_Y410')}.</li>
         </ul>
         <p>How the samples are arranged differs: <b>semi-planar</b> (Y plane + one interleaved CbCr plane, NV12/NV21/P010), <b>planar</b> (separate Y, Cr, Cb planes, YV12 — note the component table puts Cr in plane 1 and Cb in plane 2, ${src(L(P.MMD, 225, 230))}), and <b>packed</b> (everything in one plane, YUYV-style ${fl('MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT')}, ${src(L(P.MMD, 162, 165))}).</p>
+        ${sub420Html()}
         <p><a href="#/storage?f=MALI_GRALLOC_FORMAT_INTERNAL_NV12,MALI_GRALLOC_FORMAT_INTERNAL_YV12,MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT">▶ See NV12 vs YV12 vs YUYV in the Pixel storage tab</a> (try “Scan pixels”).</p>
         <h3>Bits per pixel before padding (computed from bpp and sub-sampling)</h3>
         <div class="tablewrap"><table><thead><tr><th>format</th><th>planes</th><th>sub-sampling</th><th>bpp per plane</th><th>avg bits / pixel</th><th>1920×1080 bytes</th></tr></thead><tbody>
         ${yuv.map((f) => { const a = avgBpp(f); return `<tr><td>${fl(f.name)}</td><td>${f.npln}</td><td>${f.hsub}×${f.vsub}</td><td class="mono">${f.bpp.slice(0, f.npln).join('/')}</td><td>${Number.isInteger(a) ? a : a.toFixed(2)}</td><td>${fmt(Math.round(1920 * 1080 * a / 8))}</td></tr>`; }).join('')}
         </tbody></table></div><p class="small muted">10-bit formats such as P010 store each 10-bit value in a 16-bit container (component offset 6, ${src(L(P.MMD, 215, 222))}), so they cost 16 bits per luma sample.</p>`;
       },
+      after() { bindSub420(); },
     },
     {
       title: 'How gralloc picks the format it actually allocates',

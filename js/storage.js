@@ -289,7 +289,7 @@
     let s = `<svg viewBox="0 0 ${st.gw * cell + 2} ${st.gh * cell + 2}" width="100%" style="max-width:${st.gw * cell + 2}px;display:block">`;
     for (let y = 0; y < st.gh; y++) for (let x = 0; x < st.gw; x++) {
       const i = (y * st.gw + x) * 4;
-      s += `<rect x="${x * cell + 1}" y="${y * cell + 1}" width="${cell}" height="${cell}" fill="${css(data[i], data[i + 1], data[i + 2])}"><title>(${x},${y}) RGB ${data[i]},${data[i + 1]},${data[i + 2]}</title></rect>`;
+      s += `<rect style="--i:${y * st.gw + x}" x="${x * cell + 1}" y="${y * cell + 1}" width="${cell}" height="${cell}" fill="${css(data[i], data[i + 1], data[i + 2])}"><title>(${x},${y}) RGB ${data[i]},${data[i + 1]},${data[i + 2]}</title></rect>`;
     }
     if (outline && f.is_yuv && (f.hsub > 1 || f.vsub > 1)) {
       for (let y = 0; y < st.gh; y += f.vsub) for (let x = 0; x < st.gw; x += f.hsub)
@@ -460,7 +460,9 @@
       <div class="info small">How to read this: a small real image is written into each format. For every plane you see the stored samples in memory order with their actual values and bytes, and the bits of the sample that holds the probe pixel (blue outline). <b>byte n</b> holds sample bits 8n…8n+7, assuming the sample is stored little-endian (PlaneLayoutComponent offset semantics are defined by AOSP, not in this repo). “Decoded back” rebuilds the picture from the stored values only — compare it with the original to see what sub-sampling or low bit depth loses.</div>
       <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(${sel.length > 1 ? 360 : 600}px,100%),1fr))">${sel.map((n) => `<div>${examplePanel(byName.get(n))}${formatColumn(byName.get(n))}</div>`).join('')}</div>`;
   };
+  let revealed = null;
   G.AFTER.storage = () => {
+    if (imgCache.key && imgCache.key !== revealed) { document.querySelectorAll('main .panel svg').forEach((sv) => { if (sv.querySelector('rect[style*="--i"]')) sv.classList.add('reveal'); }); revealed = imgCache.key; }
     const sel = document.getElementById('ssrc');
     if (sel) sel.addEventListener('change', () => { st.src = sel.value; save(); if (st.src !== 'upload' || uploaded) G.render(); else G.render(); });
     const fi = document.getElementById('sfile');
