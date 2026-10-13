@@ -220,6 +220,7 @@
     }
     return last;
   }
+  G.flowJourney = { LANES, PHASE_ORDER, J, STATE_AT, stateFor };
   let lastTok = null, flowTimer = null;
   function stopFlow() { if (flowTimer) { clearInterval(flowTimer); flowTimer = null; } }
   const origFlowAfter = G.AFTER.flow;
