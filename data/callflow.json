@@ -1,0 +1,680 @@
+{
+ "meta": {
+  "repo": "https://android.googlesource.com/platform/hardware/google/gchips",
+  "commit": "7cdd822b3f98c2cdaa39b83dbf0383701eb5b468",
+  "browse": "https://android.googlesource.com/platform/hardware/google/gchips/+/7cdd822b3f98c2cdaa39b83dbf0383701eb5b468/",
+  "generator": "tools/extract.py"
+ },
+ "steps": [
+  {
+   "phase": "allocate",
+   "id": "aidl_allocate",
+   "title": "GrallocAllocator::allocate (AIDL, mapper4)",
+   "function": "GrallocAllocator::allocate",
+   "def": {
+    "file": "gralloc4/src/aidl/GrallocAllocator.cpp",
+    "line": 34,
+    "end": 89
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/aidl/GrallocAllocator.cpp",
+    "line": 34,
+    "end": 47
+   },
+   "snippet": "ndk::ScopedAStatus GrallocAllocator::allocate(const std::vector<uint8_t>& descriptor, int32_t count,\n                                              AidlAllocator::AllocationResult* result) {\n    MALI_GRALLOC_LOGV(\"Allocation request from process: %lu\", callingPid());\n\n    buffer_descriptor_t bufferDescriptor;\n    if (!arm::mapper::common::grallocDecodeBufferDescriptor(hidl_vec(descriptor),\n                                                            bufferDescriptor)) {\n        return ndk::ScopedAStatus::fromServiceSpecificError(\n                static_cast<int32_t>(AidlAllocator::AllocationError::BAD_DESCRIPTOR));\n    }\n\n    // TODO(layog@): This dependency between AIDL and HIDL backends is not good.\n    // Ideally common::allocate should return the result and it should be encoded\n    // by this interface into HIDL or AIDL.",
+   "description": "AIDL IAllocator entry point. Decodes the opaque descriptor blob produced by IMapper::createDescriptor into a buffer_descriptor_t, then calls the shared HIDL-era allocate().",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "common_allocate"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "aidl_allocate2",
+   "title": "GrallocAllocator::allocate2 (AIDL V2, mapper5)",
+   "function": "GrallocAllocator::allocate2",
+   "def": {
+    "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+    "line": 106,
+    "end": 154
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+    "line": 106,
+    "end": 113
+   },
+   "snippet": "ndk::ScopedAStatus GrallocAllocator::allocate2(\n        const AidlAllocator::BufferDescriptorInfo& descriptor, int32_t count,\n        AidlAllocator::AllocationResult* result) {\n    MALI_GRALLOC_LOGV(\"Allocation request from process: %lu\", callingPid());\n\n    buffer_descriptor_t bufferDescriptor = toInternalDescriptor(descriptor);\n\n    HidlError error = HidlError::NONE;",
+   "description": "Allocator V2 entry. Builds buffer_descriptor_t directly from BufferDescriptorInfo via toInternalDescriptor() (producer_usage == consumer_usage == usage).",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "common_allocate"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "common_allocate",
+   "title": "arm::allocator::common::allocate",
+   "function": "allocate",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Allocator.cpp",
+    "line": 73,
+    "end": 219
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Allocator.cpp",
+    "line": 105,
+    "end": 134
+   },
+   "snippet": "\t\t\tallocResult = mali_gralloc_buffer_allocate(grallocBufferDescriptor, 1, &tmpBuffer, nullptr, use_placeholder);\n\t\t\tif (allocResult != 0)\n\t\t\t{\n\t\t\t\tMALI_GRALLOC_LOGE(\"%s, buffer allocation failed with %d\", __func__, allocResult);\n\t\t\t\terror = Error::NO_RESOURCES;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tauto hnd = const_cast<private_handle_t *>(reinterpret_cast<const private_handle_t *>(tmpBuffer));\n\t\t\thnd->imapper_version = HIDL_MAPPER_VERSION_SCALED;\n\n\t\t\t// 4k is rougly 7.9 MB with one byte per pixel. We are\n\t\t\t// assuming that the reserved region might be needed for\n\t\t\t// dynamic HDR and that represents the largest size.\n\t\t\tuint64_t max_reserved_region_size = 8ull * 1024 * 1024;\n\t\t\thnd->reserved_region_size = bufferDescriptor.reserved_size;\n\t\t\tif (hnd->reserved_region_size > max_reserved_region_size) {\n\t\t\t\tMALI_GRALLOC_LOGE(\"%s, Requested reserved region size (%\" PRIu64 \") is larger than allowed (%\" PRIu64 \")\",\n\t\t\t\t\t\t__func__, hnd->reserved_region_size, max_reserved_region_size);\n\t\t\t\terror = Error::BAD_VALUE;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\thnd->attr_size = mapper::common::shared_metadata_size() + hnd->reserved_region_size;\n\n\t\t\tif (hnd->get_usage() & GRALLOC_USAGE_ROIINFO)\n\t\t\t{\n\t\t\t\thnd->attr_size += 32768;\n\t\t\t}\n\n\t\t\t/* TODO: must do error checking */\n\t\t\tmali_gralloc_ion_allocate_attr(hnd);",
+   "description": "For each requested buffer: allocate pixel memory, then allocate + initialise the shared-metadata dma-buf (name, default dataspace). Records the buffer for dump(). Returns handles via callback, then frees the allocator's own copies.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "buffer_allocate",
+    "ion_allocate_attr"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "buffer_allocate",
+   "title": "mali_gralloc_buffer_allocate",
+   "function": "mali_gralloc_buffer_allocate",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 1190,
+    "end": 1264
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 1208,
+    "end": 1231
+   },
+   "snippet": "\tfor (uint32_t i = 0; i < numDescriptors; i++)\n\t{\n\t\tbuffer_descriptor_t * const bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);\n\n\t\tassert(bufDescriptor->producer_usage == bufDescriptor->consumer_usage);\n\t\tuint64_t usage = bufDescriptor->producer_usage;\n\t\tif (((usage & hidl_common::BufferUsage::VIDEO_DECODER)||(usage & hidl_common::BufferUsage::VIDEO_ENCODER)) &&\n\t\t    (usage & GRALLOC_USAGE_GOOGLE_IP_BIG))\n\t\t{\n\t\t\tusage = update_usage_for_BIG(usage);\n\t\t\tbufDescriptor->producer_usage = usage;\n\t\t\tbufDescriptor->consumer_usage = usage;\n\t\t}\n\n\t\t/* Derive the buffer size from descriptor parameters */\n\t\terr = mali_gralloc_derive_format_and_size(bufDescriptor);\n\t\tif (err != 0)\n\t\t{\n\t\t\treturn err;\n\t\t}\n\t}\n\n\t/* Allocate ION backing store memory */\n\terr = mali_gralloc_ion_allocate(descriptors, numDescriptors, pHandle, &shared, use_placeholder);",
+   "description": "Rewrites CPU_*_OFTEN to RARELY for BIG video usage, derives format/size for each descriptor, allocates dma-bufs, and assigns backing_store_id (pid<<32 | counter).",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "derive",
+    "ion_allocate"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "derive",
+   "title": "mali_gralloc_derive_format_and_size",
+   "function": "mali_gralloc_derive_format_and_size",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 1045,
+    "end": 1188
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 1045,
+    "end": 1074
+   },
+   "snippet": "int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescriptor)\n{\n\tATRACE_CALL();\n\talloc_type_t alloc_type{};\n\n\tuint64_t alloc_width = bufDescriptor->width;\n\tuint64_t alloc_height = bufDescriptor->height;\n\tuint64_t usage = bufDescriptor->producer_usage | bufDescriptor->consumer_usage;\n\n\tif (!validate_descriptor(bufDescriptor)) {\n\t\treturn -EINVAL;\n\t}\n\t/*\n\t* Select optimal internal pixel format based upon\n\t* usage and requested format.\n\t*/\n\tbufDescriptor->alloc_format = mali_gralloc_select_format(bufDescriptor->hal_format,\n\t                                                         bufDescriptor->format_type,\n\t                                                         usage);\n\n\tint base_format = bufDescriptor->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK;\n\n\t// TODO(b/182885532): Delete all multi-fd related dead code from gralloc\n\tif (is_exynos_format(base_format) && get_exynos_fd_count(base_format) != 1)\n\t{\n\t\tstatic std::set<uint32_t> seen_formats;\n\t\tif (seen_formats.find(base_format) == seen_formats.end()) {\n\t\t\tMALI_GRALLOC_LOGW(\"Multi-fd format (%s 0x%\" PRIx64 \") have been deprecated. Requested format: %s 0x%\" PRIx64\n\t\t\t\t\t\". Consider changing the format to one of the single-fd options.\",\n\t\t\t\t\tformat_name(base_format), static_cast<uint64_t>(base_format),",
+   "description": "Validates the descriptor, selects the allocation format (base + AFBC modifiers), validates it, then computes layout either via the Exynos path or the generic path.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "select_format",
+    "get_alloc_type",
+    "exynos_prepare",
+    "calc_size"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "select_format",
+   "title": "mali_gralloc_select_format",
+   "function": "mali_gralloc_select_format",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_formats.cpp",
+    "line": 1482,
+    "end": 1582
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_formats.cpp",
+    "line": 1482,
+    "end": 1521
+   },
+   "snippet": "uint64_t mali_gralloc_select_format(const uint64_t req_format,\n                                    const mali_gralloc_format_type type,\n                                    const uint64_t usage)\n{\n\tuint64_t alloc_format = MALI_GRALLOC_FORMAT_INTERNAL_UNDEFINED;\n\n\t/*\n\t * Obtain base_format (no extension bits) and indexes into format tables.\n\t */\n\tconst uint32_t req_base_format = get_base_format(req_format, usage, type, true);\n\tconst int32_t req_fmt_idx = get_format_index(req_base_format);\n\tif (req_base_format == MALI_GRALLOC_FORMAT_INTERNAL_UNDEFINED ||\n\t    req_fmt_idx == -1)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Invalid base format! req_base_format = (%s 0x%\" PRIx32\n\t\t\t\"), req_format = (%s 0x%\" PRIx64 \"), type = 0x%\" PRIx32,\n\t\t\tformat_name(req_base_format), req_base_format, format_name(req_format), req_format, type);\n\t\tgoto out;\n\t}\n\n\t/* Reject if usage specified is outside white list of valid usages. */\n\tif (type != MALI_GRALLOC_FORMAT_TYPE_INTERNAL && (usage & (~VALID_USAGE)) != 0)\n\t{\n\t\tMALI_GRALLOC_LOGW(\"Invalid usage specified: %s 0x%\" PRIx64, describe_usage(usage).c_str(), usage);\n\t}\n\n\t/* TODO: Make a function for finding formats that should be allocated as the request format */\n\tif (is_exynos_format(req_base_format) || req_base_format == HAL_PIXEL_FORMAT_BLOB)\n\t{\n\t\talloc_format = req_base_format;\n\t}\n\telse if (usage == 0)\n\t{\n\t\t/* Allocate format as-is when no usage is specified */\n\t\talloc_format = req_base_format;\n\t}\n\telse\n\t{\n\t\t/* Determine producers and consumers. */\n\t\tconst uint16_t producers = get_producers(usage);",
+   "description": "Maps the requested HAL/flex format to a base format (get_base_format), then \u2014 unless Exynos/BLOB/usage==0 \u2014 derives producers/consumers from usage, intersects their capabilities, and picks the best compatible format with the most AFBC modifiers (get_best_format).",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "get_best_format"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "get_best_format",
+   "title": "get_best_format",
+   "function": "get_best_format",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_formats.cpp",
+    "line": 1228,
+    "end": 1327
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_formats.cpp",
+    "line": 1244,
+    "end": 1273
+   },
+   "snippet": "\t/* 1. Find compatible base formats. */\n\tstd::vector<fmt_props> f_compat;\n\tfor (uint16_t i = 0; i < num_formats; i++)\n\t{\n\t\tif (is_format_compatible(&formats[req_fmt_idx], &formats[i]))\n\t\t{\n\t\t\tfmt_props fmt = {0, 0, 0};\n\t\t\tfmt.base_format = formats[i].id;\n\t\t\tMALI_GRALLOC_LOGV(\"Compatible: Base-format: (%s 0x%\" PRIx32 \")\",\n\t\t\t\tformat_name(fmt.base_format), fmt.base_format);\n\t\t\tf_compat.push_back(fmt);\n\t\t}\n\t}\n\tassert(f_compat.size() > 0);\n\n\t/* 2. Find base formats supported by IP and among them, find the highest\n\t * number of modifier enabled format and check if requested format is present\n\t */\n\n\tint32_t num_supported_formats = 0;\n\tuint64_t req_format_grade = 0;\n\tuint64_t best_fmt_grade = 0;\n\tuint64_t first_of_best_formats = MALI_GRALLOC_FORMAT_INTERNAL_UNDEFINED;\n\tuint64_t req_format = MALI_GRALLOC_FORMAT_INTERNAL_UNDEFINED;\n\n\tfor (uint16_t i = 0; i < f_compat.size(); i++)\n\t{\n\t\tMALI_GRALLOC_LOGV(\"Compatible: Base-format: 0x%\" PRIx32, f_compat[i].base_format);\n\t\tfmt_props fmt = {0, 0, 0};\n\t\tbool supported = get_supported_format(f_compat[i].base_format,",
+   "description": "Finds compatible formats, grades each supported one by number of AFBC modifier bits; substitutes the best one only when neither producer nor consumer is the CPU.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "get_alloc_type"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "get_alloc_type",
+   "title": "get_alloc_type",
+   "function": "get_alloc_type",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 152,
+    "end": 241
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 152,
+    "end": 181
+   },
+   "snippet": "bool get_alloc_type(const uint64_t format_ext,\n                    const uint32_t format_idx,\n                    const uint64_t usage,\n                    alloc_type_t * const alloc_type)\n{\n\talloc_type->primary_type = AllocBaseType::UNCOMPRESSED;\n\talloc_type->is_multi_plane = formats[format_idx].npln > 1;\n\talloc_type->is_tiled = false;\n\talloc_type->is_padded = false;\n\talloc_type->is_frontbuffer_safe = false;\n\n\t/* Determine AFBC type for this format. This is used to decide alignment.\n\t   Split block does not affect alignment, and therefore doesn't affect the allocation type. */\n\tif (format_ext & MALI_GRALLOC_INTFMT_AFBCENABLE_MASK)\n\t{\n\t\t/* YUV transform shall not be enabled for a YUV format */\n\t\tif ((formats[format_idx].is_yuv == true) && (format_ext & MALI_GRALLOC_INTFMT_AFBC_YUV_TRANSFORM))\n\t\t{\n\t\t\tMALI_GRALLOC_LOGW(\"YUV Transform is incorrectly enabled for format = (%s 0x%x). Extended internal format = (%s 0x%\" PRIx64 \")\\n\",\n\t\t\t\tformat_name(formats[format_idx].id), formats[format_idx].id, format_name(format_ext), format_ext);\n\t\t}\n\n\t\t/* Determine primary AFBC (superblock) type. */\n\t\talloc_type->primary_type = AllocBaseType::AFBC;\n\t\tif (format_ext & MALI_GRALLOC_INTFMT_AFBC_WIDEBLK)\n\t\t{\n\t\t\talloc_type->primary_type = AllocBaseType::AFBC_WIDEBLK;\n\t\t}\n\t\telse if (format_ext & MALI_GRALLOC_INTFMT_AFBC_EXTRAWIDEBLK)\n\t\t{",
+   "description": "Turns AFBC modifier bits into an alloc_type_t: superblock type (16x16 / 32x8 / 64x4), tiled headers, multi-plane, padded, front-buffer-safe.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "calc_size"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "exynos_prepare",
+   "title": "prepare_descriptor_exynos_formats",
+   "function": "prepare_descriptor_exynos_formats",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 852,
+    "end": 1043
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 852,
+    "end": 881
+   },
+   "snippet": "static int prepare_descriptor_exynos_formats(\n\t\tbuffer_descriptor_t *bufDescriptor,\n\t\tformat_info_t format_info)\n{\n\tint w = bufDescriptor->width;\n\tint h = bufDescriptor->height;\n\tuint64_t usage = bufDescriptor->producer_usage | bufDescriptor->consumer_usage;\n\tint plane_count = 2;\n\tint format = MALI_GRALLOC_INTFMT_FMT_MASK & bufDescriptor->alloc_format;\n\tint fd_count = get_exynos_fd_count(format);\n\n\tif (usage & (GRALLOC_USAGE_HW_VIDEO_ENCODER | GRALLOC_USAGE_HW_VIDEO_DECODER))\n\t{\n\t\tusage |= GRALLOC_USAGE_VIDEO_PRIVATE_DATA;\n\t\tbufDescriptor->producer_usage |= GRALLOC_USAGE_VIDEO_PRIVATE_DATA;\n\t\tbufDescriptor->consumer_usage |= GRALLOC_USAGE_VIDEO_PRIVATE_DATA;\n\t}\n\n\t/* SWBC Formats have special size requirements */\n\tswitch (format)\n\t{\n\t\tcase HAL_PIXEL_FORMAT_EXYNOS_YCbCr_420_SP_M_SBWC:\n\t\tcase HAL_PIXEL_FORMAT_EXYNOS_YCrCb_420_SP_M_SBWC:\n\t\tcase HAL_PIXEL_FORMAT_EXYNOS_YCbCr_420_SPN_SBWC:\n\t\t\tplane_count = setup_sbwc_420_sp(w, h, fd_count, bufDescriptor->plane_info);\n\t\t\tbreak;\n\n\t\tcase HAL_PIXEL_FORMAT_EXYNOS_YCbCr_420_SP_M_10B_SBWC:\n\t\tcase HAL_PIXEL_FORMAT_EXYNOS_YCrCb_420_SP_M_10B_SBWC:\n\t\tcase HAL_PIXEL_FORMAT_EXYNOS_YCbCr_420_SPN_10B_SBWC:",
+   "description": "Exynos/SBWC formats: per-format width/height pre-alignment then setup_* helper fills plane sizes/strides/fd indices; GPU usage forces 64-byte stride (and rejects SBWC); each fd gets +1024 bytes, minimum 4 KiB.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "ion_allocate"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "calc_size",
+   "title": "calc_allocation_size",
+   "function": "calc_allocation_size",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 589,
+    "end": 796
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 611,
+    "end": 640
+   },
+   "snippet": "\tfor (uint8_t plane = 0; plane < format.npln; plane++)\n\t{\n\t\tplane_info[plane].alloc_width = width;\n\t\tplane_info[plane].alloc_height = height;\n\t\tget_pixel_w_h(&plane_info[plane].alloc_width,\n\t\t              &plane_info[plane].alloc_height,\n\t\t              format,\n\t\t              alloc_type,\n\t\t              plane,\n\t\t              has_cpu_usage);\n\t\tMALI_GRALLOC_LOGV(\"Aligned w=%\" PRIu64 \", h=%\" PRIu64 \" (in pixels)\",\n\t\t      plane_info[plane].alloc_width, plane_info[plane].alloc_height);\n\n\t\t/*\n\t\t * Calculate byte stride (per plane).\n\t\t */\n\t\tif (alloc_type.is_afbc())\n\t\t{\n\t\t\tassert((plane_info[plane].alloc_width * format.bpp_afbc[plane]) % 8 == 0);\n\t\t\tplane_info[plane].byte_stride = (plane_info[plane].alloc_width * format.bpp_afbc[plane]) / 8;\n\t\t}\n\t\telse\n\t\t{\n\t\t\tassert((plane_info[plane].alloc_width * format.bpp[plane]) % 8 == 0);\n\t\t\tplane_info[plane].byte_stride = (plane_info[plane].alloc_width * format.bpp[plane]) / 8;\n\n\t\t\t/*\n\t\t\t * Align byte stride (uncompressed allocations only).\n\t\t\t *\n\t\t\t * Find the lowest-common-multiple of:",
+   "description": "Generic path: per plane, align dimensions (get_pixel_w_h), compute byte stride (with HW/GPU/CPU/camera/BIG alignment via lcm), body size (+AFBC header), and plane offset.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "ion_allocate"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "ion_allocate",
+   "title": "mali_gralloc_ion_allocate",
+   "function": "mali_gralloc_ion_allocate",
+   "def": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 360,
+    "end": 486
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 378,
+    "end": 417
+   },
+   "snippet": "\t\tauto hnd = new private_handle_t(\n\t\t    priv_heap_flag,\n\t\t    bufDescriptor->alloc_sizes,\n\t\t    bufDescriptor->consumer_usage, bufDescriptor->producer_usage,\n\t\t    nullptr, bufDescriptor->fd_count,\n\t\t    bufDescriptor->hal_format, bufDescriptor->alloc_format,\n\t\t    bufDescriptor->width, bufDescriptor->height, bufDescriptor->pixel_stride,\n\t\t    bufDescriptor->layer_count, bufDescriptor->plane_info);\n\n\t\t/* Reset the number of valid filedescriptors, we will increment\n\t\t * it each time a valid fd is added, so we can rely on the\n\t\t * cleanup functions to close open fds. */\n\t\thnd->set_numfds(0);\n\n\t\tif (nullptr == hnd)\n\t\t{\n\t\t\tMALI_GRALLOC_LOGE(\"Private handle could not be created for descriptor:%d in non-shared usecase\", i);\n\t\t\tmali_gralloc_ion_free_internal(pHandle, i);\n\t\t\treturn -1;\n\t\t}\n\n\t\tpHandle[i] = hnd;\n\t\tusage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;\n\n\t\tfor (uint32_t fidx = 0; fidx < bufDescriptor->fd_count; fidx++)\n\t\t{\n\t\t\tint& fd = hnd->fds[fidx];\n\n\t\t\tfd = alloc_from_dmabuf_heap(usage, bufDescriptor->alloc_sizes[fidx], bufDescriptor->name, use_placeholder);\n\n\t\t\tif (fd < 0)\n\t\t\t{\n\t\t\t\tMALI_GRALLOC_LOGE(\"ion_alloc failed for fds[%u] = %d\", fidx, fd);\n\t\t\t\tmali_gralloc_ion_free_internal(pHandle, i + 1);\n\t\t\t\treturn -1;\n\t\t\t}\n\n\t\t\thnd->incr_numfds(1);\n\t\t}\n\t}",
+   "description": "Creates the private_handle_t and allocates one dma-buf per fd from the heap chosen by select_dmabuf_heap(usage). Optionally (GRALLOC_INIT_AFBC) maps AFBC buffers and writes initial headers.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "heap"
+   ]
+  },
+  {
+   "phase": "allocate",
+   "id": "heap",
+   "title": "select_dmabuf_heap / alloc_from_dmabuf_heap",
+   "function": "alloc_from_dmabuf_heap",
+   "def": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 208,
+    "end": 237
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 208,
+    "end": 235
+   },
+   "snippet": "int alloc_from_dmabuf_heap(uint64_t usage, size_t size, const std::string& buffer_name = \"\", bool use_placeholder = false)\n{\n\tATRACE_CALL();\n\tif (size == 0) { return -1; }\n\n\tauto heap_name = use_placeholder ? \"system\" : select_dmabuf_heap(usage);\n\tif (use_placeholder) size = 1;\n\n\tif (heap_name.empty()) {\n\t\t\tMALI_GRALLOC_LOGW(\"No heap found for usage: %s (0x%\" PRIx64 \")\", describe_usage(usage).c_str(), usage);\n\t\t\treturn -EINVAL;\n\t}\n\n\tstd::stringstream tag;\n\ttag << \"heap: \" << heap_name << \", bytes: \" << size;\n\tATRACE_NAME(tag.str().c_str());\n\tint shared_fd = get_allocator().Alloc(heap_name, size, 0);\n\tif (shared_fd < 0)\n\t{\n\t\tALOGE(\"Allocation failed for heap %s error: %d\\n\", heap_name.c_str(), shared_fd);\n\t}\n\n\tif (!buffer_name.empty()) {\n\t\tif (get_allocator().DmabufSetName(shared_fd, buffer_name)) {\n\t\t\tALOGW(\"Unable to set buffer name %s: %s\", buffer_name.c_str(), strerror(errno));\n\t\t}\n\t}\n",
+   "description": "Picks a heap name from usage (exact-match list then subset list), allocates via libdmabufheap BufferAllocator::Alloc and names the dma-buf.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "allocate",
+   "id": "ion_allocate_attr",
+   "title": "mali_gralloc_ion_allocate_attr",
+   "function": "mali_gralloc_ion_allocate_attr",
+   "def": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 330,
+    "end": 347
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 330,
+    "end": 347
+   },
+   "snippet": "int mali_gralloc_ion_allocate_attr(private_handle_t *hnd)\n{\n\tATRACE_CALL();\n\n\tint idx = hnd->get_share_attr_fd_index();\n\tuint64_t usage = GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN;\n\n\thnd->fds[idx] = alloc_from_dmabuf_heap(usage, hnd->attr_size);\n\tif (hnd->fds[idx] < 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"ion_alloc failed\");\n\t\treturn -1;\n\t}\n\n\thnd->incr_numfds(1);\n\n\treturn 0;\n}",
+   "description": "Allocates the extra shared-metadata dma-buf (cached system heap: SW_READ_OFTEN|SW_WRITE_OFTEN) into the fd slot after the buffer fds.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "import",
+   "id": "mapper_import",
+   "title": "Mapper::importBuffer",
+   "function": "importBuffer",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 448,
+    "end": 470
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 448,
+    "end": 470
+   },
+   "snippet": "Error importBuffer(const native_handle_t *inBuffer, buffer_handle_t *outBuffer)\n{\n\t*outBuffer = const_cast<buffer_handle_t>(native_handle_clone(inBuffer));\n\tconst Error error = registerBuffer(*outBuffer);\n\tif (error != Error::NONE)\n\t{\n\t\treturn error;\n\t}\n\n\tif (gRegisteredHandles->add(*outBuffer) == false)\n\t{\n\t\t/* The newly cloned handle is already registered. This can only happen\n\t\t * when a handle previously registered was native_handle_delete'd instead\n\t\t * of freeBuffer'd.\n\t\t */\n\t\tMALI_GRALLOC_LOGE(\"Handle %p has already been imported; potential fd leaking\",\n\t\t       outBuffer);\n\t\tunregisterBuffer(*outBuffer);\n\t\treturn Error::NO_RESOURCES;\n\t}\n\n\treturn Error::NONE;\n}",
+   "description": "Clones the incoming native handle (dup's fds), registers it (validate magic + BufferManager::retain) and adds it to the registered-handle pool.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "register"
+   ]
+  },
+  {
+   "phase": "import",
+   "id": "register",
+   "title": "registerBuffer",
+   "function": "registerBuffer",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 247,
+    "end": 261
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 247,
+    "end": 261
+   },
+   "snippet": "static Error registerBuffer(buffer_handle_t bufferHandle)\n{\n\tif (private_handle_t::validate(bufferHandle) < 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Buffer: %p is corrupted\", bufferHandle);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\tif (mali_gralloc_reference_retain(bufferHandle) < 0)\n\t{\n\t\treturn Error::NO_RESOURCES;\n\t}\n\n\treturn Error::NONE;\n}",
+   "description": "private_handle_t::validate (magic 0x3141592) then mali_gralloc_reference_retain.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "retain"
+   ]
+  },
+  {
+   "phase": "import",
+   "id": "retain",
+   "title": "BufferManager::retain",
+   "function": "BufferManager::retain",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_reference.cpp",
+    "line": 254,
+    "end": 281
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_reference.cpp",
+    "line": 254,
+    "end": 281
+   },
+   "snippet": "    int retain(buffer_handle_t handle) EXCLUDES(lock) {\n        if (private_handle_t::validate(handle) < 0) {\n            MALI_GRALLOC_LOGE(\"Registering/Retaining invalid buffer %p, returning error\", handle);\n            return -EINVAL;\n        }\n        std::lock_guard<std::mutex> _l(lock);\n\n        private_handle_t *hnd =\n                reinterpret_cast<private_handle_t *>(const_cast<native_handle *>(handle));\n\n        auto it = buffer_map.find(hnd);\n        if (it == buffer_map.end()) {\n            bool success = false;\n            auto _data = std::make_unique<MappedData>();\n\n            std::tie(it, success) = buffer_map.insert({hnd, std::move(_data)});\n            if (!success) {\n                MALI_GRALLOC_LOGE(\"Failed to create buffer data mapping\");\n                return -EINVAL;\n            }\n        } else if (it->second->ref_count == 0) {\n            MALI_GRALLOC_LOGE(\"BUG: Import counter of an imported buffer is 0, expect errors\");\n        }\n        auto &data = *(it->second.get());\n\n        data.ref_count++;\n        return 0;\n    }",
+   "description": "Creates (or finds) the per-handle MappedData record and increments ref_count. No mmap happens at import time.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "lock",
+   "id": "mapper_lock",
+   "title": "Mapper::lock \u2192 lockBuffer",
+   "function": "lockBuffer",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 336,
+    "end": 410
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 344,
+    "end": 403
+   },
+   "snippet": "\tif (fenceFd >= 0)\n\t{\n\t\tfenceFd = dup(fenceFd);\n\t\tif (fenceFd < 0)\n\t\t{\n\t\t\tMALI_GRALLOC_LOGE(\"Error encountered while duplicating fence file descriptor\");\n\t\t\treturn Error::NO_RESOURCES;\n\t\t}\n\t}\n\n\tif (private_handle_t::validate(bufferHandle) < 0)\n\t{\n\t\tif (fenceFd >= 0)\n\t\t{\n\t\t\tclose(fenceFd);\n\t\t}\n\t\tMALI_GRALLOC_LOGE(\"Buffer: %p is corrupted\", bufferHandle);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\tif (mali_gralloc_reference_validate(bufferHandle) < 0)\n\t{\n\t\tif (fenceFd >= 0)\n\t\t{\n\t\t\tclose(fenceFd);\n\t\t}\n\t\tMALI_GRALLOC_LOGE(\"Buffer: %p is not imported\", bufferHandle);\n\t\treturn Error::BAD_VALUE;\n\t}\n\n\tauto private_handle = private_handle_t::dynamicCast(bufferHandle);\n\tif (private_handle->cpu_write != 0 && (cpuUsage & static_cast<uint64_t>(BufferUsage::CPU_WRITE_MASK)))\n\t{\n\t\tif (fenceFd >= 0)\n\t\t{\n\t\t\tclose(fenceFd);\n\t\t}\n#if 0\n\t\tMALI_GRALLOC_LOGW(\"Attempt to call lock*() for writing on an already locked buffer (%p)\", bufferHandle);\n#endif\n\n\t\t/* TODO: handle simulatneous locks differently. May be keep a global lock count per buffer? */\n\t}\n\telse if (fenceFd >= 0)\n\t{\n\t\tsync_wait(fenceFd, -1);\n\t\tclose(fenceFd);\n\t}\n\n\tvoid* data = nullptr;\n\tconst int gralloc_err =\n\t\tmali_gralloc_lock(bufferHandle, cpuUsage, accessRegion.left, accessRegion.top,\n\t\t\t\t  accessRegion.right - accessRegion.left,\n\t\t\t\t  accessRegion.bottom - accessRegion.top, &data);\n\tconst Error lock_err = grallocErrorToMapperError(gralloc_err);\n\n\tif(Error::NONE == lock_err)\n\t{\n\t\t*outData = data;\n\t}",
+   "description": "Dups and waits on the acquire fence, validates the handle is imported, then calls mali_gralloc_lock with the access rectangle.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "gralloc_lock"
+   ]
+  },
+  {
+   "phase": "lock",
+   "id": "gralloc_lock",
+   "title": "mali_gralloc_lock",
+   "function": "mali_gralloc_lock",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 192,
+    "end": 243
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 192,
+    "end": 243
+   },
+   "snippet": "int mali_gralloc_lock(buffer_handle_t buffer,\n                      uint64_t usage, int l, int t, int w, int h, void **vaddr)\n{\n\tint status;\n\n\tif (mali_gralloc_reference_validate(buffer))\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Locking invalid buffer %p, returning error\", buffer);\n\t\treturn -EINVAL;\n\t}\n\n\t/* Validate input parameters for lock request */\n\tstatus = validate_lock_input_parameters(buffer, l, t, w, h, usage);\n\tif (status != 0)\n\t{\n\t\treturn status;\n\t}\n\n\tprivate_handle_t *hnd = (private_handle_t *)buffer;\n\n\tconst int32_t format_idx = get_format_index(hnd->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK);\n\tif (format_idx == -1)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Corrupted buffer format (%s 0x%\" PRIx64 \") of buffer %p\",\n\t\t\tformat_name(hnd->alloc_format), hnd->alloc_format, hnd);\n\t\treturn -EINVAL;\n\t}\n\n\t/* Populate CPU-accessible pointer when requested for CPU usage */\n\tif ((usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK)) != 0)\n\t{\n\t\tif (vaddr == NULL)\n\t\t{\n\t\t\treturn -EINVAL;\n\t\t}\n\n\t\tif (mali_gralloc_reference_map(buffer) != 0) {\n\t\t\treturn -EINVAL;\n\t\t}\n\n\t\tstd::optional<void*> buf_addr = mali_gralloc_reference_get_buf_addr(buffer);\n\t\tif (!buf_addr.has_value()) {\n\t\t\tMALI_GRALLOC_LOGE(\"BUG: Invalid buffer address on a just mapped buffer\");\n\t\t\treturn -EINVAL;\n\t\t}\n\t\t*vaddr = buf_addr.value();\n\n\t\tbuffer_sync(hnd, get_tx_direction(usage));\n\t\treturn mali_gralloc_reference_lock_retain(buffer);\n\t}\n\treturn 0;\n}",
+   "description": "Validates region/usage (rejects AFBC buffers), lazily maps the buffer, returns the base address, sets cpu_read/cpu_write and (if GRALLOC_ION_SYNC_ON_LOCK) starts dma-buf CPU sync; increments locked_ref_count.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "validate_lock",
+    "ref_map",
+    "buffer_sync"
+   ]
+  },
+  {
+   "phase": "lock",
+   "id": "validate_lock",
+   "title": "validate_lock_input_parameters",
+   "function": "validate_lock_input_parameters",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 112,
+    "end": 166
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 149,
+    "end": 165
+   },
+   "snippet": "\t/* Reject lock requests for AFBC (compressed format) enabled buffers */\n\tif ((hnd->alloc_format & MALI_GRALLOC_INTFMT_EXT_MASK) != 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Lock is not supported for AFBC enabled buffers.\"\n\t\t     \"Internal Format:0x%\" PRIx64, hnd->alloc_format);\n\n\t\treturn GRALLOC1_ERROR_UNSUPPORTED;\n\t}\n\n\t/* Verify that we're locking a buffer that is used by CPU. */\n\tif ((usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK)) == 0) {\n\t\tMALI_GRALLOC_LOGE(\"Attempt to lock buffer %p with not-cpu usage (%s 0x%\" PRIx64 \")\",\n\t\t\tbuffer, describe_usage(usage).c_str(), usage);\n\t\treturn -EINVAL;\n\t}\n\n\treturn 0;",
+   "description": "Any modifier bit in alloc_format (i.e. AFBC) makes lock fail with GRALLOC1_ERROR_UNSUPPORTED; non-CPU usage fails with -EINVAL.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "lock",
+   "id": "ref_map",
+   "title": "BufferManager::map_buffer_locked \u2192 mali_gralloc_ion_map",
+   "function": "BufferManager::map_buffer_locked",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_reference.cpp",
+    "line": 113,
+    "end": 141
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_reference.cpp",
+    "line": 113,
+    "end": 140
+   },
+   "snippet": "    bool map_buffer_locked(buffer_handle_t handle) REQUIRES(lock) {\n        auto data_oe = get_validated_data_locked(handle);\n        if (!data_oe.has_value()) {\n            return false;\n        }\n        MappedData &data = data_oe.value();\n\n        // Return early if buffer is already mapped\n        if (data.bases[0] != nullptr) {\n            return true;\n        }\n\n        if (!dmabuf_sanity_check(handle)) {\n            return false;\n        }\n\n        private_handle_t *hnd =\n                reinterpret_cast<private_handle_t *>(const_cast<native_handle *>(handle));\n        data.bases = mali_gralloc_ion_map(hnd);\n        if (data.bases[0] == nullptr) {\n            return false;\n        }\n\n        for (auto i = 0; i < MAX_BUFFER_FDS; i++) {\n            data.alloc_sizes[i] = hnd->alloc_sizes[i];\n        }\n\n        return true;",
+   "description": "On first map: sanity-checks the dma-buf sizes (lseek) and mmaps every buffer fd; protected / NOZEROED buffers are not mapped unless PRIVATE_NONSECURE.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "ion_map"
+   ]
+  },
+  {
+   "phase": "lock",
+   "id": "ion_map",
+   "title": "mali_gralloc_ion_map",
+   "function": "mali_gralloc_ion_map",
+   "def": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 488,
+    "end": 526
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 488,
+    "end": 526
+   },
+   "snippet": "std::array<void*, MAX_BUFFER_FDS> mali_gralloc_ion_map(private_handle_t *hnd)\n{\n\tstd::array<void*, MAX_BUFFER_FDS> vaddrs;\n\tvaddrs.fill(nullptr);\n\n\tuint64_t usage = hnd->producer_usage | hnd->consumer_usage;\n\t/* Do not allow cpu access to secure buffers */\n\tif (usage & (GRALLOC_USAGE_PROTECTED | GRALLOC_USAGE_NOZEROED)\n\t\t\t&& !(usage & GRALLOC_USAGE_PRIVATE_NONSECURE))\n\t{\n\t\treturn vaddrs;\n\t}\n\n\tfor (int fidx = 0; fidx < hnd->fd_count; fidx++) {\n\t\tunsigned char *mappedAddress =\n\t\t\t(unsigned char *)mmap(NULL, hnd->alloc_sizes[fidx], PROT_READ | PROT_WRITE,\n\t\t\t\t\tMAP_SHARED, hnd->fds[fidx], 0);\n\n\t\tif (MAP_FAILED == mappedAddress)\n\t\t{\n\t\t\tint err = errno;\n\t\t\tMALI_GRALLOC_LOGE(\"mmap( fds[%d]:%d size:%\" PRIu64 \" ) failed with %s\",\n\t\t\t\t\tfidx, hnd->fds[fidx], hnd->alloc_sizes[fidx], strerror(err));\n\t\t\thnd->dump(\"map fail\");\n\n\t\t\tfor (int cidx = 0; cidx < fidx; fidx++)\n\t\t\t{\n\t\t\t\tmunmap((void*)vaddrs[cidx], hnd->alloc_sizes[cidx]);\n\t\t\t\tvaddrs[cidx] = 0;\n\t\t\t}\n\n\t\t\treturn vaddrs;\n\t\t}\n\n\t\tvaddrs[fidx] = mappedAddress;\n\t}\n\n\treturn vaddrs;\n}",
+   "description": "mmap(PROT_READ|PROT_WRITE, MAP_SHARED) of each fd with its alloc_size.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "lock",
+   "id": "buffer_sync",
+   "title": "buffer_sync",
+   "function": "buffer_sync",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 64,
+    "end": 96
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 64,
+    "end": 96
+   },
+   "snippet": "static void buffer_sync(private_handle_t * const hnd,\n                        const enum tx_direction direction)\n{\n\tif (direction != TX_NONE)\n\t{\n\t\thnd->cpu_read = (direction == TX_FROM_DEVICE || direction == TX_BOTH) ? 1 : 0;\n\t\thnd->cpu_write = (direction == TX_TO_DEVICE || direction == TX_BOTH) ? 1 : 0;\n\n#if defined(GRALLOC_ION_SYNC_ON_LOCK) && GRALLOC_ION_SYNC_ON_LOCK == 1\n\t\tconst int status = mali_gralloc_ion_sync_start(hnd,\n\t\t                                               hnd->cpu_read ? true : false,\n\t\t                                               hnd->cpu_write ? true : false);\n\t\tif (status < 0)\n\t\t{\n\t\t\treturn;\n\t\t}\n#endif\n\t}\n\telse if (hnd->cpu_read || hnd->cpu_write)\n\t{\n#if defined(GRALLOC_ION_SYNC_ON_LOCK) && GRALLOC_ION_SYNC_ON_LOCK == 1\n\t\tconst int status = mali_gralloc_ion_sync_end(hnd,\n\t\t                                             hnd->cpu_read ? true : false,\n\t\t                                             hnd->cpu_write ? true : false);\n\t\tif (status < 0)\n\t\t{\n\t\t\treturn;\n\t\t}\n#endif\n\t\thnd->cpu_read = 0;\n\t\thnd->cpu_write = 0;\n\t}\n}",
+   "description": "Records CPU read/write direction; with GRALLOC_ION_SYNC_ON_LOCK it brackets the access with BufferAllocator CpuSyncStart/End (DMA_BUF_IOCTL_SYNC).",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "unlock",
+   "id": "mapper_unlock",
+   "title": "Mapper::unlock \u2192 unlockBuffer",
+   "function": "unlockBuffer",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 422,
+    "end": 446
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 422,
+    "end": 446
+   },
+   "snippet": "static Error unlockBuffer(buffer_handle_t bufferHandle,\n                                  int* outFenceFd)\n{\n\tif (private_handle_t::validate(bufferHandle) < 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Buffer: %p is corrupted\", bufferHandle);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\tconst int gralloc_err = mali_gralloc_unlock(bufferHandle);\n\tconst Error unlock_err = grallocErrorToMapperError(gralloc_err);\n\n\tif (Error::NONE == unlock_err)\n\t{\n\t\t*outFenceFd = -1;\n\t}\n\telse\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Unlocking failed with error: %d\",\n\t\t\t\t  gralloc_err);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\treturn unlock_err;\n}",
+   "description": "Validates the handle and calls mali_gralloc_unlock; release fence is always -1 (synchronous).",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "gralloc_unlock"
+   ]
+  },
+  {
+   "phase": "unlock",
+   "id": "gralloc_unlock",
+   "title": "mali_gralloc_unlock",
+   "function": "mali_gralloc_unlock",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 254,
+    "end": 266
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferaccess.cpp",
+    "line": 254,
+    "end": 266
+   },
+   "snippet": "int mali_gralloc_unlock(buffer_handle_t buffer)\n{\n\tif (private_handle_t::validate(buffer) < 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Unlocking invalid buffer %p, returning error\", buffer);\n\t\treturn -EINVAL;\n\t}\n\n\tprivate_handle_t *hnd = (private_handle_t *)buffer;\n\tbuffer_sync(hnd, TX_NONE);\n\n\treturn mali_gralloc_reference_lock_release(buffer);\n}",
+   "description": "buffer_sync(TX_NONE) ends CPU sync (if enabled) and clears cpu_read/cpu_write; decrements locked_ref_count. The mapping stays until the last reference is released.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "buffer_sync"
+   ]
+  },
+  {
+   "phase": "free",
+   "id": "mapper_free",
+   "title": "Mapper::freeBuffer",
+   "function": "freeBuffer",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 472,
+    "end": 491
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 472,
+    "end": 491
+   },
+   "snippet": "Error freeBuffer(buffer_handle_t bufferHandle)\n{\n\tnative_handle_t *handle = gRegisteredHandles->remove(bufferHandle);\n\tif (handle == nullptr)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Invalid buffer handle %p to freeBuffer\", bufferHandle);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\tconst Error status = unregisterBuffer(handle);\n\tif (status != Error::NONE)\n\t{\n\t\treturn status;\n\t}\n\n\tnative_handle_close(handle);\n\tnative_handle_delete(handle);\n\n\treturn Error::NONE;\n}",
+   "description": "Removes the handle from the registered pool, unregisters it, then closes the handle's fds and deletes it.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "unregister"
+   ]
+  },
+  {
+   "phase": "free",
+   "id": "unregister",
+   "title": "unregisterBuffer",
+   "function": "unregisterBuffer",
+   "def": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 271,
+    "end": 287
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/hidl_common/Mapper.cpp",
+    "line": 271,
+    "end": 287
+   },
+   "snippet": "static Error unregisterBuffer(buffer_handle_t bufferHandle)\n{\n\tif (private_handle_t::validate(bufferHandle) < 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Buffer: %p is corrupted\", bufferHandle);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\tconst int status = mali_gralloc_reference_release(bufferHandle);\n\tif (status != 0)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Unable to release buffer:%p\", bufferHandle);\n\t\treturn Error::BAD_BUFFER;\n\t}\n\n\treturn Error::NONE;\n}",
+   "description": "Validates and calls mali_gralloc_reference_release.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "release"
+   ]
+  },
+  {
+   "phase": "free",
+   "id": "release",
+   "title": "BufferManager::release",
+   "function": "BufferManager::release",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_reference.cpp",
+    "line": 292,
+    "end": 325
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_reference.cpp",
+    "line": 292,
+    "end": 324
+   },
+   "snippet": "    int release(buffer_handle_t handle) EXCLUDES(lock) {\n        std::lock_guard<std::mutex> _l(lock);\n\n        auto data_oe = get_validated_data_locked(handle);\n        if (!data_oe.has_value()) {\n            return -EINVAL;\n        }\n        MappedData &data = data_oe.value();\n\n        if (data.ref_count == 0) {\n            MALI_GRALLOC_LOGE(\"BUG: Reference held for buffer whose counter is 0\");\n            return -EINVAL;\n        }\n\n        data.ref_count--;\n        if (data.ref_count == 0) {\n            private_handle_t *hnd =\n                    reinterpret_cast<private_handle_t *>(const_cast<native_handle *>(handle));\n            auto it = buffer_map.find(hnd);\n\n            if (data.bases[0] != nullptr) {\n                mali_gralloc_ion_unmap(hnd, data.bases);\n            }\n\n            if (data.metadata_vaddr != nullptr) {\n                munmap(data.metadata_vaddr, data.metadata_size);\n                data.metadata_vaddr = nullptr;\n            }\n\n            buffer_map.erase(it);\n        }\n\n        return 0;",
+   "description": "Decrements ref_count; at zero, munmaps the buffer (mali_gralloc_ion_unmap) and metadata, and erases the record.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": [
+    "ion_unmap"
+   ]
+  },
+  {
+   "phase": "free",
+   "id": "ion_unmap",
+   "title": "mali_gralloc_ion_unmap",
+   "function": "mali_gralloc_ion_unmap",
+   "def": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 528,
+    "end": 552
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/allocator/mali_gralloc_ion.cpp",
+    "line": 528,
+    "end": 552
+   },
+   "snippet": "void mali_gralloc_ion_unmap(private_handle_t *hnd, std::array<void*, MAX_BUFFER_FDS>& vaddrs)\n{\n\tfor (int i = 0; i < hnd->fd_count; i++)\n\t{\n\t\tint err = 0;\n\n\t\tif (vaddrs[i])\n\t\t{\n\t\t\terr = munmap(vaddrs[i], hnd->alloc_sizes[i]);\n\t\t}\n\n\t\tif (err)\n\t\t{\n\t\t\tMALI_GRALLOC_LOGE(\"Could not munmap base:%p size:%\" PRIu64 \" '%s'\",\n\t\t\t\t\t(void*)vaddrs[i], hnd->alloc_sizes[i], strerror(errno));\n\t\t}\n\t\telse\n\t\t{\n\t\t\tvaddrs[i] = 0;\n\t\t}\n\t}\n\n\thnd->cpu_read = 0;\n\thnd->cpu_write = 0;\n}",
+   "description": "munmap each mapped fd region and clear cpu_read/cpu_write.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  },
+  {
+   "phase": "free",
+   "id": "alloc_side_free",
+   "title": "mali_gralloc_buffer_free (allocator side)",
+   "function": "mali_gralloc_buffer_free",
+   "def": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 1266,
+    "end": 1280
+   },
+   "snippet_loc": {
+    "file": "gralloc4/src/core/mali_gralloc_bufferallocation.cpp",
+    "line": 1266,
+    "end": 1280
+   },
+   "snippet": "int mali_gralloc_buffer_free(buffer_handle_t pHandle)\n{\n\tauto *hnd = const_cast<private_handle_t *>(\n\t    reinterpret_cast<const private_handle_t *>(pHandle));\n\n\tif (hnd == nullptr)\n\t{\n\t\treturn -1;\n\t}\n\n\tnative_handle_close(hnd);\n\tnative_handle_delete(hnd);\n\n\treturn 0;\n}",
+   "description": "Called by the allocator service right after it hands the handles back (Allocator.cpp), closing its own fds; the client's imported clone keeps the dma-buf alive.",
+   "description_source": "manual (written from reading the snippet)",
+   "next": []
+  }
+ ],
+ "paths": {
+  "allocate": [
+   "aidl_allocate",
+   "common_allocate",
+   "buffer_allocate",
+   "derive",
+   "select_format",
+   "get_best_format",
+   "get_alloc_type",
+   "calc_size",
+   "exynos_prepare",
+   "ion_allocate",
+   "heap",
+   "ion_allocate_attr"
+  ],
+  "import": [
+   "mapper_import",
+   "register",
+   "retain"
+  ],
+  "lock": [
+   "mapper_lock",
+   "gralloc_lock",
+   "validate_lock",
+   "ref_map",
+   "ion_map",
+   "buffer_sync"
+  ],
+  "unlock": [
+   "mapper_unlock",
+   "gralloc_unlock",
+   "buffer_sync"
+  ],
+  "free": [
+   "mapper_free",
+   "unregister",
+   "release",
+   "ion_unmap",
+   "alloc_side_free"
+  ]
+ }
+}

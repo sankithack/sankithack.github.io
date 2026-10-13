@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gchips gralloc explorer</title>
+<script>try{var t=JSON.parse(localStorage.getItem("gx.theme")||"null");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><a href="#/">gchips gralloc explorer</a></div>
+  <nav id="nav">
+    <a href="#/">Overview</a>
+    <a href="#/learn">Learn</a>
+    <a href="#/formats">Formats</a>
+    <a href="#/storage">Pixel storage</a>
+    <a href="#/compare">Compare</a>
+    <a href="#/flow">Code flow</a>
+    <a href="#/usage">Usage flags</a>
+    <a href="#/glossary">Glossary</a>
+    <a href="#/settings" title="Build-flag assumptions">Build flags</a>
+  </nav>
+  <label class="theme-pick">Theme <select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+</header>
+<main id="app"><p class="muted">Loading…</p></main>
+<footer class="foot" id="foot"></footer>
+<script src="data/formats.js"></script>
+<script src="data/callflow.js"></script>
+<script src="data/glossary.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/extras.js"></script>
+</body>
+</html>
