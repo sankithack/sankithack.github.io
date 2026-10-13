@@ -221,61 +221,6 @@
     return last;
   }
   G.flowJourney = { LANES, PHASE_ORDER, J, STATE_AT, stateFor };
-  let lastTok = null, flowTimer = null;
-  function stopFlow() { if (flowTimer) { clearInterval(flowTimer); flowTimer = null; } }
-  const origFlowAfter = G.AFTER.flow;
-  G.AFTER.flow = (params) => {
-    origFlowAfter(params);
-    const phase = params.get('p') || 'allocate';
-    const ids = CF.paths[phase];
-    const cur = Math.min(Math.max(0, Number(params.get('s') || 0)), ids.length - 1);
-    const id = ids[cur];
-    const lane = (J[id] || [0])[0];
-    const col = PHASE_ORDER.indexOf(phase);
-    const W = 760, LW = 150, CW = (W - LW) / 5, RH = 46;
-    const cx = (c) => LW + c * CW + CW / 2, cy = (l) => 28 + l * RH + RH / 2;
-    const st = stateFor(phase, cur);
-    const names = ['handle', 'fds', 'ref_count', 'mapped', 'locked_ref_count', 'CPU flags'];
-    const prevSt = G._prevFlowState;
-    const html = `<div class="panel" id="journey"><div class="row"><b>Buffer journey</b>
-      <button id="fplay" class="primary">${flowTimer ? '❚❚ Pause' : '▶ Autoplay whole lifecycle'}</button><span class="small muted">token = where the code of the current step runs</span></div>
-      <div class="jgrid">
-      <div class="jscroll"><div class="jinner" style="max-width:${W}px">
-        <svg viewBox="0 0 ${W} ${28 + 3 * RH + 4}" width="100%">
-          ${PHASE_ORDER.map((p, c) => `<text x="${cx(c)}" y="18" text-anchor="middle" font-size="12" font-weight="${c === col ? 700 : 400}" fill="${c === col ? 'var(--accent)' : 'var(--muted)'}">${p}</text>`).join('')}
-          ${LANES.map((t, l) => `<rect x="0" y="${28 + l * RH}" width="${W}" height="${RH - 4}" rx="6" fill="${l === lane ? 'var(--accent-soft)' : 'var(--code)'}"/><text x="8" y="${28 + l * RH + RH / 2 + 2}" font-size="12" fill="currentColor">${t}</text>`).join('')}
-          ${PHASE_ORDER.map((p, c) => CF.paths[p].map((sid, k) => { const ln = (J[sid] || [0])[0]; const x = LW + c * CW + 10 + (k + 0.5) * (CW - 20) / CF.paths[p].length; return `<a href="#/flow?p=${p}&amp;s=${k}"><circle cx="${x}" cy="${cy(ln) - 2}" r="${sid === id && p === phase ? 5 : 3}" fill="${p === phase && k <= cur ? 'var(--accent)' : 'var(--muted)'}" opacity="${p === phase ? 1 : .45}"><title>${esc(CF.steps.find((s) => s.id === sid).title)}</title></circle></a>`; }).join('')).join('')}
-        </svg>
-        <div class="token" id="ftok" style="left:${(lastTok ? lastTok[0] : cx(col)) / W * 100}%;top:${lastTok ? lastTok[1] : cy(lane) - 2}px"></div>
-      </div></div>
-      <div class="small">${st ? `<table class="statetab">${names.map((n, k) => `<tr class="${prevSt && prevSt[k] !== st.s[k] ? 'flash' : ''}"><td class="muted">${n}</td><td>${esc(st.s[k])}</td></tr>`).join('')}</table><div class="muted">state after <i>${esc(CF.steps.find((s) => s.id === st.id).title)}</i> ${src(st.s[6])}</div>` : ''}</div></div></div>`;
-    const grid = document.querySelector('.flowgrid');
-    if (grid) grid.insertAdjacentHTML('beforebegin', html);
-    G._prevFlowState = st ? st.s : null;
-    document.querySelector('.step.cur').classList.add('anim-in');
-    // move token (CSS transition from previous position)
-    const tok = document.getElementById('ftok');
-    const svg = document.querySelector('#journey svg');
-    const scale = svg.getBoundingClientRect().width / W;
-    if (lastTok) tok.style.top = (lastTok[1] * scale) + 'px';
-    requestAnimationFrame(() => requestAnimationFrame(() => { tok.style.left = (cx(col) / W * 100) + '%'; tok.style.top = ((cy(lane) - 2) * scale) + 'px'; }));
-    lastTok = [cx(col), cy(lane) - 2];
-    document.getElementById('fplay').addEventListener('click', () => {
-      if (flowTimer) { stopFlow(); document.getElementById('fplay').textContent = '▶ Autoplay whole lifecycle'; return; }
-      if (phase === 'free' && cur === ids.length - 1) location.hash = '#/flow?p=allocate&s=0';
-      flowTimer = setInterval(() => {
-        if (route() !== 'flow') return stopFlow();
-        const q = new URLSearchParams(location.hash.split('?')[1] || '');
-        const ph = q.get('p') || 'allocate', s = Number(q.get('s') || 0);
-        if (s < CF.paths[ph].length - 1) location.hash = `#/flow?p=${ph}&s=${s + 1}`;
-        else if (PHASE_ORDER.indexOf(ph) < PHASE_ORDER.length - 1) location.hash = `#/flow?p=${PHASE_ORDER[PHASE_ORDER.indexOf(ph) + 1]}&s=0`;
-        else stopFlow();
-      }, 2600);
-      document.getElementById('fplay').textContent = '❚❚ Pause';
-    });
-  };
-  window.addEventListener('hashchange', () => { if (route() !== 'flow') { stopFlow(); lastTok = null; } });
-
   /* ------------------------------------------------------------------ */
   /* Usage page: selection funnel                                        */
   /* ------------------------------------------------------------------ */
@@ -425,7 +370,7 @@
         </ul>
         <p>How the samples are arranged differs: <b>semi-planar</b> (Y plane + one interleaved CbCr plane, NV12/NV21/P010), <b>planar</b> (separate Y, Cr, Cb planes, YV12 — note the component table puts Cr in plane 1 and Cb in plane 2, ${src(L(P.MMD, 225, 230))}), and <b>packed</b> (everything in one plane, YUYV-style ${fl('MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT')}, ${src(L(P.MMD, 162, 165))}).</p>
         ${sub420Html()}
-        <p><a href="#/storage?f=MALI_GRALLOC_FORMAT_INTERNAL_NV12,MALI_GRALLOC_FORMAT_INTERNAL_YV12,MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT">▶ See NV12 vs YV12 vs YUYV in the Pixel storage tab</a> (try “Scan pixels”).</p>
+        <p><a href="#/storage?f=MALI_GRALLOC_FORMAT_INTERNAL_NV12,MALI_GRALLOC_FORMAT_INTERNAL_YV12,MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT">Compare NV12, YV12 and YUYV in the Pixel storage tab</a> (try “Scan pixels”).</p>
         <h3>Bits per pixel before padding (computed from bpp and sub-sampling)</h3>
         <div class="tablewrap"><table><thead><tr><th>format</th><th>planes</th><th>sub-sampling</th><th>bpp per plane</th><th>avg bits / pixel</th><th>1920×1080 bytes</th></tr></thead><tbody>
         ${yuv.map((f) => { const a = avgBpp(f); return `<tr><td>${fl(f.name)}</td><td>${f.npln}</td><td>${f.hsub}×${f.vsub}</td><td class="mono">${f.bpp.slice(0, f.npln).join('/')}</td><td>${Number.isInteger(a) ? a : a.toFixed(2)}</td><td>${fmt(Math.round(1920 * 1080 * a / 8))}</td></tr>`; }).join('')}
@@ -458,7 +403,7 @@
         <h3>Live: same request, different board</h3>
         <p>RGBA_8888, app-window usage (GPU render + texture + HWC). With no board flags the GPU advertises no AFBC, so the buffer stays uncompressed; with all <code>MALI_GPU_SUPPORT_AFBC_*</code> flags on it becomes AFBC.</p>
         <div class="grid2"><div class="panel"><b>no board flags</b>${G.resultSummary(a0)}</div><div class="panel"><b>GPU AFBC flags on</b>${G.resultSummary(a1)}</div></div>
-        <p><a href="#/usage">▶ Try it yourself in the Usage flags tab</a> — it shows the candidate list and a funnel for any usage.</p>`;
+        <p><a href="#/usage">Try other usages in the Usage flags tab</a> — it shows the candidate list and a funnel for any usage.</p>`;
       },
     },
     {
@@ -517,7 +462,7 @@
           <li><b>Unlock</b>: end CPU access; the mapping stays (${src(L(P.ACC, 254, 266))}).</li>
           <li><b>Free</b>: drop the reference; at zero the buffer is unmapped and its fds closed (${src(L(P.REF, 292, 325))}, ${src(L(P.MAP, 472, 491))}).</li>
         </ol>
-        <p><a href="#/flow?p=allocate&amp;s=0">▶ Watch it in the Code flow tab</a> — press “Autoplay whole lifecycle” to see the buffer state (ref count, mapping, lock count) change step by step.</p>`;
+        <p><a href="#/flow?p=allocate&amp;s=0">Run it in the Code flow tab</a>: press Run to execute the whole lifecycle line by line and watch the buffer state (ref count, mapping, lock count) change.</p>`;
       },
     },
   ];
@@ -528,7 +473,7 @@
     return `<h1>Learn</h1>
       <div class="tabs">${CHAPTERS.map((c, i) => `<a class="tabbtn ${i === n ? 'on' : ''}" href="#/learn/${i}">${i + 1}. ${esc(c.title)}</a>`).join('')}</div>
       <div class="panel learn"><h2 style="margin-top:4px">${n + 1}. ${esc(ch.title)}</h2>${ch.body()}</div>
-      <div class="row">${n > 0 ? `<a class="tabbtn" href="#/learn/${n - 1}">← ${esc(CHAPTERS[n - 1].title)}</a>` : ''}${n < CHAPTERS.length - 1 ? `<a class="tabbtn primary" href="#/learn/${n + 1}">${esc(CHAPTERS[n + 1].title)} →</a>` : ''}</div>
+      <div class="row">${n > 0 ? `<a class="tabbtn" href="#/learn/${n - 1}">Back: ${esc(CHAPTERS[n - 1].title)}</a>` : ''}${n < CHAPTERS.length - 1 ? `<a class="tabbtn primary" href="#/learn/${n + 1}">Next: ${esc(CHAPTERS[n + 1].title)}</a>` : ''}</div>
       <p class="small muted">Explanations are written by hand; every claim links to the code it comes from, and every number on this page is computed live by the JS port of the allocator (engine.js) with no board flags unless stated.</p>`;
   };
   G.AFTER.learn = (params, arg) => {

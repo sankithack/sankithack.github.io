@@ -144,14 +144,25 @@
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) put(x, y, ...hsv(360 * x / W, 1, 1 - 0.75 * y / Math.max(1, H - 1)));
     } else if (st.src === 'detail') {
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) put(x, y, ...(x % 2 ? [40, 70, 230] : [230, 40, 40]));
+    } else if (st.src === 'upload' && uploaded) {
+      // Whole image, no cropping: halve repeatedly for a clean downscale, then draw at W×H.
+      try {
+        let cur = uploaded, cw = uploaded.naturalWidth, ch = uploaded.naturalHeight;
+        while (cw / 2 >= W * 2 && ch / 2 >= H * 2) {
+          const c2 = document.createElement('canvas'); c2.width = Math.round(cw / 2); c2.height = Math.round(ch / 2);
+          const x2 = c2.getContext('2d'); x2.imageSmoothingQuality = 'high'; x2.drawImage(cur, 0, 0, c2.width, c2.height);
+          cur = c2; cw = c2.width; ch = c2.height;
+        }
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(cur, 0, 0, W, H);
+        px.set(ctx.getImageData(0, 0, W, H).data);
+      } catch (e) { for (let i = 0; i < px.length; i += 4) { px[i] = px[i + 1] = px[i + 2] = 128; px[i + 3] = 255; } }
     } else {
       try {
         const big = document.createElement('canvas'); big.width = 256; big.height = 128;
         const bctx = big.getContext('2d');
-        if (st.src === 'upload' && uploaded) {
-          const s = Math.max(256 / uploaded.naturalWidth, 128 / uploaded.naturalHeight);
-          bctx.drawImage(uploaded, (256 - uploaded.naturalWidth * s) / 2, (128 - uploaded.naturalHeight * s) / 2, uploaded.naturalWidth * s, uploaded.naturalHeight * s);
-        } else drawScene(bctx, 256, 128);
+        drawScene(bctx, 256, 128);
         const c = document.createElement('canvas'); c.width = W; c.height = H;
         const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(big, 0, 0, W, H);
@@ -160,6 +171,18 @@
     }
     imgCache = { key, img: { w: W, h: H, px } };
     return imgCache.img;
+  }
+  // Fit the example grid to an image's aspect ratio and use its real size for the buffer.
+  const MAX_GW = 48, MAX_GH = 32;
+  function fitToImage(nw, nh) {
+    const a = nw / nh;
+    let gw = MAX_GW, gh = Math.max(1, Math.round(MAX_GW / a));
+    if (gh > MAX_GH) { gh = MAX_GH; gw = Math.max(2, Math.round(MAX_GH * a)); }
+    st.gw = Math.min(gw, nw); st.gh = Math.min(gh, nh);
+    st.px = Math.min(st.px, st.gw - 1); st.py = Math.min(st.py, st.gh - 1);
+    state.calc.w = nw; state.calc.h = nh;
+    st.fitted = true;
+    G.saveCalc(); save(); imgCache.key = null;
   }
   const rgbaAt = (img, x, y) => { const i = (Math.min(y, img.h - 1) * img.w + Math.min(x, img.w - 1)) * 4; return [img.px[i], img.px[i + 1], img.px[i + 2], img.px[i + 3]]; };
 
@@ -366,12 +389,16 @@
     const head = `<div class="small muted">Allocation: ${state.calc.w}×${state.calc.h}, usage SW_READ_OFTEN|SW_WRITE_OFTEN (CPU-lockable). Byte address = <code>offsetInBytes + row × strideInBytes + sample position</code>, the values the mapper reports (${src(L(P.MMD, 377, 379))}).</div>`;
     if (!r.ok) return { html: head + `<div class="err small">This format cannot be allocated for CPU access: ${esc(r.error)}</div>`, r };
     if (r.format.value !== f.value) return { html: head + `<div class="note small">Request was mapped to ${esc(shortName(r.format.name))}.</div>`, r };
-    if (st.px >= state.calc.w || st.py >= state.calc.h) return { html: head + '<div class="note small">Probe pixel is outside the allocation.</div>', r };
+    const fitted = st.src === 'upload' && uploaded && st.fitted && state.calc.w === uploaded.naturalWidth && state.calc.h === uploaded.naturalHeight;
+    const bx = fitted ? Math.floor((st.px + 0.5) * state.calc.w / st.gw) : st.px, by = fitted ? Math.floor((st.py + 0.5) * state.calc.h / st.gh) : st.py;
+    const mapNote = fitted ? `<div class="small">Grid pixel (${st.px},${st.py}) is the centre of buffer pixel <b>(${fmt(bx)}, ${fmt(by)})</b> — the grid is your ${fmt(state.calc.w)}×${fmt(state.calc.h)} image scaled to ${st.gw}×${st.gh}; stored values shown are for the scaled grid pixel.</div>` : '';
+    if (bx >= state.calc.w || by >= state.calc.h) return { html: head + '<div class="note small">Probe pixel is outside the allocation.</div>', r };
     if (r.unknown || isTiledExynos(f) || isS10B(f)) return { html: head + `<div class="note small">Address not derivable from this repo for this format (see notes above). Plane offsets/strides from the allocator: ${r.planes.map((p, i) => `plane ${i}: offset ${fmt(p.offset)}, stride ${p.byte_stride ? fmt(p.byte_stride) : '?'}`).join('; ')}</div>`, r };
     const rows = ms.map((m) => {
       const lp = r.planes[m.p];
       if (!lp) return '';
-      const sx = Math.floor(st.px / m.sub[0]), sy = Math.floor(st.py / m.sub[1]);
+      const sx = Math.floor(bx / m.sub[0]), sy = Math.floor(by / m.sub[1]);
+      const gsx = Math.floor(st.px / m.sub[0]), gsy = Math.floor(st.py / m.sub[1]);
       if (isRaw10or12(f)) {
         return `<tr><td>${m.p}</td><td colspan="4">row ${sy} starts at byte ${fmt(lp.offset + sy * lp.byte_stride)} (stride ${fmt(lp.byte_stride)}); the pixel's bit position (${sx}×${m.sampleBits} = ${fmt(sx * m.sampleBits)} bits into the row) is only meaningful if samples are packed contiguously — <b>packing not confirmed in source</b></td></tr>`;
       }
@@ -382,11 +409,12 @@
         const k = sx % m.ppm;
         mine = m.comps.filter((c) => !/\d$/.test(c.label) || c.label.endsWith(String(k))).map((c) => c.label);
       }
-      const pc = pr_enc && pr_enc.planes[m.p] && pr_enc.planes[m.p].rows[sy] && pr_enc.planes[m.p].rows[sy][mi];
+      const gmi = Math.floor(gsx / m.ppm);
+      const pc = pr_enc && pr_enc.planes[m.p] && pr_enc.planes[m.p].rows[gsy] && pr_enc.planes[m.p].rows[gsy][gmi];
       const stored = pc ? `<td class="mono small">${m.comps.map((c) => `${c.label}=${hexv(pc.vals[c.label], c.bits)}`).join(' ')}<br>bytes ${pc.bytes.map((b) => hexv(b, 8)).join(' ')}</td>` : '<td class="small muted">—</td>';
       return `<tr><td>${m.p}</td><td class="mono">fd ${lp.fd_idx || 0}: ${fmt(lp.offset)} + ${sy}×${fmt(lp.byte_stride)} + ${mi}×${bytes}</td><td class="mono"><b>${fmt(addr)}</b> (${bytes} B)</td>${stored}<td class="small">${esc(mine.join(', ') || '—')}${m.p === 0 && m.ppm > 1 ? ` <span class="muted">(${m.ppm}-pixel macro; ${isY0L2(f) ? 'pixel↔Y mapping unknown' : 'Y index = x mod ' + m.ppm + ', assumed'})</span>` : ''}</td></tr>`;
     }).join('');
-    return { html: head + `<div class="tablewrap"><table class="small"><thead><tr><th>plane</th><th>offset + row×stride + macro×bytes</th><th>byte address</th><th>stored value (example image)</th><th>this pixel's components</th></tr></thead><tbody>${rows}</tbody></table></div>`, r };
+    return { html: head + mapNote + `<div class="tablewrap"><table class="small"><thead><tr><th>plane</th><th>offset + row×stride + macro×bytes</th><th>byte address</th><th>stored value (example image)</th><th>this pixel's components</th></tr></thead><tbody>${rows}</tbody></table></div>`, r };
   }
 
 
@@ -455,8 +483,10 @@
         <div class="row small" style="margin-top:6px"><span class="muted">Quick comparisons:</span> ${quick.map(([t, v]) => `<a href="#/storage?f=${v}">${t}</a>`).join(' · ')}</div></div>
       <div class="panel row"><label>Example image <select id="ssrc">${SOURCES.map(([k, t]) => `<option value="${k}" ${st.src === k ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
         <input type="file" id="sfile" accept="image/*" style="display:${st.src === 'upload' ? 'inline' : 'none'}">
-        ${num('gw', 2, 32, 'size')} × ${num('gh', 1, 16, '')} <span class="muted">|</span> ${num('px', 0, 99999, 'Probe pixel x')} ${num('py', 0, 99999, 'y')}
-        <span class="small muted">Addresses use the layout-calculator size ${state.calc.w}×${state.calc.h} (change on any format page).</span></div>
+        ${st.src === 'upload' && uploaded ? `<span class="small">your image is ${fmt(uploaded.naturalWidth)} × ${fmt(uploaded.naturalHeight)} px</span>
+          <button id="sfit" title="Set the example grid to this image's aspect ratio and the buffer to its real size">Use image size</button>` : ''}
+        ${num('gw', 2, MAX_GW, 'grid')} × ${num('gh', 1, MAX_GH, '')} <span class="muted">|</span> ${num('px', 0, 99999, 'Probe pixel x')} ${num('py', 0, 99999, 'y')}
+        <span class="small muted">Addresses use a ${fmt(state.calc.w)}×${fmt(state.calc.h)} buffer${st.src === 'upload' && uploaded && st.fitted ? ' (your image’s size)' : ' (the layout-calculator size; change it on any format page)'}.</span></div>
       <div class="info small">How to read this: a small real image is written into each format. For every plane you see the stored samples in memory order with their actual values and bytes, and the bits of the sample that holds the probe pixel (blue outline). <b>byte n</b> holds sample bits 8n…8n+7, assuming the sample is stored little-endian (PlaneLayoutComponent offset semantics are defined by AOSP, not in this repo). “Decoded back” rebuilds the picture from the stored values only — compare it with the original to see what sub-sampling or low bit depth loses.</div>
       <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(${sel.length > 1 ? 360 : 600}px,100%),1fr))">${sel.map((n) => `<div>${examplePanel(byName.get(n))}${formatColumn(byName.get(n))}</div>`).join('')}</div>`;
   };
@@ -465,12 +495,14 @@
     if (imgCache.key && imgCache.key !== revealed) { document.querySelectorAll('main .panel svg').forEach((sv) => { if (sv.querySelector('rect[style*="--i"]')) sv.classList.add('reveal'); }); revealed = imgCache.key; }
     const sel = document.getElementById('ssrc');
     if (sel) sel.addEventListener('change', () => { st.src = sel.value; save(); if (st.src !== 'upload' || uploaded) G.render(); else G.render(); });
+    const fit = document.getElementById('sfit');
+    if (fit) fit.addEventListener('click', () => { fitToImage(uploaded.naturalWidth, uploaded.naturalHeight); G.render(); });
     const fi = document.getElementById('sfile');
     if (fi) fi.addEventListener('change', () => {
       const file = fi.files && fi.files[0];
       if (!file) return;
       const rd = new FileReader();
-      rd.onload = () => { const im = new Image(); im.onload = () => { uploaded = im; imgCache.key = null; G.render(); }; im.src = rd.result; };
+      rd.onload = () => { const im = new Image(); im.onload = () => { uploaded = im; fitToImage(im.naturalWidth, im.naturalHeight); G.render(); }; im.src = rd.result; };
       rd.readAsDataURL(file);
     });
     const slots = [...document.querySelectorAll('select[data-sslot]')];
@@ -479,8 +511,9 @@
       location.hash = '#/storage?f=' + v.map(encodeURIComponent).join(',');
     }));
     document.querySelectorAll('input[data-st]').forEach((i) => i.addEventListener('change', () => {
-      const lim = { gw: [2, 32], gh: [1, 16], px: [0, 1e6], py: [0, 1e6] }[i.dataset.st];
+      const lim = { gw: [2, MAX_GW], gh: [1, MAX_GH], px: [0, 1e6], py: [0, 1e6] }[i.dataset.st];
       st[i.dataset.st] = Math.min(lim[1], Math.max(lim[0], Math.floor(Number(i.value) || 0)));
+      if (i.dataset.st === 'gw' || i.dataset.st === 'gh') st.fitted = false;
       save(); G.render();
     }));
   };
