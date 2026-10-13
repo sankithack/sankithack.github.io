@@ -397,7 +397,7 @@
         return true;
       });
       document.getElementById('fcount').textContent = `${rows.length} of ${FD.formats.length}`;
-      tb.innerHTML = rows.map((f, k) => `<tr class="row-in" style="animation-delay:${Math.min(k, 40) * 12}ms">
+      tb.innerHTML = rows.map((f) => `<tr>
         <td><a href="#/format/${encodeURIComponent(f.name)}" class="mono">${esc(shortName(f.name))}</a></td>
         <td class="mono">${f.value_hex || '?'} ${f.value_source === 'manual' ? badge('AOSP', 'b-manual') : ''}</td>
         <td>${f.categories.map((c) => badge(c.replace('Compressed: ', ''), c.includes('AFBC') ? 'b-afbc' : c.includes('SBWC') ? 'b-sbwc' : '')).join('')}</td>
@@ -547,42 +547,11 @@
       ${row('row source', (f) => src(f.row))}
     </tbody></table></div><p class="small muted">Highlighted rows differ.</p>
     <div class="grid2">${rs.map((r, i) => `<div class="panel"><b class="mono">${esc(shortName(names[i]))}</b>${r.ok ? layoutSVG(r, r.format, state.calc.w, state.calc.h) : `<div class="err">${esc(r.error)}</div>`}</div>`).join('')}</div>`;
-    document.getElementById('cmpout').innerHTML = `<p><a href="#/storage?f=${names.map(encodeURIComponent).join(',')}">Compare how these formats store pixel data →</a></p>` + html;
+    document.getElementById('cmpout').innerHTML = `<p><a href="#/storage?f=${names.map(encodeURIComponent).join(',')}">Compare how these formats store pixel data</a></p>` + html;
   }
 
-  /* ---- code flow ---- */
-  const PHASES = [['allocate', 'Allocate'], ['import', 'Import'], ['lock', 'Lock'], ['unlock', 'Unlock'], ['free', 'Free']];
-  views.flow = (params) => {
-    const phase = params.get('p') || 'allocate';
-    const ids = CF.paths[phase];
-    const cur = Math.min(Math.max(0, Number(params.get('s') || 0)), ids.length - 1);
-    const st = CF.steps.find((s) => s.id === ids[cur]);
-    const snippet = st.snippet.split('\n').map((l, i) => `${String(st.snippet_loc.line + i).padStart(5)}  ${esc(l)}`).join('\n');
-    const nexts = st.next.map((n) => { const s = CF.steps.find((x) => x.id === n); const ph = Object.keys(CF.paths).find((p) => CF.paths[p].includes(n)); const ix = CF.paths[ph].indexOf(n); return `<a class="badge b-afbc" href="#/flow?p=${ph}&s=${ix}">${esc(s.title)}</a>`; }).join(' ');
-    return `<h1>Code flow walkthrough</h1>
-      <div class="tabs">${PHASES.map(([k, t]) => `<button data-phase="${k}" class="${k === phase ? 'on' : ''}">${t}</button>`).join('')}</div>
-      <p class="small muted">Order: allocate (allocator process) → import (client process) → lock → unlock → free. Snippets and line numbers are extracted from source by <code>tools/extract.py</code>; descriptions are written from reading those lines.</p>
-      <div class="flowgrid"><div class="panel"><ol class="steplist">${ids.map((id, i) => { const s = CF.steps.find((x) => x.id === id); return `<li class="${i === cur ? 'cur' : ''}" data-step="${i}">${i + 1}. ${esc(s.title)}</li>`; }).join('')}</ol></div>
-      <div><div class="step cur"><div class="row"><b>${cur + 1}/${ids.length} · ${esc(st.title)}</b> <span class="mono small">${esc(st.function || '')}</span> ${src(st.def, 'definition ' + short(st.def.file) + ':' + st.def.line)}</div>
-        <p>${esc(st.description)}</p>
-        <pre>${snippet}</pre><div class="small muted">snippet ${src(st.snippet_loc)}</div>
-        ${nexts ? `<p class="small">Calls next: ${nexts}</p>` : ''}
-        <div class="row"><button id="prev" ${cur === 0 ? 'disabled' : ''}>← Prev</button><button id="next" class="primary" ${cur === ids.length - 1 ? 'disabled' : ''}>Next →</button><span class="small muted">(arrow keys work too)</span></div>
-      </div></div></div>`;
-  };
-  function flowAfter(params) {
-    const phase = params.get('p') || 'allocate';
-    const n = CF.paths[phase].length;
-    const cur = Math.min(Math.max(0, Number(params.get('s') || 0)), n - 1);
-    const go = (s) => { if (s >= 0 && s < n) location.hash = `#/flow?p=${phase}&s=${s}`; };
-    document.querySelectorAll('[data-phase]').forEach((b) => b.addEventListener('click', () => { location.hash = '#/flow?p=' + b.dataset.phase; }));
-    document.querySelectorAll('[data-step]').forEach((li) => li.addEventListener('click', () => go(Number(li.dataset.step))));
-    document.getElementById('prev').addEventListener('click', () => go(cur - 1));
-    document.getElementById('next').addEventListener('click', () => go(cur + 1));
-    keyHandler = (e) => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return; if (e.key === 'ArrowRight') go(cur + 1); if (e.key === 'ArrowLeft') go(cur - 1); };
-  }
+  /* ---- code flow: see flow.js ---- */
   let keyHandler = null;
-  document.addEventListener('keydown', (e) => { if (keyHandler) keyHandler(e); });
 
   /* ---- usage explorer ---- */
   const C2 = (f, l) => L(f, l);
@@ -764,14 +733,13 @@
     const parts = path.split('/').map(decodeURIComponent);
     return { route: parts[0] || 'overview', arg: parts[1], params: new URLSearchParams(q || '') };
   }
-  const AFTER = { formats: formatsAfter, format: formatAfter, compare: compareAfter, flow: flowAfter, usage: usageAfter, settings: settingsAfter };
+  const AFTER = { formats: formatsAfter, format: formatAfter, compare: compareAfter, usage: usageAfter, settings: settingsAfter };
   function render() {
     const { route, arg, params } = parse();
     keyHandler = null;
     const v = views[route] || views.overview;
     const y = window.scrollY;
     app.innerHTML = v(params, arg);
-    if (render.lastRoute !== location.hash) { app.classList.remove('fade-in'); void app.offsetWidth; app.classList.add('fade-in'); }
     if (AFTER[route]) AFTER[route](params, arg);
     document.querySelectorAll('#nav a').forEach((a) => {
       const r = a.getAttribute('href').replace(/^#\/?/, '') || 'overview';
@@ -781,16 +749,18 @@
     render.lastRoute = location.hash;
   }
   window.addEventListener('hashchange', render);
-  // Theme: system (default) / light / dark — stored per browser, applied before paint by index.html.
+  // Theme toggle: light ⇄ dark. Starts from the saved choice or the OS setting (index.html sets it before paint).
   (function () {
-    const sel = document.getElementById('theme');
-    if (!sel) return;
-    sel.value = store.get('theme', 'system');
-    sel.addEventListener('change', () => {
-      store.set('theme', sel.value);
-      if (sel.value === 'system') document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme', sel.value);
+    const btn = document.getElementById('theme');
+    if (!btn) return;
+    const sync = () => { const dark = document.documentElement.getAttribute('data-theme') === 'dark'; btn.setAttribute('aria-checked', String(dark)); btn.title = dark ? 'Switch to light theme' : 'Switch to dark theme'; };
+    btn.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      store.set('theme', next);
+      sync();
     });
+    sync();
   })();
   document.getElementById('foot').innerHTML = `Data: <code>site/data/*.json</code> generated by <code>tools/extract.py</code> from gchips @ <code>${esc((FD.meta.commit || '').slice(0, 12))}</code>. Source links open android.googlesource.com at that commit.`;
   // Extension point for additional views (site/js/storage.js).

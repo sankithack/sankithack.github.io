@@ -179,8 +179,8 @@
     s += `<g class="ucbuf"><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>
       <text x="${bx + bw / 2}" y="${by + 22}" text-anchor="middle" font-size="12" fill="var(--muted)">gralloc buffer</text>
       <text x="${bx + bw / 2}" y="${by + 44}" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">${esc(fmtName.length > 26 ? fmtName.slice(0, 25) + '…' : fmtName)}</text>
-      <text x="${bx + bw / 2}" y="${by + 63}" text-anchor="middle" font-size="11" fill="var(--accent)">${esc(mods.length ? mods.map((m) => m.replace('AFBC_', '')).join(' · ') : r.ok ? (r.unknown ? 'SBWC (size not in repo)' : 'uncompressed') : '')}</text>
-      <text x="${bx + bw / 2}" y="${by + 82}" text-anchor="middle" font-size="12" fill="currentColor">${r.ok ? (r.total != null ? (r.total / 1048576).toFixed(2) + ' MiB · ' : '') + (r.lockable ? 'CPU-lockable' : 'not CPU-lockable') : ''}</text></g>`;
+      <text x="${bx + bw / 2}" y="${by + 63}" text-anchor="middle" font-size="11" fill="var(--accent)">${esc(mods.length ? mods.map((m) => m.replace('AFBC_', '')).join(', ') : r.ok ? (r.unknown ? 'SBWC (size not in repo)' : 'uncompressed') : '')}</text>
+      <text x="${bx + bw / 2}" y="${by + 82}" text-anchor="middle" font-size="12" fill="currentColor">${r.ok ? (r.total != null ? (r.total / 1048576).toFixed(2) + ' MiB, ' : '') + (r.lockable ? 'CPU-lockable' : 'not CPU-lockable') : ''}</text></g>`;
     // moving frames (SMIL motion along each path)
     if (!REDUCE && r.ok) {
       paths.forEach((d, i) => {
@@ -213,7 +213,7 @@
       <div class="grid2" style="margin-top:10px"><div class="panel"><h3 style="margin-top:0">What gralloc does <span class="small muted">(computed)</span></h3>${G.resultSummary(r)}</div>
       <div class="panel"><h3 style="margin-top:0">Why</h3><ol class="trace">${why.map((t) => `<li>${esc(t.msg)} ${src(t.cite)}</li>`).join('')}</ol>
         <h3>The source says</h3><ul class="small">${uc.notes.map(([t, c]) => `<li>${esc(t)} ${src(c)}</li>`).join('')}</ul></div></div>
-      <div class="row"><a class="tabbtn primary" href="${link}">Open in the Usage-flag explorer →</a>${r.ok ? `<a class="tabbtn" href="#/format/${encodeURIComponent(r.format.name)}">Format page: ${esc(shortName(r.format.name))}</a><a class="tabbtn" href="#/storage?f=${encodeURIComponent(r.format.name)}">How its pixels are stored</a>` : ''}</div>
+      <div class="row"><a class="tabbtn primary" href="${link}">Open in the usage-flag explorer</a>${r.ok ? `<a class="tabbtn" href="#/format/${encodeURIComponent(r.format.name)}">Format page: ${esc(shortName(r.format.name))}</a><a class="tabbtn" href="#/storage?f=${encodeURIComponent(r.format.name)}">How its pixels are stored</a>` : ''}</div>
     </div>`;
   }
 
