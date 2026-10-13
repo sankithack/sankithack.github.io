@@ -206,7 +206,7 @@
       <p>${esc(uc.story)} <span class="badge b-manual">Android background</span></p>
       <div class="kv small"><div>typical request</div><div><span class="mono">${esc(shortName(uc.req))}</span>, ${uc.h === 1 ? fmt(uc.w) + ' bytes' : `${fmt(uc.w)} × ${fmt(uc.h)}`} <span class="badge b-manual">Android background</span>${uc.noteReq ? ` <span class="muted">${esc(uc.noteReq)}</span>` : ''}</div>
         <div>typical usage</div><div class="mono">${usageList.join(' | ') || '0'} = ${G.hex(u)}</div></div>
-      ${pipeline(uc, r, u)}
+      <div class="jscroll"><div class="jinner">${pipeline(uc, r, u)}</div></div>
       ${!cons.length ? `<div class="note small">No consumer is derived from these bits: <code>COMPOSER</code> counts as a display consumer only when it is the sole public bit (ignoring PROTECTED) or is combined with <code>TEXTURE</code> (${src(L(FMTS, 119, 151))}). With no consumers the consumer capabilities stay unrestricted (${src(L(FMTS, 266, 315))}).</div>` : ''}
       ${!prods.length ? `<div class="note small">No producer is derived from these bits; gralloc then assumes no producer capabilities (${src(L(FMTS, 335, 339))}).</div>` : ''}
       <div class="small muted">Producers and consumers are derived from the usage bits by ${src(L(FMTS, 198), 'get_producers')} / ${src(L(FMTS, 105), 'get_consumers')}; IP names from ${src(IP_CITE)}. Moving blocks = frames being written into and read out of the buffer.</div>

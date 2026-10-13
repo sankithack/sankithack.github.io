@@ -746,6 +746,11 @@
       a.classList.toggle('active', r === route || (route === 'format' && r === 'formats'));
     });
     if (render.lastRoute === location.hash) window.scrollTo(0, y); else window.scrollTo(0, 0);
+    // Phone: keep the active tab / chip visible in horizontally scrolling rows (no vertical scroll).
+    document.querySelectorAll('#nav a.active, main > .tabs .on, .uclist .on').forEach((el) => {
+      const row = el.parentElement;
+      if (row && row.scrollWidth > row.clientWidth) row.scrollLeft = el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2;
+    });
     render.lastRoute = location.hash;
   }
   window.addEventListener('hashchange', render);
