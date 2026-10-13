@@ -19,7 +19,7 @@
 
   const COMP_COL = { R: '#e15759', G: '#59a14f', B: '#4e79a7', A: '#a0a0a0', Y: '#c8b98a', CB: '#5b8fd4', CR: '#e0766d', RAW: '#b07aa1' };
   const GROUP_COL = ['#fde2b8', '#cfe8cf', '#d6e2f7', '#f6d0d6', '#e4d7f2', '#d3efec', '#f3e3c8', '#dfe7c4', '#f2d9e9', '#d9e6ee', '#efe7d2', '#e1e1f5'];
-  const st = Object.assign({ gw: 16, gh: 8, px: 5, py: 3, src: 'sunset' }, G.store.get('storage', {}));
+  const st = Object.assign({ gw: 16, gh: 8, px: 5, py: 3, src: 'sunset', scanMode: 'raster', memk: 0 }, G.store.get('storage', {}));
   if (st.src === 'upload') st.src = 'sunset'; // uploaded images are not persisted
   const save = () => G.store.set('storage', st);
   G.storageState = st; G.storageSave = save;
@@ -307,7 +307,33 @@
     const i = (cell.y0 * st.gw + cell.x0) * 4; return [enc.decoded[i], enc.decoded[i + 1], enc.decoded[i + 2]];
   }
 
-  function imageGrid(f, data, title, outline) {
+  /* Stored samples in memory order (rows shown on the page only), for the memory-order scan. */
+  const MEM_ROWS = 8;
+  function memCells(f, ms) {
+    if (isTiledExynos(f) || isS10B(f) || !f.linear || f.is_sbwc) return [];
+    const out = [];
+    ms.forEach((m) => {
+      const planeW = Math.ceil(st.gw / m.sub[0]), planeH = Math.min(MEM_ROWS, Math.ceil(st.gh / m.sub[1]));
+      const perRow = Math.ceil(planeW / m.ppm);
+      for (let sy = 0; sy < planeH; sy++) for (let mi = 0; mi < perRow; mi++) {
+        let x0, x1, y0, y1;
+        if (m.p === 0) { x0 = mi * m.ppm; x1 = Math.min(st.gw, x0 + m.ppm) - 1; y0 = y1 = sy; }
+        else { x0 = mi * m.sub[0]; x1 = Math.min(st.gw, x0 + m.sub[0]) - 1; y0 = sy * m.sub[1]; y1 = Math.min(st.gh, y0 + m.sub[1]) - 1; }
+        out.push({ p: m.p, sy, mi, x0, x1, y0, y1, off: mi * m.macroBits / 8, labels: m.comps.map((c) => c.label) });
+      }
+    });
+    return out;
+  }
+  function memCellFor(f, ms) {
+    if (st.scanMode !== 'memory') return null;
+    const cells = memCells(f, ms);
+    if (!cells.length) return null;
+    const k = st.memk % cells.length;
+    return Object.assign({ k, n: cells.length }, cells[k]);
+  }
+  G.storageMemFirst = null;
+
+  function imageGrid(f, data, title, outline, mc) {
     const cell = Math.max(10, Math.min(30, Math.floor(480 / st.gw)));
     let s = `<svg viewBox="0 0 ${st.gw * cell + 2} ${st.gh * cell + 2}" width="100%" style="max-width:${st.gw * cell + 2}px;display:block">`;
     for (let y = 0; y < st.gh; y++) for (let x = 0; x < st.gw; x++) {
@@ -318,7 +344,8 @@
       for (let y = 0; y < st.gh; y += f.vsub) for (let x = 0; x < st.gw; x += f.hsub)
         s += `<rect x="${x * cell + 1.5}" y="${y * cell + 1.5}" width="${Math.min(f.hsub, st.gw - x) * cell - 1}" height="${Math.min(f.vsub, st.gh - y) * cell - 1}" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1"/>`;
     }
-    s += `<rect x="${st.px * cell + 1}" y="${st.py * cell + 1}" width="${cell}" height="${cell}" fill="none" stroke="var(--accent)" stroke-width="3" class="probe-mark"/>`;
+    if (mc) s += `<rect x="${mc.x0 * cell + 1}" y="${mc.y0 * cell + 1}" width="${(mc.x1 - mc.x0 + 1) * cell}" height="${(mc.y1 - mc.y0 + 1) * cell}" fill="none" stroke="var(--cr)" stroke-width="3" class="probe-mark"/>`;
+    else s += `<rect x="${st.px * cell + 1}" y="${st.py * cell + 1}" width="${cell}" height="${cell}" fill="none" stroke="var(--accent)" stroke-width="3" class="probe-mark"/>`;
     return `<div><div class="small"><b>${title}</b></div>${s}</svg></div>`;
   }
 
@@ -333,7 +360,7 @@
   }
 
   /* Rows of one plane in memory order, each macro-pixel coloured by the pixels it covers. */
-  function planeRows(f, m, layoutPlane, enc) {
+  function planeRows(f, m, layoutPlane, enc, mc) {
     if (isTiledExynos(f) || isS10B(f) || !f.linear || f.is_sbwc) return '';
     const pl = enc ? enc.planes[m.p] : null;
     const MAXROWS = 8;
@@ -350,7 +377,7 @@
         else { x0 = mi * m.sub[0]; x1 = Math.min(st.gw, x0 + m.sub[0]) - 1; y0 = sy * m.sub[1]; y1 = Math.min(st.gh, y0 + m.sub[1]) - 1; }
         const rng = (a, b, n) => (a === b ? `${n}${a}` : `${n}${a}–${b}`);
         const covers = m.p === 0 ? rng(x0, x1, 'x') : `${rng(x0, x1, 'x')}, ${rng(y0, y1, 'y')}`;
-        const hasProbe = st.px >= x0 && st.px <= x1 && st.py >= y0 && st.py <= y1;
+        const hasProbe = mc ? (mc.p === m.p && mc.sy === sy && mc.mi === mi) : (st.px >= x0 && st.px <= x1 && st.py >= y0 && st.py <= y1);
         const label = m.comps.length ? m.comps.map((c) => c.label).join(' ') : isRaw10or12(f) ? 'RAW' : `${m.sampleBits}b`;
         if (pl) {
           const cell = pl.rows[sy][mi], col = cellColor(f, enc, pl, cell);
@@ -422,7 +449,7 @@
     const ms = models(f), img = getImage(), enc = encode(f, ms, img);
     const head = `<b class="small">Example image ${st.gw}×${st.gh} — ${esc((SOURCES.find((x) => x[0] === st.src) || SOURCES[0])[1])}</b>`;
     if (!enc) {
-      return `<div class="panel">${head}<div class="row" style="align-items:flex-start;margin-top:4px">${imageGrid(f, img.px, 'source pixels', true)}<div style="flex:1;min-width:160px">${pixelGrid(f)}</div></div>
+      return `<div class="panel">${head}<div class="row" style="align-items:flex-start;margin-top:4px">${imageGrid(f, img.px, 'source pixels', true, memCellFor(f, ms))}<div style="flex:1;min-width:160px">${pixelGrid(f)}</div></div>
         <div class="small muted">Stored values cannot be shown for this format: the repo does not describe how its samples encode pixel values (see the notes below). The right grid shows which pixels ${f.is_yuv && (f.hsub > 1 || f.vsub > 1) ? 'share a chroma sample' : 'map to separate samples'}.</div></div>`;
     }
     const sp = enc.spec;
@@ -430,7 +457,7 @@
       ? `RGB → Y′CbCr with the standard ${sp.ds.standard.replace('_625', '')} equations, ${sp.ds.range.toLowerCase()} range — the standard and range gralloc assigns as this buffer's default dataspace at ${state.calc.w}×${state.calc.h} (${src(sp.ds.cite)}; equations themselves are not in this repo). Chroma = average of the pixels that share it. Conversion is done by producers (GPU, camera, codec), not by gralloc.`
       : isFP16(f) ? 'Each 0–255 channel is stored as a 16-bit float in 0.0–1.0.' : 'Each 0–255 channel is scaled to the component\'s bit width (e.g. 5 or 6 bits for RGB 565, 10 bits for 1010102).';
     return `<div class="panel">${head}
-      <div class="row" style="align-items:flex-start;margin-top:4px;gap:12px">${imageGrid(f, img.px, 'original (what was written)', true)}${imageGrid(f, enc.decoded, 'decoded back from the stored values', false)}</div>
+      <div class="row" style="align-items:flex-start;margin-top:4px;gap:12px">${imageGrid(f, img.px, 'original (what was written)', true, memCellFor(f, ms))}${imageGrid(f, enc.decoded, 'decoded back from the stored values', false, memCellFor(f, ms))}</div>
       <div class="small muted" style="margin-top:4px">${conv}${f.is_yuv && (f.hsub > 1 || f.vsub > 1) ? ` White outlines = pixels sharing one Cb/Cr pair (${f.hsub}×${f.vsub}); colour edges inside a box bleed in the decoded image.` : ''}</div></div>`;
   }
 
@@ -440,6 +467,8 @@
     const enc = encode(f, ms, img);
     pr_enc = enc;
     const pr = probe(f, ms);
+    const mc = memCellFor(f, ms);
+    const memCap = mc ? `<div class="memcap anim-in"><b>Memory step ${mc.k + 1} of ${mc.n}</b>: plane ${mc.p}, row ${mc.sy}, byte +${fmt(mc.off)} in the row holds <span class="mono">${esc(mc.labels.join(' ') || 'sample')}</span> for pixels x ${mc.x0}${mc.x1 > mc.x0 ? '–' + mc.x1 : ''}, y ${mc.y0}${mc.y1 > mc.y0 ? '–' + mc.y1 : ''}.</div>` : (st.scanMode === 'memory' ? '<div class="small muted">Memory-order scan is not available for this format (its sample layout is not described in this repo).</div>' : '');
     const cv = caveats(f, ms);
     const c = f.enum_comments || {};
     const desc = [c.group && `"${esc(c.group.text)}" ${src(c.group.loc)}`, c.trailing && `trailing comment "${esc(c.trailing)}" ${src(f.defined_at)}`].filter(Boolean).join('<br>');
@@ -455,10 +484,12 @@
         ${desc ? `<div>comment in source</div><div>${desc}</div>` : ''}
       </div>
       ${G.describe ? G.describe(f, true) : ''}
+      ${G.formatMeaning ? G.formatMeaning(f, true) : ''}
       ${cv.map(([k, t]) => `<div class="${k} small">${t}</div>`).join('')}
+      ${memCap}
       ${ms.map((m) => `<h3>Plane ${m.p}${m.p > 0 ? ` <span class="small muted">(1 sample per ${m.sub[0]}×${m.sub[1]} pixels)</span>` : ''}</h3>
         ${m.comps.length ? `<div class="small" style="overflow-wrap:anywhere">One ${m.ppm > 1 ? `${m.macroBits}-bit block (${m.ppm} samples of ${m.sampleBits} bits — components span ${m.macroBits} bits)` : `${m.macroBits}-bit sample`}, components from ${src(f.components.loc)}:</div>${(() => { const cell = enc && enc.planes[m.p].rows[Math.floor(st.py / m.sub[1])] && enc.planes[m.p].rows[Math.floor(st.py / m.sub[1])][Math.floor(Math.floor(st.px / m.sub[0]) / m.ppm)]; return (cell ? `<div class="small muted">bit values below = the sample holding probe pixel (${st.px},${st.py}) of the example image</div>` : '') + bitDiagram(m, cell ? cell.sample : null); })()}${compTable(m)}` : ''}
-        ${planeRows(f, m, pr.r && pr.r.ok && pr.r.format.value === f.value ? pr.r.planes[m.p] : null, enc)}`).join('')}
+        ${planeRows(f, m, pr.r && pr.r.ok && pr.r.format.value === f.value ? pr.r.planes[m.p] : null, enc, mc)}`).join('')}
       ${afbcBox(f)}
       <h3>Pixel → byte address (pixel ${st.px},${st.py})</h3>${pr.html}
     </div>`;
@@ -467,6 +498,7 @@
   G.views.storage = (params) => {
     const sel = (params.get('f') || '').split(',').filter((n) => byName.has(n)).slice(0, 3);
     if (!sel.length) sel.push('MALI_GRALLOC_FORMAT_INTERNAL_NV12');
+    if (st.scanMode === 'memory') { const f0 = byName.get(sel[0]); const m0 = memCellFor(f0, models(f0)); if (m0) { st.px = m0.x0; st.py = m0.y0; } }
     const opts = (cur) => FD.formats.map((f) => `<option value="${esc(f.name)}" ${f.name === cur ? 'selected' : ''}>${esc(shortName(f.name))}</option>`).join('');
     const slots = [0, 1, 2].map((i) => `<select data-sslot="${i}"><option value="">${i === 0 ? '—' : '(compare with…)'}</option>${opts(sel[i])}</select>`).join(' ');
     const quick = [['NV12 vs NV21 vs YV12', 'MALI_GRALLOC_FORMAT_INTERNAL_NV12,MALI_GRALLOC_FORMAT_INTERNAL_NV21,MALI_GRALLOC_FORMAT_INTERNAL_YV12'],
@@ -486,6 +518,7 @@
         ${st.src === 'upload' && uploaded ? `<span class="small">your image is ${fmt(uploaded.naturalWidth)} × ${fmt(uploaded.naturalHeight)} px</span>
           <button id="sfit" title="Set the example grid to this image's aspect ratio and the buffer to its real size">Use image size</button>` : ''}
         ${num('gw', 2, MAX_GW, 'grid')} × ${num('gh', 1, MAX_GH, '')} <span class="muted">|</span> ${num('px', 0, 99999, 'Probe pixel x')} ${num('py', 0, 99999, 'y')}
+        <label class="small">Scan order <select id="sorder"><option value="raster" ${st.scanMode !== 'memory' ? 'selected' : ''}>pixels (left to right, top to bottom)</option><option value="memory" ${st.scanMode === 'memory' ? 'selected' : ''}>memory (how the bytes are stored)</option></select></label>
         <span class="small muted">Addresses use a ${fmt(state.calc.w)}×${fmt(state.calc.h)} buffer${st.src === 'upload' && uploaded && st.fitted ? ' (your image’s size)' : ' (the layout-calculator size; change it on any format page)'}.</span></div>
       <div class="info small">How to read this: a small real image is written into each format. For every plane you see the stored samples in memory order with their actual values and bytes, and the bits of the sample that holds the probe pixel (blue outline). <b>byte n</b> holds sample bits 8n…8n+7, assuming the sample is stored little-endian (PlaneLayoutComponent offset semantics are defined by AOSP, not in this repo). “Decoded back” rebuilds the picture from the stored values only — compare it with the original to see what sub-sampling or low bit depth loses.</div>
       <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(${sel.length > 1 ? 360 : 600}px,100%),1fr))">${sel.map((n) => `<div>${examplePanel(byName.get(n))}${formatColumn(byName.get(n))}</div>`).join('')}</div>`;
@@ -495,6 +528,8 @@
     if (imgCache.key && imgCache.key !== revealed) { document.querySelectorAll('main .panel svg').forEach((sv) => { if (sv.querySelector('rect[style*="--i"]')) sv.classList.add('reveal'); }); revealed = imgCache.key; }
     const sel = document.getElementById('ssrc');
     if (sel) sel.addEventListener('change', () => { st.src = sel.value; save(); if (st.src !== 'upload' || uploaded) G.render(); else G.render(); });
+    const so = document.getElementById('sorder');
+    if (so) so.addEventListener('change', () => { st.scanMode = so.value; st.memk = 0; save(); G.render(); });
     const fit = document.getElementById('sfit');
     if (fit) fit.addEventListener('click', () => { fitToImage(uploaded.naturalWidth, uploaded.naturalHeight); G.render(); });
     const fi = document.getElementById('sfile');

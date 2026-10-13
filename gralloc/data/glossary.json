@@ -36,6 +36,62 @@
    ]
   },
   {
+   "term": "Colour components: R, G, B, A, X",
+   "definition": "R = red, G = green, B = blue intensity; A = alpha (opacity: 0 transparent, max opaque); X = padding bits that carry nothing (e.g. the 4th byte of RGBX_8888). General colour terminology; the code names the components per format in its PlaneLayout table.",
+   "definition_source": "manual",
+   "code": [
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 108,
+     "text": "const ExtendableType R = android::gralloc4::PlaneLayoutComponentType_R;"
+    },
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 149,
+     "text": ".drm_fourcc = DRM_FORMAT_XBGR8888,"
+    }
+   ]
+  },
+  {
+   "term": "Y, Cb, Cr (YUV)",
+   "definition": "Y = luma (brightness); Cb = blue-difference and Cr = red-difference colour (also called U and V). Storing colour separately lets formats keep fewer Cb/Cr samples than pixels. General colour terminology; component positions per format come from the PlaneLayout table.",
+   "definition_source": "manual",
+   "code": [
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 114,
+     "text": "const ExtendableType Y = android::gralloc4::PlaneLayoutComponentType_Y;"
+    },
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 201,
+     "text": ".drm_fourcc = DRM_FORMAT_NV21,"
+    }
+   ]
+  },
+  {
+   "term": "Packed / semi-planar / planar",
+   "definition": "Packed: all components of a pixel side by side in one plane (RGBA, YUYV). Semi-planar: a Y plane plus one plane of interleaved Cb/Cr pairs (NV12, P010). Planar: separate Y, Cb and Cr planes (YV12).",
+   "definition_source": "manual",
+   "code": [
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 161,
+     "text": "/* Single plane 8 bit YUV 4:2:2 */"
+    },
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 192,
+     "text": "/* Semi-planar 8 bit YUV 4:2:0 */"
+    },
+    {
+     "file": "gralloc4/src/hidl_common/MapperMetadata.cpp",
+     "line": 223,
+     "text": "/* Planar 8 bit YUV 4:2:0 */"
+    }
+   ]
+  },
+  {
    "term": "Plane",
    "definition": "A separately addressed array of samples (e.g. Y plane and interleaved CbCr plane of NV12). format_info_t.npln gives the count; plane_info_t holds offset/stride/size per plane.",
    "definition_source": "manual",

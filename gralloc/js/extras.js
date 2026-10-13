@@ -75,6 +75,130 @@
   G.describe = describe;
 
   /* ------------------------------------------------------------------ */
+  /* What the name and the letters mean                                  */
+  /* ------------------------------------------------------------------ */
+  const EXF = 'include/exynos_format.h';
+  // Component letters: standard colour terminology (general background, not defined in gchips).
+  const COMP_INFO = {
+    R: ['Red', 'Intensity of red light in this pixel.'],
+    G: ['Green', 'Intensity of green light.'],
+    B: ['Blue', 'Intensity of blue light.'],
+    A: ['Alpha', 'Opacity: 0 = fully transparent, maximum value = fully opaque. Used when layers are blended.'],
+    Y: ['Luma (Y′)', 'Brightness: a weighted sum of red, green and blue. A Y-only image looks like a black-and-white photo.'],
+    CB: ['Chroma blue (Cb, also called U)', 'Blue-difference colour: how much bluer (or more yellow) the pixel is than its brightness suggests. Mid value = no colour shift.'],
+    CR: ['Chroma red (Cr, also called V)', 'Red-difference colour: how much redder (or more cyan) the pixel is than its brightness suggests. Mid value = no colour shift.'],
+    RAW: ['Raw sensor value', 'One camera-sensor reading before demosaicing; each pixel measured a single colour through the sensor’s colour filter.'],
+  };
+  const COMP_COL = { R: '#e15759', G: '#59a14f', B: '#4e79a7', A: '#a0a0a0', Y: '#b9a77a', CB: '#5b8fd4', CR: '#e0766d', RAW: '#b07aa1' };
+  const DIGITS = { '8888': [8, 8, 8, 8], '888': [8, 8, 8], '565': [5, 6, 5], '1010102': [10, 10, 10, 2], '16161616': [16, 16, 16, 16], '88': [8, 8], '8': [8] };
+
+  function nameParts(f) {
+    const n = shortName(f.name), out = [];
+    const g = (part, meaning) => out.push({ part, meaning, cite: null });
+    const c = (part, meaning, cite) => out.push({ part, meaning, cite });
+    const row = f.row;
+    let m;
+    if ((m = n.match(/^(?:GOOGLE_)?(RGBA|RGBX|BGRA|RGB|RG|R)_(\d+)$/))) {
+      const letters = m[1].split(''), bits = DIGITS[m[2]];
+      if (n.startsWith('GOOGLE_')) c('GOOGLE_', 'Google-defined format (enum in exynos_format.h).', L(EXF, 105, 111));
+      g(m[1], `Channel letters in name order: ${letters.map((x) => x === 'X' ? 'X = unused padding' : `${x} = ${(COMP_INFO[x] || [x])[0]}`).join(', ')}.`);
+      if (bits) g(m[2], `Bits per channel in the same order: ${letters.map((x, i) => `${x} ${bits[i]}`).join(', ')} = ${bits.reduce((a, b) => a + b, 0)} bits per pixel.`);
+      if (letters.includes('X')) c('X', 'The 4th byte is padding: the component table lists only R, G, B while bpp is 32.', L(P.MMD, 148, 151));
+      if (f.name.endsWith('16161616')) c('16161616', 'Each channel is a 16-bit floating-point number (“16-bit floating point format.”).', L(P.MGF, 77));
+      return out;
+    }
+    if (/^RAW(\d+)$/.test(n)) { const b = n.slice(3); g('RAW', COMP_INFO.RAW[1]); g(b, `${b} bits per sensor sample.`); if (b !== '16') c(b, 'How the samples are packed is not described in this repo (the mapper reports no component layout).', L(P.MMD, 276, 279)); return out; }
+    if (n === 'BLOB') { c('BLOB', 'Opaque bytes, not pixels (e.g. JPEG data, ML model weights). Width = byte count, height must be 1.', L(P.ALLOC, 842, 847)); return out; }
+    if (/DEPTH|STENCIL/.test(n)) {
+      if (/DEPTH/.test(n)) g('DEPTH_' + (n.match(/DEPTH_(\w+?)(?:_STENCIL|$)/) || [, ''])[1], 'Depth buffer: per-pixel distance from the camera, used by 3D rendering. The number is its bit width; F = floating point.');
+      if (/STENCIL/.test(n)) g('STENCIL_8', 'Stencil: 8 bits per pixel used as a mask for drawing.');
+      c('', 'This repo does not name the components of depth/stencil formats (no DRM fourcc).', FD.components_table_loc);
+      return out;
+    }
+    if (/^Y(8|16)$/.test(n)) { g(n, `Luma only (brightness, no colour), ${n.slice(1)} bits per pixel.`); return out; }
+    // YUV families
+    if (/^NV(12|21|16)$/.test(n)) {
+      g('NV', 'Semi-planar YUV: a full-resolution Y plane followed by one plane of interleaved chroma pairs.');
+      g(n.slice(2), n === 'NV12' ? '4:2:0 with Cb before Cr.' : n === 'NV21' ? '4:2:0 with Cr before Cb.' : '4:2:2 (chroma for every 2×1 pixels), Cb before Cr.');
+      return out;
+    }
+    if (n === 'YV12') { g('YV12', 'Planar 4:2:0: a Y plane, then a V (Cr) plane, then a U (Cb) plane — note V comes before U.'); c('order', 'The component table confirms plane 1 = CR, plane 2 = CB.', L(P.MMD, 223, 230)); return out; }
+    if (/^P(010|210)$/.test(n)) { g('P', 'Semi-planar like NV12/NV16, but each sample is 16 bits.'); g(n.slice(1), `${n === 'P010' ? '4:2:0' : '4:2:2'}, 10 bits of each 16-bit sample are used.`); c('bit 6', 'The 10 bits sit at bit offset 6 (the top of the 16-bit word).', L(P.MMD, 207, 222)); return out; }
+    if (n === 'Y210' || n === 'Y410' || n === 'Y0L2') { g(n, n === 'Y210' ? 'Packed 4:2:2, 10-bit samples in 16-bit slots, Y Cb Y Cr order.' : n === 'Y410' ? 'Packed 4:4:4, 10 bits each for Cb, Y, Cr plus 2-bit alpha in 32 bits.' : 'Packed 4:2:0 10-bit with alpha, 2×2 blocks in 64 bits.'); c('layout', 'Bit positions from the component table.', L(P.MMD, 166, 183)); return out; }
+    if ((m = n.match(/^YUV(420|422|444)_(8|10)BIT(_I)?$/))) {
+      g('YUV' + m[1], `${m[1].split('').join(':')} chroma sub-sampling.`);
+      g(m[2] + 'BIT', `${m[2]}-bit samples.`);
+      if (m[3]) c('_I', '“Single-plane (I = interleaved) variants of 8/10-bit YUV formats” — these exist only AFBC-compressed.', L(P.MGF, 117, 120));
+      else if (m[1] === '422') g('', 'Packed: Y0 Cb Y1 Cr in one plane (YUYV).');
+      return out;
+    }
+    if (n === 'YCrCb_420_SP') { g('YCrCb', 'Chroma order Cr then Cb (NV21).'); g('420', '4:2:0.'); g('SP', 'Semi-planar.'); c('note', 'Requests for this value are remapped to the internal NV21 format.', L(P.FI, 234)); return out; }
+    if (n.startsWith('EXYNOS_') || n.startsWith('GOOGLE_')) {
+      if (n.startsWith('EXYNOS_')) c('EXYNOS_', 'Samsung Exynos vendor format, defined in exynos_format.h.', L(EXF, 26, 103));
+      else c('GOOGLE_', 'Google-defined format, defined in exynos_format.h.', L(EXF, 105, 111));
+      if (/YCbCr/.test(n)) g('YCbCr', 'Chroma order Cb then Cr.');
+      if (/YCrCb/.test(n)) g('YCrCb', 'Chroma order Cr then Cb.');
+      if (/YV12/.test(n)) g('YV12', 'Planar Y, V (Cr), U (Cb).');
+      if (/_420/.test(n)) g('420', '4:2:0 chroma sub-sampling.');
+      if (/NV12/.test(n)) g('NV12', 'Semi-planar 4:2:0, Cb before Cr.');
+      if (/_SPN/.test(n)) c('SPN', 'Semi-planar, contiguous: all planes in one dma-buf (“contiguous(single fd) custom formats”).', L(EXF, 59));
+      else if (/_SP_M/.test(n)) c('SP_M', 'Semi-planar, multi-fd: each plane in its own dma-buf — get_exynos_fd_count returns 2 for these formats (the allocator logs that multi-fd formats are deprecated).', L(P.FMTS, 1626, 1641));
+      else if (/_SP(_|$)/.test(n)) g('SP', 'Semi-planar: Y plane + interleaved chroma plane.');
+      if (/_P_M$|_YV12_M/.test(n)) c('_M', 'Multi-fd: each plane in its own dma-buf (3 fds).', L(P.FMTS, 1642, 1644));
+      else if (/_420_P$/.test(n)) g('P', 'Planar: separate Y, Cb and Cr planes.');
+      if (/P010/.test(n)) c('P010', '“10bit, 2x byte”: 10-bit samples stored in 16 bits.', L(EXF, 70, 77));
+      if (/S10B/.test(n)) c('S10B', '“8bit + separated 2bit”: 10-bit data split into an 8-bit area and a separate 2-bit area.', L(EXF, 64, 68));
+      if (/_10B/.test(n) && !/S10B/.test(n)) g('10B', '10-bit samples.');
+      if (/SBWC/.test(n)) c('SBWC', 'Samsung Bandwidth Compression (“SBWC format”); sizes come from an external header.', L(EXF, 79));
+      if ((m = n.match(/_L(\d+)$/))) c('L' + m[1], `Lossy SBWC (“SBWC Lossy formats”); ${m[1]} is passed as the rate to setup_sbwc_*_lossy(). What the number means exactly is not stated in source.`, f.exynos_prepare ? f.exynos_prepare.loc : L(EXF, 89));
+      if (/TILED/.test(n)) c('TILED', `Pixels stored in ${f.tile_size}×${f.tile_size} tiles (tile_size); tile order not described.`, row);
+      if (/_FULL$/.test(n)) c('FULL', 'Not stated in source; the old name in the trailing comment is HAL_PIXEL_FORMAT_EXYNOS_YCrCb_420_SP_FULL.', f.defined_at);
+      if (/_10B$/.test(n) && n.startsWith('GOOGLE')) g('10B', '10-bit samples (P010-style 16-bit containers).');
+      return out;
+    }
+    return out;
+  }
+
+  function componentRows(f) {
+    const rows = [];
+    const cs = f.components ? f.components.planes : [];
+    cs.forEach((pl, p) => {
+      const sorted = pl.slice().sort((a, b) => a.offset - b.offset);
+      const seen = {};
+      sorted.forEach((c) => {
+        if (c.bits <= 0 && c.type !== 'RAW') return;
+        const k = seen[c.type] = (seen[c.type] || 0) + 1;
+        rows.push({ p, c, n: k });
+      });
+    });
+    return rows;
+  }
+
+  function formatMeaning(f, compact) {
+    const parts = nameParts(f);
+    const rows = componentRows(f);
+    const types = [...new Set(rows.map((r) => r.c.type))];
+    const hasX = f.is_rgb && f.ncmp[0] === 3 && f.bpp[0] === 32;
+    const general = '<span class="badge">general colour terminology</span>';
+    const nameTable = parts.length ? `<table class="small meaning"><tbody>${parts.map((x) => `<tr><td class="mono">${esc(x.part)}</td><td>${esc(x.meaning)} ${x.cite ? src(x.cite) : ''}</td></tr>`).join('')}</tbody></table>` : '';
+    const legend = types.length ? `<div class="complegend">${types.map((t) => {
+      const [name, what] = COMP_INFO[t] || [t, ''];
+      return `<div><span class="cdot" style="background:${COMP_COL[t] || '#ccc'}">${esc(t === 'CB' ? 'Cb' : t === 'CR' ? 'Cr' : t)}</span><div><b>${esc(name)}</b><div class="small muted">${esc(what)}</div></div></div>`;
+    }).join('')}${hasX ? `<div><span class="cdot" style="background:var(--pad);color:var(--ink)">X</span><div><b>Unused (padding)</b><div class="small muted">8 bits per pixel that carry nothing; keeps each pixel 32-bit aligned.</div></div></div>` : ''}</div>` : '';
+    const where = rows.length ? `<table class="small meaning"><thead><tr><th>plane</th><th>component</th><th>bits in the sample</th><th>byte(s)</th></tr></thead><tbody>${rows.map(({ p, c }) => `<tr><td>${p}</td><td><span class="cdot sm" style="background:${COMP_COL[c.type] || '#ccc'}"></span>${esc((COMP_INFO[c.type] || [c.type])[0])}</td><td class="mono">${c.bits > 0 ? `${c.offset}–${c.offset + c.bits - 1} (${c.bits} bits)` : 'size not stated'}</td><td class="mono">${c.bits > 0 ? (Math.floor(c.offset / 8) === Math.floor((c.offset + c.bits - 1) / 8) ? Math.floor(c.offset / 8) : `${Math.floor(c.offset / 8)}–${Math.floor((c.offset + c.bits - 1) / 8)}`) : '—'}</td></tr>`).join('')}</tbody></table>
+      <div class="small muted">Lowest bit first, from the component table ${src(f.components.loc)}${rows.some((r) => r.c.offset > 0) ? ' — this is the order in memory, which can differ from the order in the name' : ''}.</div>` : '';
+    const nameOrder = (f.name.match(/_(RGBA|RGBX|BGRA|RGB)_/) || [])[1];
+    const memOrder = rows.filter((r) => r.p === 0).map((r) => r.c.type).join('');
+    const orderNote = nameOrder && memOrder && nameOrder.replace('X', '') !== memOrder ? `<div class="note small">Name order <b>${nameOrder}</b> ≠ memory order (lowest bit first) <b>${memOrder.split('').join(', ')}</b>.</div>` : '';
+    if (!parts.length && !legend) return '';
+    return `<div class="panel meaning-panel"><b>What the name and the letters mean</b>
+      ${nameTable ? `<h3 style="margin-top:8px">Reading the name</h3>${nameTable}<div class="small muted">Parts without a source link are standard naming, not defined in this repo.</div>` : ''}
+      ${legend ? `<h3>The letters ${general}</h3>${legend}` : ''}
+      ${compact ? '' : where}${orderNote}</div>`;
+  }
+  G.formatMeaning = formatMeaning;
+
+  /* ------------------------------------------------------------------ */
   /* Alignment replay                                                    */
   /* ------------------------------------------------------------------ */
   function alignAnimator(r, reqW, reqH, id) {
@@ -164,7 +288,7 @@
     const f = byName.get(name);
     if (!f) return;
     const h = document.querySelector('main h1');
-    if (h && h.nextElementSibling) h.nextElementSibling.insertAdjacentHTML('afterend', describe(f));
+    if (h && h.nextElementSibling) h.nextElementSibling.insertAdjacentHTML('afterend', describe(f) + formatMeaning(f));
     const out = document.getElementById('calcout');
     if (!out) return;
     const r = G.calcRun(name, G.usageValue(state.calc.usage));
@@ -256,15 +380,18 @@
     origStorageAfter(params);
     const inp = document.querySelector('input[data-st="px"]');
     if (!inp) return;
-    inp.closest('.panel').insertAdjacentHTML('beforeend', `<button id="scanbtn" class="${scanTimer ? '' : 'primary'}">${scanTimer ? '❚❚ Stop scan' : '▶ Scan pixels'}</button><span class="small muted">walks the probe pixel through the example image in raster order</span>`);
+    inp.closest('.panel').insertAdjacentHTML('beforeend', `<button id="scanbtn" class="${scanTimer ? '' : 'primary'}">${scanTimer ? '❚❚ Stop scan' : '▶ Scan pixels'}</button><span class="small muted">${G.storageState && G.storageState.scanMode === 'memory' ? 'walks through the stored samples in memory order' : 'walks the probe pixel through the image, left to right, top to bottom'}</span>`);
     document.getElementById('scanbtn').addEventListener('click', () => {
       if (scanTimer) { stopScan(); G.render(); return; }
       const st = G.storageState;
       scanTimer = setInterval(() => {
         if (route() !== 'storage') return stopScan();
-        st.px++;
-        if (st.px >= st.gw) { st.px = 0; st.py++; }
-        if (st.py >= st.gh) { st.py = 0; }
+        if (st.scanMode === 'memory') st.memk++;
+        else {
+          st.px++;
+          if (st.px >= st.gw) { st.px = 0; st.py++; }
+          if (st.py >= st.gh) { st.py = 0; }
+        }
         G.storageSave(); G.render();
       }, REDUCE ? 1500 : 900);
       G.render();
@@ -336,6 +463,66 @@
       let k = 0; show(0);
       t = setInterval(() => { if (!document.body.contains(root) || k >= 3) { clearInterval(t); t = null; return; } show(++k); }, 1700);
     }));
+    show(0);
+  }
+
+
+  /* AFBC superblock animation (Learn ch. 5): numbers from the engine, header pointers from init_afbc. */
+  const afbcState = { tiled: false };
+  function afbcAnimHtml() {
+    return `<div class="panel" id="afbcw"><div class="row"><b>Animation: how an AFBC buffer is organised</b>
+      <button class="primary" data-a="play">▶ Play</button><button data-a="prev">◀</button><button data-a="next">▶</button>
+      <label class="chk"><input type="checkbox" id="afbctiled" ${afbcState.tiled ? 'checked' : ''}> tiled headers (GPU with all AFBC features)</label></div>
+      <div id="afbcbody"></div></div>`;
+  }
+  function bindAfbcAnim() {
+    const root = document.getElementById('afbcw');
+    if (!root) return;
+    const flags = afbcState.tiled ? GPU_AFBC : Object.assign({}, E.DEFAULT_FLAGS, { MALI_GPU_SUPPORT_AFBC_BASIC: true });
+    const W = 128, H = 64;
+    const r = run('MALI_GRALLOC_FORMAT_INTERNAL_RGBA_8888', W, H, GPU(), flags);
+    const body = document.getElementById('afbcbody');
+    if (!r.ok || !r.alloc_type.is_afbc) { body.innerHTML = '<div class="note">AFBC was not selected with these assumptions.</div>'; return; }
+    const pl = r.planes[0], f = r.format, tiled = r.alloc_type.is_tiled;
+    const cols = pl.alloc_width / 16, rows = pl.alloc_height / 16, n = cols * rows;
+    const sbBytes = E.ALIGN(Math.floor(f.bpp_afbc[0] * 256 / 8), 128);
+    const hue = (i) => { const x = i % cols, y = Math.floor(i / cols); return `hsl(${20 + 300 * x / cols}, 65%, ${70 - 30 * y / rows}%)`; };
+    const pad = (i) => (i % cols) * 16 >= W || Math.floor(i / cols) * 16 >= H;
+    const cell = Math.max(12, Math.min(26, Math.floor(260 / cols)));
+    body.innerHTML = `<div class="afbcgrid">
+      <div><div class="small muted">image ${W}×${H} → allocated ${pl.alloc_width}×${pl.alloc_height}, ${cols}×${rows} superblocks of 16×16</div>
+        <div class="sbgrid" style="grid-template-columns:repeat(${cols}, ${cell}px)">${Array.from({ length: n }, (_, i) => `<span data-i="${i}" class="${pad(i) ? 'hatch' : ''}" style="${pad(i) ? '' : `background:${hue(i)}`};width:${cell}px;height:${cell}px"></span>`).join('')}</div>
+        <div class="small muted">hatched = padding superblocks added by alignment</div></div>
+      <div style="min-width:0"><div class="small"><b>header</b> — ${n} entries × 16 B = ${fmt(n * 16)} B, aligned to ${fmt(pl.header)} B ${src(L(P.ALLOC, 776, 777))}</div>
+        <div class="hstrip">${Array.from({ length: n }, (_, i) => `<span data-h="${i}"></span>`).join('')}${pl.header > n * 16 ? `<em style="flex:${(pl.header - n * 16) / 16}"></em>` : ''}</div>
+        <div class="small" style="margin-top:8px"><b>body</b> — ${n} slots × ${fmt(sbBytes)} B = ${fmt(pl.body)} B reserved ${src(L(P.ALLOC, 736, 737))}</div>
+        <div class="bstrip">${Array.from({ length: n }, (_, i) => `<span data-b="${i}"></span>`).join('')}</div>
+        <div class="caption small" id="afbccap"></div></div></div>`;
+    const cap = document.getElementById('afbccap');
+    let i = -1, t = null;
+    function show(k) {
+      i = Math.max(0, Math.min(n - 1, k));
+      body.querySelectorAll('.on').forEach((e) => e.classList.remove('on'));
+      body.querySelectorAll('.done').forEach((e) => { if (Number(e.dataset.i ?? e.dataset.h ?? e.dataset.b) > i) e.classList.remove('done'); });
+      for (let j = 0; j <= i; j++) ['i', 'h', 'b'].forEach((a) => { const e = body.querySelector(`[data-${a}="${j}"]`); if (e) e.classList.add('done'); });
+      ['i', 'h', 'b'].forEach((a) => body.querySelector(`[data-${a}="${i}"]`).classList.add('on'));
+      const x = (i % cols) * 16, y = Math.floor(i / cols) * 16;
+      const bodyOff = pl.header + i * sbBytes;
+      cap.innerHTML = `Superblock <b>${i}</b> covers pixels x ${x}–${x + 15}, y ${y}–${y + 15}${pad(i) ? ' (padding)' : ''}. Its header entry is bytes <b>${fmt(i * 16)}–${fmt(i * 16 + 15)}</b>. When built with <code>GRALLOC_INIT_AFBC</code> ${src(L(P.ION, 421, 432))}, ` + (tiled
+        ? `with tiled headers gralloc initialises headers to zero (“solid colour” blocks) instead of pointing them at body slots ${src(L(P.ALLOC, 286, 293))}; where the payload goes is decided by the encoder (AFBC spec, not in this repo).`
+        : `gralloc initialises it to point at body offset <b>${fmt(bodyOff)}</b> = header ${fmt(pl.header)} + ${i} × ${fmt(sbBytes)} ${src(L(P.ALLOC, 303, 308))}; the compressed payload written later may use less than the ${fmt(sbBytes)} B slot.`);
+    }
+    function stopA() { if (t) { clearInterval(t); t = null; } root.querySelector('[data-a=play]').textContent = '▶ Play'; }
+    root.querySelector('[data-a=play]').onclick = () => {
+      if (t) return stopA();
+      if (i >= n - 1) i = -1;
+      root.querySelector('[data-a=play]').textContent = '❚❚ Pause';
+      t = setInterval(() => { if (!document.body.contains(root) || i >= n - 1) return stopA(); show(i + 1); }, n > 40 ? 160 : 320);
+    };
+    root.querySelector('[data-a=prev]').onclick = () => { stopA(); show(i - 1); };
+    root.querySelector('[data-a=next]').onclick = () => { stopA(); show(i + 1); };
+    document.getElementById('afbctiled').onchange = (e) => { stopA(); afbcState.tiled = e.target.checked; bindAfbcAnim(); };
+    body.querySelectorAll('[data-i]').forEach((e) => e.addEventListener('click', () => { stopA(); show(Number(e.dataset.i)); }));
     show(0);
   }
 
@@ -437,6 +624,7 @@
         const p = afbc.planes[0];
         return `<h3>AFBC (Arm Frame Buffer Compression)</h3>
         <p>AFBC is not a separate format: it is a set of <b>modifier bits</b> in the upper 32 bits of the 64-bit internal format (${src(L(P.MGF, 141, 171))}). The image is cut into <b>superblocks</b> of 16×16, 32×8 or 64×4 pixels (${src(L(P.ALLOC, 104, 133))}). The buffer holds a header array — 16 bytes per superblock (${src(L(P.ALLOC, 72))}) — followed by a body that reserves <code>ALIGN(bpp_afbc × pixels / 8, 128)</code> bytes per superblock (${src(L(P.ALLOC, 736))}).</p>
+        ${afbcAnimHtml()}
         <p><b>Consequence:</b> gralloc reserves worst-case space, so an AFBC allocation is <em>not smaller</em> than the uncompressed one — the saving is in memory bandwidth, not allocation size. Live, RGBA_8888 1920×1080 GPU usage:</p>
         <div class="tablewrap"><table><thead><tr><th></th><th>uncompressed (no board flags)</th><th>AFBC (GPU AFBC flags on)</th></tr></thead><tbody>
           <tr><td>modifiers</td><td>—</td><td>${E.modNames(afbc.alloc_format).map((x) => badge(x, 'b-afbc')).join('')}</td></tr>
@@ -450,6 +638,7 @@
         <h3>SBWC (Samsung Bandwidth Compression)</h3>
         <p>SBWC <em>is</em> expressed as separate format IDs: 8-bit and 10-bit, lossless and lossy (the L40…L80 suffixes) (${src(L(P.EXF, 79, 100))}). gralloc lays them out in <code>setup_sbwc_*</code> (${src(L(P.EXA, 56, 162))}) but the size macros come from a kernel header that is not in this repository, so their byte sizes are <b>not confirmed in source</b>. They are not reported as compressed through the COMPRESSION metadata (only AFBC is, ${src(L(P.MAP, 106, 107))}), and GPU usage with SBWC is logged as invalid (${src(L(P.ALLOC, 984))}). Camera buffers headed only to the MFC encoder may become SBWC automatically (${src(L(P.FMTS, 1387, 1400))}).</p>`;
       },
+      after() { bindAfbcAnim(); },
     },
     {
       title: 'Life of a buffer',
