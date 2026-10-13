@@ -135,6 +135,48 @@
       bits: ['GRALLOC_USAGE_SENSOR_DIRECT_DATA'],
       notes: [['SENSOR_DIRECT_DATA selects sensor_direct_heap.', L(ION, 157, 161)]],
     },
+    {
+      id: 'video-call', title: 'Video call (preview + encode)', icon: '📞',
+      story: 'In a video call the same camera frames are shown on screen and sent to the video encoder at the same time.',
+      req: 'HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED', w: 1280, h: 720, read: 'none', write: 'none',
+      bits: ['GRALLOC_USAGE_HW_CAMERA_WRITE', 'GRALLOC_USAGE_HW_COMPOSER', 'GRALLOC_USAGE_HW_TEXTURE', 'GRALLOC_USAGE_HW_VIDEO_ENCODER'],
+      notes: [['TEXTURE/COMPOSER is checked first, so the buffer is the plain single-fd NV12 variant rather than SBWC.', L(FMTS, 1383, 1386)],
+        ['SBWC would need the MFC encoder to be the only consumer; here the GPU and display also read the frames.', L(FMTS, 1387, 1394)]],
+    },
+    {
+      id: 'raw-capture', title: 'Shooting a RAW (DNG) photo', icon: '🎞',
+      story: 'Pro camera apps capture the unprocessed sensor data as RAW16 and read it on the CPU to write a DNG file.',
+      req: 'MALI_GRALLOC_FORMAT_INTERNAL_RAW16', w: 4032, h: 3024, read: 'often', write: 'none',
+      bits: ['GRALLOC_USAGE_HW_CAMERA_WRITE'],
+      notes: [['RAW16 is reported to clients as DRM_FORMAT_R16.', L(P.DRM, 32)],
+        ['On zuma builds the camera ISP needs a 32-byte aligned stride for RAW buffers (“Camera ISP requires RAW buffers to have 32-byte aligned stride”).', L(ALLOC, 670, 678)]],
+    },
+    {
+      id: 'hdr-game', title: 'HDR game rendering (16-bit float colour)', icon: '🎮',
+      story: 'A game renders in half-float RGBA (FP16) for HDR and hands frames to SurfaceFlinger.',
+      req: 'MALI_GRALLOC_FORMAT_INTERNAL_RGBA_16161616', w: 2400, h: 1080, read: 'none', write: 'none',
+      bits: ['GRALLOC_USAGE_HW_RENDER', 'GRALLOC_USAGE_HW_TEXTURE', 'GRALLOC_USAGE_HW_COMPOSER'],
+      notes: [['The display cannot read RGBA_16161616 (dpu_rd = F_NONE), so gralloc retries the check with the GPU as the only consumer.', L(FMTS, 1009, 1035)],
+        ['AFBC for FP16 needs the AFBC_RGBA16161616 capability; otherwise the format is forced to linear. No IP sets that capability in this repo.', L(FMTS, 646, 657)]],
+      tryFlags: true,
+    },
+    {
+      id: 'texture-array', title: 'A 6-layer texture array (e.g. skybox)', icon: '🧊',
+      story: 'A 3D app uploads six 512×512 images as one layered texture, writing them on the CPU and sampling them on the GPU.',
+      req: 'MALI_GRALLOC_FORMAT_INTERNAL_RGBA_8888', w: 512, h: 512, layers: 6, read: 'none', write: 'often',
+      bits: ['GRALLOC_USAGE_HW_TEXTURE'],
+      notes: [['Each layer is sized like a single image, then the size is multiplied by layer_count (with extra alignment for AFBC).', L(ALLOC, 1153, 1176)],
+        ['Asking for a real cube map (GPU_CUBE_MAP usage) is rejected: “BufferUsage::GPU_CUBE_MAP is unsupported”.', L(ALLOC, 481, 484)]],
+    },
+    {
+      id: 'stylus', title: 'Low-latency stylus drawing (front buffer)', icon: '✏',
+      story: 'Note-taking apps draw stylus strokes into the buffer that is currently on screen (front-buffer rendering) to cut latency.',
+      req: 'MALI_GRALLOC_FORMAT_INTERNAL_RGBA_8888', w: 1080, h: 2400, read: 'none', write: 'none',
+      bits: ['GRALLOC_USAGE_HW_RENDER', 'GRALLOC_USAGE_HW_TEXTURE', 'GRALLOC_USAGE_HW_COMPOSER', 'GRALLOC_USAGE_FRONT_BUFFER'],
+      notes: [['With FRONT_BUFFER, AFBC is only allowed if producers and consumers support AFBC_DOUBLE_BODY (front-buffer-safe AFBC).', L(FMTS, 629, 635)],
+        ['None of the IP capability masks in this repo include AFBC_DOUBLE_BODY, so front buffers stay uncompressed even with GPU AFBC on.', L('gralloc4/src/capabilities/src/gralloc_capabilities.cpp', 42, 145)]],
+      tryFlags: true,
+    },
   ];
 
   const ucState = { id: UC[0].id, gpuAfbc: false };
@@ -196,7 +238,7 @@
 
   function detail(uc) {
     const u = usageOf(uc);
-    const r = E.allocate({ width: uc.w, height: uc.h, layer_count: 1, hal_format: byName.get(uc.req) ? byName.get(uc.req).value : V[uc.req], usage: u }, flagsFor());
+    const r = E.allocate({ width: uc.w, height: uc.h, layer_count: uc.layers || 1, hal_format: byName.get(uc.req) ? byName.get(uc.req).value : V[uc.req], usage: u }, flagsFor());
     const prods = bitsOf(E.get_producers(u), E.PR), cons = bitsOf(E.get_consumers(u), E.CO);
     const why = r.trace.filter((t) => /→|IMPLEMENTATION_DEFINED|YCbCr_420_888|P010|get_best_format|as-is|update_usage_for_BIG|E:/.test(t.msg)).slice(0, 4);
     const usageList = [uc.read !== 'none' ? `SW_READ_${uc.read.toUpperCase()}` : null, uc.write !== 'none' ? `SW_WRITE_${uc.write.toUpperCase()}` : null, ...uc.bits.map((b) => b.replace(/^GRALLOC_USAGE_|^GS101_GRALLOC_USAGE_/, ''))].filter(Boolean);
@@ -204,7 +246,7 @@
     return `<div class="panel uc-detail anim-in">
       <div class="row"><span style="font-size:28px">${uc.icon}</span><h2 style="margin:0">${esc(uc.title)}</h2></div>
       <p>${esc(uc.story)} <span class="badge b-manual">Android background</span></p>
-      <div class="kv small"><div>typical request</div><div><span class="mono">${esc(shortName(uc.req))}</span>, ${uc.h === 1 ? fmt(uc.w) + ' bytes' : `${fmt(uc.w)} × ${fmt(uc.h)}`} <span class="badge b-manual">Android background</span>${uc.noteReq ? ` <span class="muted">${esc(uc.noteReq)}</span>` : ''}</div>
+      <div class="kv small"><div>typical request</div><div><span class="mono">${esc(shortName(uc.req))}</span>, ${uc.h === 1 ? fmt(uc.w) + ' bytes' : `${fmt(uc.w)} × ${fmt(uc.h)}${uc.layers ? ` × ${uc.layers} layers` : ''}`} <span class="badge b-manual">Android background</span>${uc.noteReq ? ` <span class="muted">${esc(uc.noteReq)}</span>` : ''}</div>
         <div>typical usage</div><div class="mono">${usageList.join(' | ') || '0'} = ${G.hex(u)}</div></div>
       <div class="jscroll"><div class="jinner">${pipeline(uc, r, u)}</div></div>
       ${!cons.length ? `<div class="note small">No consumer is derived from these bits: <code>COMPOSER</code> counts as a display consumer only when it is the sole public bit (ignoring PROTECTED) or is combined with <code>TEXTURE</code> (${src(L(FMTS, 119, 151))}). With no consumers the consumer capabilities stay unrestricted (${src(L(FMTS, 266, 315))}).</div>` : ''}
@@ -217,6 +259,13 @@
     </div>`;
   }
 
+  // Used by the Overview hero: the computed pipeline for one use case.
+  G.ucPipeline = (id) => {
+    const uc = UC.find((u) => u.id === id); if (!uc) return '';
+    const u = usageOf(uc);
+    const r = E.allocate({ width: uc.w, height: uc.h, layer_count: uc.layers || 1, hal_format: byName.get(uc.req) ? byName.get(uc.req).value : V[uc.req], usage: u }, state.flags);
+    return { uc, html: pipeline(uc, r, u) };
+  };
   G.views.usecases = (params, arg) => {
     if (arg && UC.some((u) => u.id === arg)) ucState.id = arg;
     const uc = UC.find((u) => u.id === ucState.id) || UC[0];
@@ -241,4 +290,31 @@
     });
   };
   window.addEventListener('hashchange', () => { if (!/^#\/usecases/.test(location.hash)) stopTour(); });
+
+  /* Overview hero: a live pipeline that cycles through everyday scenarios. */
+  const HERO = ['app-window', 'camera-preview', 'video-play', 'video-record', 'screenshot'];
+  let heroTimer = null, heroIdx = 0;
+  function stopHero() { if (heroTimer) { clearInterval(heroTimer); heroTimer = null; } }
+  function heroHtml() {
+    const { uc, html } = G.ucPipeline(HERO[heroIdx]);
+    const u = usageOf(uc);
+    const r = E.allocate({ width: uc.w, height: uc.h, layer_count: uc.layers || 1, hal_format: byName.get(uc.req) ? byName.get(uc.req).value : V[uc.req], usage: u }, state.flags);
+    return `<div class="row" style="justify-content:space-between"><div class="tabs" style="margin:0">${HERO.map((id, i) => { const x = UC.find((q) => q.id === id); return `<button data-hero="${i}" class="${i === heroIdx ? 'on' : ''}">${x.icon} ${esc(x.title)}</button>`; }).join('')}</div></div>
+      <div class="anim-in">${'<div class="jscroll"><div class="jinner">' + html + '</div></div>'}
+      <p class="small" style="margin:4px 0 0"><b>${esc(uc.title)}:</b> gralloc allocates <span class="mono">${r.ok ? esc(shortName(r.format.name)) : '—'}</span>${r.ok && r.total != null ? `, ${(r.total / 1048576).toFixed(1)} MiB` : ''}${r.ok ? `, from the ${esc(r.heap.name.split(' ')[0])} heap` : ''}. <a href="#/usecases/${uc.id}">How and why</a></p></div>`;
+  }
+  G.AFTER.overview = () => {
+    stopHero();
+    const lede = document.querySelector('main h1 + p');
+    if (!lede) return;
+    lede.insertAdjacentHTML('afterend', '<div class="panel hero" id="hero"></div>');
+    const box = document.getElementById('hero');
+    const draw = () => {
+      box.innerHTML = '<div class="small muted" style="margin-bottom:6px">Live: who writes and reads a buffer in everyday situations, and what gralloc gives them (computed from the code)</div>' + heroHtml();
+      box.querySelectorAll('[data-hero]').forEach((b) => b.addEventListener('click', () => { stopHero(); heroIdx = Number(b.dataset.hero); draw(); }));
+    };
+    draw();
+    heroTimer = setInterval(() => { if (!document.getElementById('hero')) return stopHero(); heroIdx = (heroIdx + 1) % HERO.length; draw(); }, 5000);
+  };
+  window.addEventListener('hashchange', () => { if (location.hash && !/^#\/?$/.test(location.hash)) stopHero(); });
 })();
