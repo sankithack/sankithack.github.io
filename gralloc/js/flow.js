@@ -53,7 +53,8 @@
     const cut = h.indexOf('//');
     let tail = '';
     if (cut >= 0 && !/https?:$/.test(h.slice(0, cut))) { tail = `<span class="c-com">${h.slice(cut)}</span>`; h = h.slice(0, cut); }
-    h = h.replace(/(&quot;.*?&quot;)/g, '<span class="c-str">$1</span>').replace(KW, '<span class="c-kw">$1</span>');
+    // keywords only outside string literals, so markup inserted for strings is never touched
+    h = h.split(/(&quot;.*?&quot;)/g).map((part, i) => (i % 2 ? `<span class="c-str">${part}</span>` : part.replace(KW, '<span class="c-kw">$1</span>'))).join('');
     return h + tail;
   }
 

@@ -181,7 +181,7 @@ svg text { font-family: var(--sans); }
 
 /* use cases */
 .ucgrid { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
-@media (max-width: 860px) { .ucgrid { grid-template-columns: 1fr; } .uclist { display: flex; flex-wrap: wrap; gap: 6px; } .uclist .ucitem { margin: 0; } }
+@media (max-width: 860px) { .ucgrid { grid-template-columns: minmax(0, 1fr); } .uclist { display: flex; flex-wrap: wrap; gap: 6px; } .uclist .ucitem { margin: 0; } }
 .ucitem { display: flex; gap: 9px; align-items: center; padding: 7px 10px; margin-bottom: 3px; border-radius: 4px; text-decoration: none; color: var(--ink); border-left: 3px solid transparent; }
 .ucitem:hover { background: var(--sheet); border-left-color: var(--rule); }
 .ucitem.on { background: var(--sheet); border-left-color: var(--cb); font-weight: 650; }
@@ -268,3 +268,53 @@ tr.row-in { animation: fadeIn .35s ease-out both; }
   nav a { padding: 10px 7px 9px; }
   .xcode { height: 340px; }
 }
+
+/* ---- phone ---- */
+@media (max-width: 760px) {
+  body { font-size: 15px; }
+  .top { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 0 12px; min-height: 0; }
+  .brand { padding: 10px 0 4px; }
+  .theme-toggle { grid-row: 1; grid-column: 2; padding: 10px 0 4px; }
+  .theme-toggle .tt-label { display: none; }
+  #nav {
+    grid-column: 1 / -1; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    margin: 0 -12px; padding: 0 6px;
+    mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 22px), transparent);
+  }
+  #nav::-webkit-scrollbar { display: none; }
+  nav a { padding: 11px 9px 12px; font-size: 14.5px; }
+  button, a.tabbtn, select, input[type=number], input[type=text] { min-height: 40px; }
+  .seg button { min-height: 40px; padding: 7px 12px; }
+  .chk { min-height: 32px; }
+  .lede { font-size: 15.5px; }
+  h2 { font-size: 20px; }
+  .panel { padding: 12px; }
+  /* swipeable chip rows instead of wrapping button walls */
+  main > .tabs, .learn-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -14px; margin-right: -14px; padding: 2px 14px; }
+  main > .tabs::-webkit-scrollbar { display: none; }
+  main > .tabs > *, .learn-tabs > * { flex: none; }
+  .uclist { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 2px 14px 6px; }
+  .uclist .ucitem { flex: none; border-left: 0; border-bottom: 3px solid transparent; background: var(--sheet); }
+  .uclist .ucitem.on { border-bottom-color: var(--cb); }
+  /* code flow: controls within thumb reach */
+  .flowctl {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; justify-content: center;
+    background: var(--sheet); border-top: 1px solid var(--rule); padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  }
+  .flowctl #fpos { width: 100%; text-align: center; order: -1; }
+  body:has(.flowctl) .foot { padding-bottom: 110px; }
+  .seg { width: 100%; overflow-x: auto; }
+  .seg button { flex: 1 0 auto; }
+  .xcode { height: 56vh; font-size: 12px; }
+  .ln .gut { width: 40px; }
+  .xside { display: grid; grid-template-columns: 1fr; }
+  .grid2 { gap: 10px; }
+  .kv { grid-template-columns: minmax(90px, max-content) 1fr; gap: 3px 10px; }
+}
+
+@media (max-width: 480px) {
+  .kv { grid-template-columns: 1fr; gap: 0; }
+  .kv > div:nth-child(odd) { font-size: 12.5px; margin-top: 7px; }
+}
+.ucgrid > *, .xgrid > *, .jgrid > * { min-width: 0; }
+.xside .statetab td:first-child { width: 56%; overflow-wrap: normal; word-break: normal; font-size: 12.5px; }
