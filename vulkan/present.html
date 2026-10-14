@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Presentation – AMDVLK Driver Atlas</title>
+<meta name="description" content="vkAcquireNextImageKHR and vkQueuePresentKHR through XGL and PAL's swap chain and present scheduler to DRI3 (X11) and Wayland.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="present">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>Presentation</h1>
+      <p class="lede">Presenting is where the driver hands a finished image to someone else: the X server or a Wayland
+        compositor. This page follows <code>vkAcquireNextImageKHR</code> and <code>vkQueuePresentKHR</code> from XGL into
+        PAL's swap chain, its present scheduler, and the DRI3 and Wayland window systems.</p>
+
+      <div class="prose">
+      <h2 id="model">The model</h2>
+      <ul>
+        <li><b>Images rotate.</b> The swap chain owns N presentable images. Acquire gives you a free one (the least
+          recently used), present gives it back, and an idle fence says when the compositor is done with it.</li>
+        <li><b>PAL does the bookkeeping, the window system does the display.</b> The PAL swap chain and present
+          scheduler track which images are free and in which order; a window-system object speaks DRI3/Present
+          (X11) or the Wayland protocol.</li>
+        <li><b>Synchronization is syncobjs again.</b> With explicit sync, each image has acquire and release timeline
+          syncobjs shared with the compositor, the same DRM objects as <a href="submit.html#sync">Topic 5</a>.</li>
+      </ul>
+      </div>
+
+      <h2 id="trace">Step-through: acquire → present → X11 / Wayland</h2>
+      <div data-flow="present"></div>
+
+      <h2 id="example">Worked example: one frame in FIFO mode</h2>
+      <div class="example-walk">
+<pre class="example"><code class="language-c ex">uint32_t index;
+vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailable, VK_NULL_HANDLE, &amp;index);
+/* record and submit rendering that waits on imageAvailable and signals renderDone */
+VkPresentInfoKHR present = {
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .waitSemaphoreCount = 1, .pWaitSemaphores = &amp;renderDone,
+    .swapchainCount = 1, .pSwapchains = &amp;swapchain, .pImageIndices = &amp;index };
+vkQueuePresentKHR(queue, &amp;present);</code></pre>
+        <ol>
+          <li><b>Acquire:</b> PAL's generic path waits on <code>m_availableImageSemaphore</code> and returns the least
+            recently used free index. <code class="ex">imageAvailable</code> becomes a PAL queue semaphore, which on amdgpu is a
+            DRM syncobj, so your rendering waits for it on the GPU, not on the CPU.</li>
+          <li><b>Render:</b> your submission waits on <code class="ex">imageAvailable</code> as an
+            <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> chunk and signals <code class="ex">renderDone</code>.</li>
+          <li><b>Present:</b> <code>Queue::Present</code> turns the wait on <code class="ex">renderDone</code> into a queue wait, then
+            calls <code>PresentSwapChain</code>. PAL validates that the image is presentable and passes it to its
+            present scheduler.</li>
+          <li><b>To the window system:</b> on Linux the scheduler calls the window system's <code>Present</code> with the
+            image's idle fence. On X11 that is <code>xcb_present_pixmap</code> (or the synced variant with timeline
+            syncobjs); on Wayland it is attach, damage, commit.</li>
+          <li><b>FIFO:</b> PAL waits until the request has reached hardware (<code>WaitForLastImagePresented</code>),
+            which is how FIFO throttles the application to the display rate.</li>
+        </ol>
+        <h3>Mode differences, from the code</h3>
+        <ul>
+          <li><b>Mailbox:</b> acquire searches for unused images (<code>ReclaimUnusedImages</code>) and the present is
+            complete as soon as the image is handed over.</li>
+          <li><b>Immediate:</b> the only Linux mode that may present inline on the calling thread.</li>
+          <li><b>FIFO:</b> waits for the last present to reach hardware before completing.</li>
+          <li>When no hardware-accelerated path is available, PAL has a CPU blit fallback
+            (<a data-ref="pr_cpu_blit">DoCpuPresentBlit</a>).</li>
+        </ul>
+      </div>
+
+      <div class="prose">
+      <h2 id="not-traced">Not traced on this page</h2>
+      <ul>
+        <li>How the swap-chain images are created and exported as DRI3 pixmaps or <code>wl_buffer</code>s.</li>
+        <li>The compositor's side, and the kernel's KMS page flip once the X server or compositor scans the image out.</li>
+        <li>Fullscreen and direct-display paths (<code>VK_KHR_display</code>).</li>
+      </ul>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Descriptor sets – AMDVLK Driver Atlas</title>
+<meta name="description" content="How vkUpdateDescriptorSets writes hardware descriptors (SRDs) into CPU-mapped GPU memory and how bound sets reach shader registers in AMDVLK.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="descriptors">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>Descriptor sets</h1>
+      <p class="lede">A descriptor set is a block of GPU memory full of hardware descriptors (SRDs). XGL writes those
+        bytes from the CPU, puts the set's address into a few shader registers when you bind it, and the compiled shader
+        loads descriptors from that address. This page follows one uniform buffer from layout to ISA.</p>
+
+      <div class="prose">
+      <h2 id="model">The model in four sentences</h2>
+      <ol>
+        <li><b>Layout:</b> each binding gets a fixed size and offset inside the set's memory, from PAL's SRD sizes
+          (<a data-ref="ds_layout_create">DescriptorSetLayout::Create</a>).</li>
+        <li><b>Pool and allocation:</b> a pool is one CPU-mapped GPU allocation, and allocating a set reserves a range of it.</li>
+        <li><b>Update:</b> writing a descriptor is a CPU store of 16 or 32 bytes into that range. No command, no ioctl.</li>
+        <li><b>Bind and use:</b> binding records the set's GPU address as user data. At draw time PAL writes it into the
+          shader's user SGPRs, and the shader loads SRDs relative to it.</li>
+      </ol>
+      </div>
+
+      <h2 id="trace">Step-through: layout → pool → update → bind → shader load</h2>
+      <div data-flow="descriptors"></div>
+
+      <h2 id="srd">Build a buffer SRD</h2>
+      <div class="prose">
+      <p>This is the descriptor <code>vkUpdateDescriptorSets</code> writes for a <code>VK_DESCRIPTOR_TYPE_STORAGE_BUFFER</code>
+        on GFX10/11. The fields and constants are the ones PAL's <code>CreateUntypedBufferViewSrds</code> uses. Change
+        the address, range or stride and watch the four DWORDs change.</p>
+      </div>
+      <div class="pm4" id="srd-widget"></div>
+
+      <h2 id="example">Worked example: one uniform buffer, end to end</h2>
+      <div class="example-walk">
+        <p>An application has a 256-byte uniform block at offset 512 of a buffer, bound as set 0, binding 0, and a
+          fragment shader that reads it.</p>
+<pre class="example"><code class="language-c ex">VkDescriptorSetLayoutBinding binding = {
+    .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT };
+/* ... vkCreateDescriptorSetLayout, vkCreateDescriptorPool, vkAllocateDescriptorSets ... */
+VkDescriptorBufferInfo info = { .buffer = ubo, .offset = 512, .range = 256 };
+VkWriteDescriptorSet write = {
+    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = set, .dstBinding = 0,
+    .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .pBufferInfo = &amp;info };
+vkUpdateDescriptorSets(device, 1, &amp;write, 0, NULL);
+vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &amp;set, 0, NULL);
+vkCmdDraw(cmd, 3, 1, 0, 0);</code></pre>
+        <h3>What the driver does</h3>
+        <ol>
+          <li><b>Layout:</b> binding 0 is a uniform buffer, so its static size is <code>untypedBufferView</code>
+            (a 16-byte <code>BufferSrd</code> on GFX10/11). The set's static section is 4 DWORDs.</li>
+          <li><b>Allocate:</b> the pool's bump allocator returns an aligned offset; the set's CPU and GPU addresses are
+            the pool's base plus that offset.</li>
+          <li><b>Update:</b> <code>WriteBufferInfoDescriptors</code> computes <code>gpuAddr</code> = buffer VA + 512 and
+            range 256, then PAL encodes the SRD straight into the set's memory. Put the buffer's address plus 512 into
+            the SRD builder above, with range 256: DW2 is <code>0x00000100</code> and DW3 is the fixed raw-buffer
+            pattern.</li>
+          <li><b>Bind:</b> the set's GPU address goes into <code>setBindingData</code> and, through
+            <code>CmdSetUserData</code>, into PAL's user-data entries at the pipeline layout's
+            <code>setBindingRegBase</code>. No PM4 is written yet.</li>
+          <li><b>Draw:</b> <code>ValidateDraw</code> finds the entries dirty and emits a <code>SET_SH_REG</code> that puts
+            the pointer into the pixel shader's user SGPRs (<code>WriteUserDataEntriesToSgprs</code>), then the
+            <code>DRAW_INDEX_AUTO</code> from <a href="cmdbuf.html#pm4">Topic 4</a>.</li>
+          <li><b>Shader:</b> when the pipeline was compiled, LGC's <code>LowerDesc</code> turned the uniform-block access
+            into "load 4 DWORDs at (descriptor table pointer + binding offset)", using the resource mapping XGL built
+            from the same pipeline layout (<a data-ref="ex_resource_mapping">BuildPipelineResourceMapping</a>).</li>
+        </ol>
+        <h3>Variations</h3>
+        <ul>
+          <li><b><code>VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC</code>:</b> takes no space in the set. At bind time XGL
+            patches the dynamic offset into the SRD and puts the whole descriptor in user data, so changing the offset
+            per draw needs no memory write.</li>
+          <li><b>Sampled image:</b> the 32-byte <code>ImageSrd</code> was built at <code>vkCreateImageView</code>; the
+            update is a <code>memcpy</code>.</li>
+          <li><b>Null descriptor:</b> a <code>VK_NULL_HANDLE</code> view writes zeros. For buffers PAL also leaves
+            DW3 = 0 when the address is 0 (try address 0 above).</li>
+          <li><b>Push constants:</b> same user-data mechanism, without any memory at all.</li>
+        </ul>
+      </div>
+
+      <div class="prose">
+      <h2 id="why-layout">Why pipelines depend on the pipeline layout</h2>
+      <p>The compiled ISA hard-codes which SGPRs hold which set pointers and the offset of every binding. Both come from
+        the <code>VkPipelineLayout</code> through the resource mapping. That's why a pipeline must be used with a
+        compatible layout, and why changing the layout means compiling a new pipeline.</p>
+
+      <h2 id="gfx">Generation differences</h2>
+      <ul>
+        <li>GFX12 has its own SRD encodings (<code>sq_buf_rsrc_t</code> and <code>sq_img_rsrc_t</code> in the gfx12 chip
+          headers); the builder above shows the GFX10/11 layout.</li>
+        <li>The descriptor sizes an application sees through <code>VK_EXT_descriptor_buffer</code> are exactly PAL's
+          <code>srdSizes</code>, so they can change with the generation.</li>
+      </ul>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

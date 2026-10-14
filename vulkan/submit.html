@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Submission &amp; sync · AMDVLK Driver Atlas</title>
+<title>Submission &amp; sync – AMDVLK Driver Atlas</title>
 <meta name="description" content="vkQueueSubmit through XGL, PAL IQueue::Submit and its amdgpu backend, libdrm amdgpu_cs_submit_raw2 and DRM_IOCTL_AMDGPU_CS; IBs, BO lists, rings, fences, semaphores and syncobjs.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body data-page="submit">
@@ -15,7 +18,7 @@
   <div class="main">
     <header class="topbar" id="topbar"></header>
     <main id="main" class="content">
-      <h1>5 · Submission &amp; synchronization</h1>
+      <h1>Submission &amp; synchronization</h1>
       <p class="lede">Submission turns recorded command chunks into one CS ioctl. The ioctl carries IB descriptors, a BO
         list and syncobj wait/signal lists. The kernel validates it, queues a job, and eventually writes an
         <code>INDIRECT_BUFFER</code> packet into a hardware ring. Fences and semaphores are DRM syncobjs throughout.</p>
@@ -34,6 +37,44 @@
 
       <h2 id="trace">Step-through: vkQueueSubmit → ring, then fences &amp; semaphores</h2>
       <div data-flow="submit"></div>
+
+      <h2 id="example">Worked example: one submit with a timeline wait, a semaphore signal and a fence</h2>
+      <div class="example-walk">
+<pre class="example"><code class="language-c ex">VkTimelineSemaphoreSubmitInfo tl = {
+    .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+    .waitSemaphoreValueCount = 1, .pWaitSemaphoreValues = &amp;(uint64_t){ 5 } };
+VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+VkSubmitInfo submit = {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .pNext = &amp;tl,
+    .waitSemaphoreCount = 1, .pWaitSemaphores = &amp;uploadTimeline, .pWaitDstStageMask = &amp;stage,
+    .commandBufferCount = 1, .pCommandBuffers = &amp;cmd,
+    .signalSemaphoreCount = 1, .pSignalSemaphores = &amp;renderDone };
+vkQueueSubmit(queue, 1, &amp;submit, frameFence);</code></pre>
+        <ol>
+          <li><b>Wait, recorded not performed:</b> <code>PalWaitSemaphores</code> calls
+            <code class="ex">WaitQueueSemaphore(uploadTimeline, 5)</code>. PAL's amdgpu queue just pushes {syncobj, 5} onto
+            <code>m_waitSemList</code>.</li>
+          <li><b>Submit:</b> XGL builds a <code>Pal::SubmitInfo</code> with one command buffer and the fence.
+            <code>OsSubmit</code> refreshes the BO list if needed, and <code>SubmitPm4</code> adds IBs: PAL's internal
+            preamble stream(s), then the command buffer's first chunk, then any postamble.</li>
+          <li><b>One ioctl:</b> <code>SubmitIbsRaw</code> builds the chunk array:
+            <code>AMDGPU_CHUNK_ID_IB</code> per IB, <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> {uploadTimeline, 5},
+            a signal chunk containing the queue's <code>m_lastSignaledSyncObject</code>, and the BO list as
+            <code>AMDGPU_CHUNK_ID_BO_HANDLES</code>. Then one <code>DRM_IOCTL_AMDGPU_CS</code>.</li>
+          <li><b>Kernel:</b> the timeline wait becomes a scheduler dependency. The job runs once point 5 signals, its IBs
+            are emitted as <code>INDIRECT_BUFFER</code> packets on the GFX ring, and the job's fence signals the queue's
+            syncobj when the GPU finishes.</li>
+          <li><b>After the ioctl:</b> PAL copies the fence of <code>m_lastSignaledSyncObject</code> into
+            <code class="ex">frameFence</code>'s syncobj (<code>DoAssociateFenceWithLastSubmit</code>), and XGL's
+            <code>PalSignalSemaphores</code> does the same for <code class="ex">renderDone</code>
+            (<code>Queue::SignalSemaphore</code> → <code>ConveySyncObjectState</code>).</li>
+          <li><b>Waiting on the CPU:</b> <code class="ex">vkWaitForFences(frameFence)</code> becomes <code>amdgpu_cs_syncobj_wait</code>
+            on that syncobj. Nothing polls the GPU.</li>
+        </ol>
+        <p>In total: one CS ioctl and two syncobj-transfer ioctls, and no CPU blocking anywhere in
+          <code>vkQueueSubmit</code>.</p>
+      </div>
+
 
       <div class="prose">
       <h2 id="ibs">IBs and rings</h2>
@@ -114,6 +155,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
 <script src="assets/data/search-index.js"></script>
 <script src="assets/site.js"></script>
 </body>

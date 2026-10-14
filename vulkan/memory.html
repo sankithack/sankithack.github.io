@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Memory allocation · AMDVLK Driver Atlas</title>
+<title>Memory allocation – AMDVLK Driver Atlas</title>
 <meta name="description" content="vkAllocateMemory traced through XGL, PAL's IGpuMemory, libdrm and the amdgpu GEM ioctls: heaps, VA vs. backing, residency, mapping.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body data-page="memory">
@@ -15,7 +18,7 @@
   <div class="main">
     <header class="topbar" id="topbar"></header>
     <main id="main" class="content">
-      <h1>2 · Memory allocation</h1>
+      <h1>Memory allocation</h1>
       <p class="lede"><code>vkAllocateMemory</code> runs through every software layer: XGL picks a PAL heap, PAL reserves
         a GPU virtual address, creates a buffer object in the kernel and maps it at that address, and XGL marks the
         memory resident for every future submission.</p>
@@ -47,6 +50,49 @@
 
       <h2 id="trace">Step-through: vkAllocateMemory → kernel</h2>
       <div data-flow="memory"></div>
+
+      <h2 id="example">Worked examples: three allocations</h2>
+      <div class="example-walk">
+        <h3>1. A 64 MiB upload buffer the CPU writes every frame</h3>
+<pre class="example"><code class="language-c ex">VkMemoryAllocateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .allocationSize = 64u &lt;&lt; 20,
+    .memoryTypeIndex = typeWith(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) };
+vkAllocateMemory(device, &amp;info, NULL, &amp;mem);
+vkMapMemory(device, mem, 0, VK_WHOLE_SIZE, 0, &amp;ptr);</code></pre>
+        <p>(<code class="nv">typeWith</code> stands for the usual "first memory type with these flags" loop.)</p>
+        <ol>
+          <li><b>Which type?</b> On a discrete GPU without Resizable BAR, XGL's <a data-ref="ex_heap_priority">priority
+            order</a> puts the GartUswc type second, after the device-local Invisible type, so the first
+            HOST_VISIBLE | HOST_COHERENT match is <code>GpuHeapGartUswc</code>.</li>
+          <li><b>VA:</b> PAL reserves 64 MiB of GPU virtual address space in the default partition
+            (<a data-ref="ex_va_partition">ChooseVaPartition</a>); libdrm hands it out in user space.</li>
+          <li><b>Backing:</b> <code>AMDGPU_GEM_CREATE</code> with domain GTT and <code>AMDGPU_GEM_CREATE_CPU_GTT_USWC</code>.
+            For memory private to the process, and when the kernel supports it, PAL adds <code>AMDGPU_GEM_CREATE_VM_ALWAYS_VALID</code>.</li>
+          <li><b>Map:</b> <code>AMDGPU_GEM_VA</code> maps the BO at the VA. That is the second and last ioctl for the
+            allocation.</li>
+          <li><b>Residency:</b> XGL calls <code>AddMemReference</code>, but because the BO is always-valid, the per-queue
+            reference maps skip it and it never appears in a BO list.</li>
+          <li><b>CPU map:</b> <code>vkMapMemory</code> passes PAL's CPU-visible check, then libdrm does one
+            <code>AMDGPU_GEM_MMAP</code> ioctl and an <code>mmap</code>. CPU writes through the pointer are
+            write-combined (fast); reads through it are very slow.</li>
+        </ol>
+        <h3>2. A 256 MiB device-local image heap</h3>
+        <ol>
+          <li>The first DEVICE_LOCAL type is the Invisible type, so <code>heaps[0]</code> = <code>GpuHeapInvisible</code>.</li>
+          <li><code>AMDGPU_GEM_CREATE</code> with domain VRAM and <code>AMDGPU_GEM_CREATE_NO_CPU_ACCESS</code>: the kernel may
+            place it outside the CPU-visible BAR window.</li>
+          <li>Calling <code>vkMapMemory</code> on it (which the Vulkan spec forbids anyway) reaches PAL's
+            <code>ErrorNotMappable</code> branch and returns <code>VK_ERROR_MEMORY_MAP_FAILED</code>
+            (<a data-ref="ex_mem_map_failed">vk_memory.cpp</a>).</li>
+        </ol>
+        <h3>3. The same requests on a Resizable BAR system</h3>
+        <ol>
+          <li>PAL reports an Invisible heap of size 0. XGL still exposes the device-local type, but routes it to
+            <code>GpuHeapLocal</code>.</li>
+          <li>PAL's amdgpu layer gives Invisible the same domain and flags as Local, so all VRAM is CPU-mappable.</li>
+        </ol>
+      </div>
+
 
       <div class="prose">
       <h2 id="heaps">How heaps and memory types are derived</h2>
@@ -127,6 +173,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
 <script src="assets/data/search-index.js"></script>
 <script src="assets/site.js"></script>
 </body>

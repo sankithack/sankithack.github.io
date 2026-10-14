@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Command buffers &amp; PM4 · AMDVLK Driver Atlas</title>
+<title>Command buffers &amp; PM4 – AMDVLK Driver Atlas</title>
 <meta name="description" content="vkBeginCommandBuffer and vkCmdDraw through XGL into PAL's ICmdBuffer, chunk allocation, and the PM4 packets PAL's hardware layers build, with an annotated DRAW_INDEX_AUTO.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body data-page="cmdbuf">
@@ -15,7 +18,7 @@
   <div class="main">
     <header class="topbar" id="topbar"></header>
     <main id="main" class="content">
-      <h1>4 · Command buffers &amp; PM4</h1>
+      <h1>Command buffers &amp; PM4</h1>
       <p class="lede">Recording a Vulkan command buffer means PAL writing PM4 packets into chunks of GPU-visible memory.
         Nothing reaches the kernel until submission. This page follows <code>vkCmdDraw</code> down to the three DWORDs it
         produces and takes them apart bit by bit.</p>
@@ -63,6 +66,47 @@
 
       <h2 id="trace">Step-through: vkBeginCommandBuffer → vkCmdDraw → PM4</h2>
       <div data-flow="cmdbuf"></div>
+
+      <h2 id="example">Worked example: the PM4 for one draw and one dispatch</h2>
+      <div class="example-walk">
+<pre class="example"><code class="language-c ex">vkBeginCommandBuffer(cmd, &amp;begin);
+vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gfxPipeline);
+vkCmdDraw(cmd, 3, 1, 0, 0);
+vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, csPipeline);
+vkCmdDispatch(cmd, 64, 1, 1);
+vkEndCommandBuffer(cmd);</code></pre>
+        <h3>The draw, on a GFX10/11 GPU</h3>
+        <ol>
+          <li><b>Validation packets first.</b> <code>ValidateDraw</code> writes whatever is dirty: the pipeline's shader
+            and context registers (<code>SET_SH_REG</code> and <code>SET_CONTEXT_REG</code>, or packed register pairs on GFX11), user-data SGPRs (descriptor table
+            pointers, the vertex offset), viewport and scissor. Because the instance count changed from "unknown" to 1,
+            it also emits <code>NUM_INSTANCES</code>: header <code class="nv">0xC0002F00</code> (opcode 0x2F, count 0), then
+            <code class="nv">0x00000001</code>.</li>
+          <li><b>The draw packet:</b> <code class="nv">0xC0012D00 0x00000003 0x00000002</code>. That is the type-3 header for
+            <code>IT_DRAW_INDEX_AUTO</code>, a vertex count of 3, and <code>VGT_DRAW_INITIATOR</code> with
+            <code>SOURCE_SELECT</code> = auto-index. Reproduce it in the <a href="#pm4">packet widget</a>.</li>
+        </ol>
+        <h3>The dispatch</h3>
+        <ol>
+          <li><b>Validation:</b> <code>ValidateDispatchPalAbi</code> writes the compute shader's registers and user data.</li>
+          <li><b>The packet:</b> 5 DWORDs (<code>PM4_ME_DISPATCH_DIRECT_SIZEDW__CORE</code> = 5).
+            <ul>
+              <li>Header <code class="nv">0xC0031502</code>: type 3, count 5 − 2 = 3, opcode <code>IT_DISPATCH_DIRECT</code> = 0x15,
+                shader type 1 (<code>ShaderCompute</code>).</li>
+              <li><code>dim_x</code> = 64, <code>dim_y</code> = 1, <code>dim_z</code> = 1.</li>
+              <li><code>dispatch_initiator</code> = <code class="nv">0x00000045</code> for a wave64 shader: <code>COMPUTE_SHADER_EN</code>
+                (bit 0), <code>FORCE_START_AT_000</code> (bit 2, because the universal command buffer instantiates
+                <code>BuildDispatchDirect&lt;false, true&gt;</code>) and <code>ORDER_MODE</code> (bit 6). A wave32 shader
+                adds <code>CS_W32_EN</code> (bit 15) to give <code class="nv">0x00008045</code>
+                (<a data-ref="ex_dispatch_initiator">wave32 bit</a>).</li>
+            </ul></li>
+        </ol>
+        <h3>Where it all lives</h3>
+        <p>All of these DWORDs go into the command buffer's draw-engine stream (<code>m_deCmdStream</code>), in a chunk
+          from the pool's <code>CommandDataAlloc</code>. At <code>vkEndCommandBuffer</code> the stream is closed, and at
+          submit its first chunk becomes one IB (<a href="submit.html#ibs">Topic 5</a>).</p>
+      </div>
+
 
       <h2 id="pm4">Anatomy of a real packet: DRAW_INDEX_AUTO</h2>
       <div class="prose">
@@ -120,6 +164,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
 <script src="assets/data/search-index.js"></script>
 <script src="assets/site.js"></script>
 </body>

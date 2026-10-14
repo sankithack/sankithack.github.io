@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Code reference – AMDVLK Driver Atlas</title>
+<meta name="description" content="Searchable tables of AMDVLK's Vulkan entry points, PAL interfaces, driver settings, libdrm functions, kernel ioctls, PM4 opcodes, compiler passes and extensions.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="reference">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>Code reference</h1>
+      <p class="lede">Lookup tables extracted from the sources by <code class="nv">tools/extract.py</code>, one row per item,
+        each linked to its definition at the pinned commit. Use the tabs, filter as you type, and link to any row: the
+        address bar keeps the tab and filter.</p>
+      <div id="ref-app"><p class="placeholder">The reference needs JavaScript and <code class="nv">assets/data/reference.js</code>.</p></div>
+      <div class="prose">
+      <h2 id="how-made">How these tables are made, and their limits</h2>
+      <ul>
+        <li><b>Entry points:</b> names come from XGL's <code>DispatchTable::Init</code>. "First call in its body" is the
+          first method call found in the implementation, resolved to its class where the handle conversion makes that
+          clear. It is a pointer for reading, not a full call graph.</li>
+        <li><b>PAL interfaces:</b> public methods of the <code>I*</code> classes in <code class="nv">pal/inc/core</code>, with the
+          first sentence of each doc comment.</li>
+        <li><b>Settings:</b> every setting, and every field of struct settings, in XGL's and PAL's settings files.
+          Defaults are shown as written there; some differ per OS.</li>
+        <li><b>libdrm and ioctls:</b> ioctl names are the ones literally present in each function body. Calls through
+          helpers show up under "Calls" rather than "Ioctls".</li>
+        <li><b>PM4 opcodes:</b> "refs" counts lines in each hardware layer that mention the opcode, including table entries.</li>
+        <li><b>Extensions:</b> the condition shown is the nearest enclosing <code>if</code>; deeper conditions and runtime
+          checks elsewhere are not captured.</li>
+      </ul>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Use cases and settings – AMDVLK Driver Atlas</title>
+<meta name="description" content="Practical debugging, profiling and shader workflows for AMDVLK, each tied to the driver setting that enables it and the code that reads it.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="usecases">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>Use cases and driver settings</h1>
+      <p class="lede">Concrete things you can do with this driver, each tied to the setting that enables it and the line
+        of code that reads that setting. Every setting name below is checked against the settings files at the pinned
+        commit.</p>
+
+      <div class="prose">
+      <h2 id="how">How settings are applied</h2>
+      <p>The <a data-ref="readme_settings">AMDVLK README</a> says to put one <code class="nv">name,value</code> pair per line
+        in <code class="nv">amdVulkanSettings.cfg</code> or <code class="nv">amdPalSettings.cfg</code>, in
+        <code class="nv">/etc/amd</code> or the directory named by <code class="nv">$AMD_CONFIG_DIR</code>. Lines starting with
+        <code class="nv">;</code> are comments, and settings are read only when a device is created, so restart the
+        application after editing. Enum settings take the number shown in the <a href="reference.html#settings">code
+        reference</a>; bitmask settings take the sum of their bits.</p>
+      <p>Every XGL and PAL setting, with its type, default, allowed values and description, is in the
+        <a href="reference.html#settings">settings tab</a>.</p>
+      <div class="callout warn"><p><b>The README is out of date in two places.</b> It lists
+        <a data-ref="readme_vmalwaysvalid">EnableVmAlwaysValid</a> and <a data-ref="readme_diskcache">AllowVkPipelineCachingToDisk</a>,
+        but neither name exists in any settings file at the pinned commits. Their entries below were replaced by the
+        settings that do exist.</p></div>
+      </div>
+
+      <h2 id="debug">Debugging correctness</h2>
+        <section class="uc" id="uc-hang">
+          <h3>Find the submission that hangs or corrupts the GPU</h3>
+          <p class="why">When a GPU hang or corrupted frame can't be pinned to one command buffer.</p>
+<pre class="cfg"><code class="cfg">WaitAfterSubmit,1</code></pre>
+          <p>XGL then waits for the queue to go idle after every PAL submission. With <code>multiSubmitChaining</code> off, <code>PalQueueSubmit</code> also submits command buffers one at a time, so a hang shows up right after the offending one. Expect a large slowdown.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/WaitAfterSubmit">WaitAfterSubmit</a>, <a href="reference.html#settings/MultiSubmitChaining">MultiSubmitChaining</a>. Read at: <a data-ref="uc_wait_after_submit"></a>, <a data-ref="uc_multi_submit"></a></p>
+          <p class="callout warn">The README also suggests <a href="reference.html#settings/IdleAfterSubmitGpuMask">IdleAfterSubmitGpuMask</a>. It is defined in <a data-ref="uc_idle_after_submit">settings_core.json</a>, but no source file in the pinned PAL reads its value, so it has no effect in this build.</p>
+        </section>
+        <section class="uc" id="uc-barriers">
+          <h3>Check whether a bug is a missing barrier</h3>
+          <p class="why">When rendering is wrong only sometimes, or only on some GPUs: a classic sign of a missing pipeline barrier.</p>
+<pre class="cfg"><code class="cfg">DbgBarrierPostCmdEnable,0x8FFFFFFF</code></pre>
+          <p>XGL inserts a full barrier after every command in the mask (<code>DbgBarrierPostCmd</code> runs after draws, dispatches, copies and so on). If the bug disappears, a barrier is missing. Narrow it down with the individual bits, e.g. <code>DbgBarrierDrawIndexed</code> = 2 or <code>DbgBarrierDispatch</code> = 8.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/DbgBarrierPostCmdEnable">DbgBarrierPostCmdEnable</a>. Read at: <a data-ref="uc_dbg_barrier"></a></p>
+          <p class="callout warn">The setting's own description says it requires a driver built with <code class="nv">VKI_ENABLE_DEBUG_BARRIERS=1</code>.</p>
+        </section>
+        <section class="uc" id="uc-residency">
+          <h3>Rule out a residency or eviction bug</h3>
+          <p class="why">When a crash or corruption might be caused by memory being evicted or missing from a submission's BO list.</p>
+<pre class="cfg"><code class="cfg">AlwaysResident,1</code></pre>
+          <p>PAL creates every BO with <code>AMDGPU_GEM_CREATE_NO_EVICT</code> and stops building BO lists on submit (the <code>alwaysResident</code> checks in <code>AllocateOrPinMemory</code> and <code>OsSubmit</code>). If the problem goes away, look at memory residency (<a href="memory.html#residency">Topic 2</a>).</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/AlwaysResident">AlwaysResident</a>. Read at: <a data-ref="uc_always_resident_alloc"></a>, <a data-ref="uc_always_resident_submit"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-zero">
+          <h3>Zero new VRAM allocations (already the default here)</h3>
+          <p class="why">When results depend on stale memory contents.</p>
+<pre class="cfg"><code class="cfg">InitializeVramToZero,1</code></pre>
+          <p>XGL passes <code>initializeToZero</code> to PAL, which adds <code>AMDGPU_GEM_CREATE_VRAM_CLEARED</code> to VRAM allocations. The upstream kernel checked out here already sets that flag on every GEM create (its comment says "always clear VRAM"), so with this kernel new VRAM is zeroed either way and the setting changes nothing.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/InitializeVramToZero">InitializeVramToZero</a> (default true on Linux). Read at: <a data-ref="uc_init_vram"></a>, <a data-ref="uc_vram_cleared"></a>, <a data-ref="k_always_clear"></a></p>
+          
+        </section>
+
+      <h2 id="shaders">Shaders and pipelines</h2>
+        <section class="uc" id="uc-dump">
+          <h3>Dump every pipeline, its SPIR-V and the compiled code</h3>
+          <p class="why">When a shader looks miscompiled, or you want the ISA of a hot pipeline.</p>
+<pre class="cfg"><code class="cfg">EnablePipelineDump,1
+PipelineDumpDir,spvPipeline</code></pre>
+          <p>Every pipeline creation writes a <code class="nv">.pipe</code> file (the full <code>Vkgc</code> build info) and the SPIR-V of its shaders, named by pipeline hash. The README says the directory is relative to <code class="nv">$AMD_DEBUG_DIR</code>, <code class="nv">$TMPDIR</code> or <code class="nv">/var/tmp</code>. A .pipe file can be recompiled offline with LLPC's standalone <code class="nv">amdllpc</code> tool.</p>
+          <p class="setting-facts">Settings: <a href="reference.html#settings/EnablePipelineDump">EnablePipelineDump</a>, <a href="reference.html#settings/PipelineDumpDir">PipelineDumpDir</a>. Read at: <a data-ref="uc_pipeline_dump"></a>. See <a data-ref="readme_dump"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-replace">
+          <h3>Replace one shader without rebuilding the application</h3>
+          <p class="why">When you want to test a fix to a shader you can't easily rebuild.</p>
+<pre class="cfg"><code class="cfg">ShaderReplaceMode,1
+ShaderReplaceDir,ShaderReplace</code></pre>
+          <p>With mode 1 (<code>ShaderReplaceShaderHash</code>), for a shader whose hash is AAA, a file <code class="nv">shader_0xAAA_replace.spv</code> in the replacement directory is used instead of the original SPIR-V. Other modes replace by pipeline hash (2, 3), by ISA (4), or both (5). Get the hashes from a pipeline dump first.</p>
+          <p class="setting-facts">Settings: <a href="reference.html#settings/ShaderReplaceMode">ShaderReplaceMode</a>, <a href="reference.html#settings/ShaderReplaceDir">ShaderReplaceDir</a>. Read at: <a data-ref="uc_shader_replace"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-cache">
+          <h3>Measure cold compile times or rule out a stale cache</h3>
+          <p class="why">When first-run stutter matters, or a bug might come from a cached binary.</p>
+<pre class="cfg"><code class="cfg">ShaderCacheMode,0</code></pre>
+          <p>Mode 0 (<code>ShaderCacheDisable</code>) stops XGL from giving LLPC its internal cache adapter, so caches 3 and 4 on <a href="shaders.html#caching">the shaders page</a> stay empty. Mode 2 (<code>ShaderCacheEnableOnDisk</code>) persists the cache to disk instead.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/ShaderCacheMode">ShaderCacheMode</a>. Read at: <a data-ref="uc_shader_cache"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-ngg">
+          <h3>Compare NGG against the legacy geometry path (GFX10 only)</h3>
+          <p class="why">When a geometry-heavy workload behaves differently than expected on GFX10.</p>
+<pre class="cfg"><code class="cfg">EnableNgg,0</code></pre>
+          <p><code>EnableNgg</code> is a bitmask of pipeline types: VS/FS = 1, GS = 2, tessellation = 4, tessellation + GS = 8 (default 1 | 4). XGL sets <code>nggState.enableNgg</code> per pipeline from it. On GFX11 and later LGC enables NGG regardless (<a href="shaders.html#gfx">the shaders page</a>).</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/EnableNgg">EnableNgg</a>. Read at: <a data-ref="uc_ngg"></a></p>
+          
+        </section>
+
+      <h2 id="perf">Performance</h2>
+        <section class="uc" id="uc-cpu-bound">
+          <h3>Find out whether you are CPU-bound</h3>
+          <p class="why">When you need to know how fast the application would run with an infinitely fast GPU.</p>
+<pre class="cfg"><code class="cfg">IFH,1</code></pre>
+          <p>Infinitely Fast Hardware. With <code>IfhModePal</code> (1), PAL replaces every submitted command buffer with a dummy one, so the GPU does almost no work. If the frame rate hardly changes, the bottleneck is on the CPU. Mode 2 (<code>IfhModeKmd</code>) instead creates kernel contexts with <code>AMDGPU_CTX_FLAGS_IFH</code>; that flag comes from PAL's own extension header (<code class="nv">amdgpu_drm_exts.h</code>) and is not in the upstream kernel uAPI checked out here, so use mode 1 on upstream kernels.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/IFH">IFH</a>. Read at: <a data-ref="uc_ifh_dummy"></a>, <a data-ref="uc_ifh_ctx"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-profile">
+          <h3>Time every draw on the GPU</h3>
+          <p class="why">When you need per-draw or per-command-buffer GPU timings without an external profiler.</p>
+<pre class="cfg"><code class="cfg">GpuProfilerMode,1
+GpuProfilerConfig.Granularity,0
+GpuProfilerConfig.StartFrame,100
+GpuProfilerConfig.FrameCount,1</code></pre>
+          <p>PAL inserts its GpuProfiler layer between XGL and the core, which records timestamps around each command. Granularity 0 is per draw, 1 per command buffer, 2 per frame. The README describes the CSV output and a <code class="nv">timingReport.py</code> script that summarizes it. Modes 2 and 3 also capture thread traces.</p>
+          <p class="setting-facts">Settings: <a href="reference.html#settings/GpuProfilerMode">GpuProfilerMode</a>, <a href="reference.html#settings/GpuProfilerConfig.Granularity">GpuProfilerConfig.Granularity</a>, <a href="reference.html#settings/GpuProfilerConfig.StartFrame">GpuProfilerConfig.StartFrame</a>, <a href="reference.html#settings/GpuProfilerConfig.FrameCount">GpuProfilerConfig.FrameCount</a>. Read at: <a data-ref="uc_profiler"></a>. See <a data-ref="readme_profiler"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-overlay">
+          <h3>Watch frame times and memory per heap live</h3>
+          <p class="why">When you want an on-screen view of FPS, CPU and GPU frame time, and how much memory each heap holds.</p>
+<pre class="cfg"><code class="cfg">DebugOverlayEnabled,1</code></pre>
+          <p>PAL wraps its platform in the debug-overlay layer, which draws on presented images. The memory ledger maps directly onto the heaps on <a href="memory.html#heaps">the memory page</a>.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/DebugOverlayEnabled">DebugOverlayEnabled</a>. Read at: <a data-ref="uc_overlay"></a>. See <a data-ref="readme_overlay"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-upload">
+          <h3>Make CPU writes to GART memory write-combined</h3>
+          <p class="why">When an application maps a HOST_CACHED memory type only to stream data to the GPU.</p>
+<pre class="cfg"><code class="cfg">OverrideHeapGartCacheableToUswc,1</code></pre>
+          <p>XGL silently moves allocations from <code>GpuHeapGartCacheable</code> to <code>GpuHeapGartUswc</code>. CPU writes become write-combined and fast, but CPU reads from those mappings become very slow, so only use it for write-only uploads.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/OverrideHeapGartCacheableToUswc">OverrideHeapGartCacheableToUswc</a>. Read at: <a data-ref="uc_gart_override"></a></p>
+          
+        </section>
+        <section class="uc" id="uc-mapping">
+          <h3>Stop repeated map/unmap from costing mmap calls</h3>
+          <p class="why">When an application maps and unmaps the same memory every frame.</p>
+<pre class="cfg"><code class="cfg">SkipUnMapMemory,1</code></pre>
+          <p>XGL keeps the first CPU mapping and returns it on later <code>vkMapMemory</code> calls, avoiding a <code>DRM_AMDGPU_GEM_MMAP</code> plus <code>mmap</code> each time.</p>
+          <p class="setting-facts">Setting: <a href="reference.html#settings/SkipUnMapMemory">SkipUnMapMemory</a>. Read at: <a data-ref="uc_skip_unmap"></a></p>
+          
+        </section>
+
+      <div class="prose">
+      <h2 id="learning">Use cases for learning the codebase</h2>
+      <ul>
+        <li><b>Answer "what does this Vulkan call do in the driver?"</b> Find it in the
+          <a href="reference.html#entrypoints">entry-point table</a>; its first call takes you to the XGL method, and the
+          topic pages take it further down.</li>
+        <li><b>Answer "which ioctl does this end in?"</b> The <a href="reference.html#drmprocs">PAL → libdrm</a> tab maps
+          each libdrm function PAL calls to the ioctl its body issues and to the kernel handler.</li>
+        <li><b>Read an unfamiliar PM4 dump.</b> Look up the opcode byte in the <a href="reference.html#pm4">PM4 tab</a>,
+          then use the <a href="cmdbuf.html#pm4">packet widget</a> to decode a header.</li>
+        <li><b>Understand a compile-time difference between GPUs.</b> The <a href="reference.html#passes">compiler
+          passes</a> tab shows which LGC passes are conditional on the GFX level.</li>
+      </ul>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

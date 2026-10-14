@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shader compilation · AMDVLK Driver Atlas</title>
+<title>Shader compilation – AMDVLK Driver Atlas</title>
 <meta name="description" content="VkShaderModule and pipeline creation in XGL, handoff to LLPC, SPIR-V to LLVM IR, LGC lowering, the AMDGPU backend, the PAL ELF, caching and GFX-level differences.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body data-page="shaders">
@@ -15,7 +18,7 @@
   <div class="main">
     <header class="topbar" id="topbar"></header>
     <main id="main" class="content">
-      <h1>3 · Shader compilation</h1>
+      <h1>Shader compilation</h1>
       <p class="lede">AMDVLK compiles <em>pipelines</em>, not shaders. A shader module is only hashed and preprocessed;
         when a pipeline is created, LLPC translates each stage's SPIR-V to LLVM IR, links the stages into one module,
         lowers it with full knowledge of the pipeline state, and has LLVM emit a single ELF that PAL loads.</p>
@@ -41,6 +44,45 @@
 
       <h2 id="trace">Step-through: shader module → pipeline → ELF → PAL</h2>
       <div data-flow="shaders"></div>
+
+      <h2 id="example">Worked example: the same pipeline, created twice</h2>
+      <div class="example-walk">
+<pre class="example"><code class="language-c ex">VkGraphicsPipelineCreateInfo info = {
+    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+    .stageCount = 2, .pStages = stages,             /* vertex + fragment SPIR-V */
+    .pVertexInputState = &amp;vertexInput,             /* binding 0: R32G32B32_SFLOAT position */
+    .pColorBlendState = &amp;blend, .layout = layout,  /* render target: B8G8R8A8_UNORM */
+    /* ... */ };
+vkCreateGraphicsPipelines(device, cache, 1, &amp;info, NULL, &amp;pipeA);
+vkCreateGraphicsPipelines(device, cache, 1, &amp;info, NULL, &amp;pipeB);   /* identical */</code></pre>
+        <h3>First creation: everything misses</h3>
+        <ol>
+          <li><b>Cache lookups:</b> the shader modules were hashed at <code>vkCreateShaderModule</code>.
+            <code>GetCachedPipelineBinary</code> misses in <code>cache</code> and in XGL's internal binary cache.</li>
+          <li><b>State capture:</b> <code>ConvertGraphicsPipelineInfo</code> records, among other things, the vertex
+            format (<a data-ref="ex_vertex_input">BuildVertexInputInterfaceState</a>), the colour format and blend
+            (<a data-ref="ex_frag_output">BuildFragmentOutputInterfaceState</a>) and the descriptor layout
+            (<a data-ref="ex_resource_mapping">BuildPipelineResourceMapping</a>).</li>
+          <li><b>LLPC:</b> each stage's SPIR-V becomes LLVM IR, the two modules are linked, and LGC lowers them. The state
+            above is consumed here: <a data-ref="ex_lower_vertex_fetch">LowerVertexFetch</a> generates loads that
+            unpack three floats, <a data-ref="ex_lower_color_export">LowerFragmentColorExport</a> converts the output to
+            the B8G8R8A8 export format, and <a data-ref="ex_lower_desc">LowerDesc</a> turns resource accesses into loads
+            relative to user-data pointers.</li>
+          <li><b>Codegen:</b> on a GFX11 GPU the target is <code>gfx1100</code> (for example), NGG is forced on, and the
+            vertex shader becomes part of an NGG primitive shader. LLVM emits ISA plus PAL metadata into one ELF.</li>
+          <li><b>PAL:</b> the ELF is uploaded to GPU memory and the register values are prepared. On a cache-enabled
+            device the ELF is also stored in the caches.</li>
+        </ol>
+        <h3>Second creation: one lookup</h3>
+        <p>The cache ID is the same, so <code>GetCachedPipelineBinary</code> hits (in <code>cache</code> if the app passed
+          one, otherwise in XGL's internal cache) and LLPC is never called. Only the PAL pipeline object is created again
+          from the cached ELF.</p>
+        <h3>What a different state would do</h3>
+        <p>Change the render-target format to R16G16B16A16_SFLOAT and the colour export code changes, so it is a new
+          pipeline compile. LGC's per-stage cache (<code>CheckShaderCache</code>) is designed to let the unchanged vertex stage be
+          reused.</p>
+      </div>
+
 
       <div class="prose">
       <h2 id="spirv">SPIR-V → LLVM IR</h2>
@@ -133,6 +175,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
 <script src="assets/data/search-index.js"></script>
 <script src="assets/site.js"></script>
 </body>
