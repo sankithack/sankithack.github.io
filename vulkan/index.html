@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · AMDVLK Driver Atlas</title>
+<meta name="description" content="An interactive, source-grounded walk through AMD's open-source Vulkan driver stack: XGL, PAL, LLPC, libdrm and the amdgpu kernel driver.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="index">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>AMDVLK, from <code>vkCmdDraw</code> to the GPU ring</h1>
+      <p class="lede">An interactive guide to AMD's open-source Vulkan driver, built from its actual source code. Every
+        class, function and file named here exists in the pinned checkouts, and every code panel links to the exact lines
+        on GitHub or GitLab.</p>
+
+      <div class="callout warn" id="status">
+        <div class="callout-title">Project status: discontinued, repositories archived</div>
+        <p><b>AMDVLK is discontinued.</b> The first line of the AMDVLK README reads <em>“This project is discontinued”</em>
+          (with a link to discussion #416). The GitHub API reports the
+          <b>xgl</b>, <b>pal</b>, <b>llpc</b> and <b>llvm-project</b> (GPUOpen fork) repositories as
+          <span class="badge-arch">archived</span> (read-only). The top-level AMDVLK repository is not marked archived,
+          but its README carries the notice. The final xgl/pal/llpc commits are dated <b>2025-04-29</b>.</p>
+        <p>libdrm and the Linux amdgpu driver are actively developed. Their checkouts here are newer (2026) than the
+          AMDVLK code, so kernel line numbers match the pinned Linux SHA, not necessarily the kernel AMDVLK was last
+          tested on. See <a href="versions.html">Sources, SHAs &amp; status</a>.</p>
+      </div>
+
+      <h2 id="stack">The stack, layer by layer</h2>
+      <p>Click a layer for its responsibilities, its key classes and links into the code. On each topic page, a smaller
+        copy of this diagram follows the stepper and highlights the layer the current step runs in.</p>
+      <div data-diagram="xgl"></div>
+      <p>LLPC is drawn beside XGL because it isn't a layer that calls go <em>through</em>. It is a compiler library that
+        XGL calls into (<a data-ref="xgl_llpc_create">Llpc::ICompiler::Create</a>) and that returns an ELF. PAL then loads
+        that ELF.</p>
+
+      <h2 id="start-here">Start here: a reading order</h2>
+      <ol class="path">
+        <li><b><a href="architecture.html">Architecture &amp; loader entry</a></b>: how the Vulkan loader finds the
+          driver, how a <code>VkDevice</code> handle becomes a C++ object, and how XGL objects own PAL objects. Read this
+          first; the patterns repeat everywhere.</li>
+        <li><b><a href="memory.html">Memory allocation</a></b>: the simplest end-to-end path through all six software
+          layers, and the place to learn the BO/VA/residency vocabulary used in every later topic.</li>
+        <li><b><a href="cmdbuf.html">Command buffers &amp; PM4</a></b>: what recording a draw actually writes, with a
+          bit-level breakdown of a real <code>DRAW_INDEX_AUTO</code> packet.</li>
+        <li><b><a href="submit.html">Submission &amp; sync</a></b>: how those command chunks become IBs in a CS ioctl,
+          how the kernel puts them on a ring, and how fences and semaphores map to DRM syncobjs.</li>
+        <li><b><a href="shaders.html">Shader compilation</a></b>: the deepest topic: SPIR-V → LLVM IR → LGC → AMDGPU ISA →
+          ELF → PAL. Read it last, or first if compilers are your thing.</li>
+        <li>Keep the <a href="glossary.html">glossary</a> open. Dotted-underlined terms show definitions on hover.
+          Press <kbd>/</kbd> to search.</li>
+      </ol>
+
+      <h2 id="traces">The five traces</h2>
+      <div class="cards">
+        <a class="card" href="architecture.html"><span class="k">TOPIC 1</span><b>Loader → XGL → PAL</b><span>ICD entry, dispatch tables, handle wrapping, HWL selection, where LLPC is created.</span></a>
+        <a class="card" href="memory.html"><span class="k">TOPIC 2</span><b>vkAllocateMemory</b><span>Heaps → domains, VA reservation vs. BO creation vs. GEM_VA mapping, residency, mmap.</span></a>
+        <a class="card" href="shaders.html"><span class="k">TOPIC 3</span><b>Pipelines → LLPC → ELF</b><span>SPIRV reader, LGC passes, NGG, AMDGPU backend, PAL metadata, four cache layers.</span></a>
+        <a class="card" href="cmdbuf.html"><span class="k">TOPIC 4</span><b>vkCmdDraw → PM4</b><span>Command chunks, function-pointer dispatch, packet builders, barriers.</span></a>
+        <a class="card" href="submit.html"><span class="k">TOPIC 5</span><b>vkQueueSubmit → ring</b><span>IBs, BO lists, CS chunks, scheduler, INDIRECT_BUFFER, syncobjs.</span></a>
+      </div>
+
+      <h2 id="findings">Five facts that surprise newcomers</h2>
+      <ol>
+        <li><b>This PAL and LLPC cannot target GFX9 (Vega).</b> PAL's <code>GfxIpLevel</code> starts at
+          <code>GfxIp10_1</code> and LLPC asserts <code>gfxIp.major &gt;= 10</code>. The AMDVLK README sends pre-GFX10
+          users to the 2023.Q3.3 release. This site therefore covers GFX10, GFX11 and GFX12.</li>
+        <li><b>PAL's <code>hw/gfxip/gfx9</code> directory is the GFX10–GFX11.5 hardware layer.</b>
+          <a data-ref="pal_hwl_select">Device creation</a> sends 10.1, 10.3, 11.0 and 11.5 to <code>Gfx9::CreateDevice</code>.
+          Only GFX12 has its own layer.</li>
+        <li><b>Reserving GPU virtual address space never reaches the kernel.</b> libdrm's
+          <a data-ref="drm_va_range_alloc">amdgpu_va_range_alloc</a> is a user-space allocator. The kernel first sees the
+          address when a BO is mapped there with <code>DRM_AMDGPU_GEM_VA</code>.</li>
+        <li><b>Every <code>VkDeviceMemory</code> is resident for its whole life.</b> XGL adds each allocation to PAL's
+          device-global reference list at creation (<a data-ref="xgl_addmemref">Device::AddMemReference</a>), and that list
+          becomes the BO list of every submission.</li>
+        <li><b>Shader modules aren't compiled to ISA.</b> <code>vkCreateShaderModule</code> only hashes and preprocesses
+          the SPIR-V. Codegen happens per <em>pipeline</em>, because LGC needs vertex formats, color formats and the
+          descriptor layout to lower the shaders.</li>
+      </ol>
+
+      <h2 id="how-to-read">How to read the code panels</h2>
+      <ul>
+        <li>The header shows <code class="nv">repo / path  Lstart–end</code>. The link opens the full file at the pinned
+          commit, with those lines highlighted.</li>
+        <li>Excerpts are cut from the source by a script (<code class="nv">tools/build.py</code>), never retyped. They
+          are at most 30 lines, so they often stop mid-function; follow the link for the rest.</li>
+        <li>Each panel has an <b>Explain</b> note in plain language. Where something couldn't be traced from the cloned
+          source, the page says <span class="not-traced">not traced</span> rather than guessing.</li>
+      </ul>
+
+      <footer class="foot">Built from the pinned sources listed on <a href="versions.html">Sources, SHAs &amp; status</a>.
+        Excerpts © their respective authors under their original licenses: MIT for AMDVLK, xgl, pal and llpc;
+        MIT-style permission notices on the libdrm and Linux amdgpu files shown; Apache-2.0 with LLVM exceptions for
+        LLVM. Individual files may carry their own headers.</footer>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>
