@@ -134,7 +134,7 @@ DRV.layers = [
  },
  {
   "id": "llpc",
-  "name": "LLPC \u00b7 LGC \u00b7 LLVM",
+  "name": "LLPC / LGC / LLVM",
   "sub": "Pipeline compiler (in-process library)",
   "resp": [
    "LLPC front end: SPIR-V \u2192 LLVM IR (SPIRV reader) plus API-level lowering.",
@@ -3052,6 +3052,660 @@ DRV.flows = {
     "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuQueue.cpp#L607-L636"
    }
   ]
+ },
+ "descriptors": {
+  "title": "Descriptor sets: layout \u2192 pool \u2192 update \u2192 bind \u2192 shader load",
+  "page": "descriptors.html",
+  "steps": [
+   {
+    "id": "ds-sizes",
+    "title": "How big is each binding?",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_set_layout.cpp",
+    "explain": "A descriptor set is a block of GPU memory holding hardware descriptors (SRDs). When the layout is created, every binding gets a size from PAL's SRD sizes: images use <code>imageView</code>, texel buffers use <code>typedBufferView</code>, uniform and storage buffers use <code>untypedBufferView</code>. <b>Dynamic</b> buffers take no space in the set: their SRDs live in user-data registers instead (see the bind step).",
+    "symbols": [
+     "descriptorSizes.imageView",
+     "descriptorSizes.untypedBufferView",
+     "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC"
+    ],
+    "refs": [],
+    "start": 156,
+    "end": 185,
+    "code": "    case VK_DESCRIPTOR_TYPE_SAMPLER:\n        size = descriptorSizes.sampler;\n        break;\n\n    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:\n        size = descriptorSizes.combinedImageSampler;\n        break;\n\n    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:\n    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:\n    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:\n        size = descriptorSizes.imageView;\n        break;\n\n    case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:\n    case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:\n        size = descriptorSizes.typedBufferView;\n        break;\n    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:\n    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:\n#if VKI_RAY_TRACING\n    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:\n#endif\n        size = descriptorSizes.untypedBufferView;\n        break;\n    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:\n    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:\n        // Currently we don't use any storage in the static section of descriptor sets for dynamic buffer descriptors\n        // as we pack the whole buffer SRD in the dynamic section (i.e. user data registers).\n        size = 0;",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set_layout.cpp#L156-L185"
+   },
+   {
+    "id": "ds-srdsizes",
+    "title": "SRD sizes come from the hardware layer",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/hw/gfxip/gfx9/gfx9Device.cpp",
+    "explain": "On GFX10/11 a buffer SRD is <code>BufferSrd</code> (4 DWORDs) and an image SRD is <code>ImageSrd</code> (8 DWORDs). XGL reports the same values to applications through <code>VK_EXT_descriptor_buffer</code> properties, and they are the strides used inside a set.",
+    "symbols": [
+     "sizeof(BufferSrd)",
+     "sizeof(ImageSrd)"
+    ],
+    "refs": [
+     {
+      "label": "GFX12 SRD sizes",
+      "loc": "src/core/hw/gfxip/gfx12/gfx12Device.cpp:319",
+      "repo": "pal",
+      "anchor": "pInfo->srdSizes.imageView         = sizeof(sq_img_rsrc_t);",
+      "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx12/gfx12Device.cpp#L319-L319"
+     },
+     {
+      "label": "exposed as descriptor-buffer properties",
+      "loc": "icd/api/vk_physical_device.cpp:8920",
+      "repo": "xgl",
+      "anchor": "pProps->sampledImageDescriptorSize               = palProps.gfxipProperties.srdSizes.imageView;",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_physical_device.cpp#L8920-L8920"
+     }
+    ],
+    "start": 6512,
+    "end": 6515,
+    "code": "    pInfo->srdSizes.typedBufferView   = sizeof(BufferSrd);\n    pInfo->srdSizes.untypedBufferView = sizeof(BufferSrd);\n    pInfo->srdSizes.imageView         = sizeof(ImageSrd);\n    pInfo->srdSizes.fmaskView         = sizeof(ImageSrd);",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9Device.cpp#L6512-L6515"
+   },
+   {
+    "id": "ds-pool",
+    "title": "A pool is one CPU-mapped GPU allocation",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_pool.cpp",
+    "explain": "<code>vkCreateDescriptorPool</code> allocates the pool's memory once, from XGL's internal memory manager's descriptor-table pool (<code>InternalPoolDescriptorTable</code>), and keeps both its GPU address and a CPU pointer. Writing a descriptor is therefore a plain CPU store into GPU-visible memory. There is no command or ioctl per update.",
+    "symbols": [
+     "InternalPoolDescriptorTable",
+     "AllocGpuMem",
+     "staticCpuAddr",
+     "staticGpuAddr"
+    ],
+    "refs": [],
+    "start": 171,
+    "end": 200,
+    "code": "                InternalMemCreateInfo allocInfo = {};\n\n                allocInfo.pal.size      = memReqs.size;\n                allocInfo.pal.alignment = memReqs.alignment;\n                allocInfo.pal.priority  = m_pDevice->GetRuntimeSettings().enableHighPriorityDescriptorMemory ?\n                                            Pal::GpuMemPriority::High :\n                                            Pal::GpuMemPriority::Normal;\n\n                pDevice->MemMgr()->GetCommonPool(InternalPoolDescriptorTable, &allocInfo);\n\n                allocInfo.flags.needShadow = m_pDevice->GetRuntimeSettings().enableFmaskBasedMsaaRead;\n\n                result = pDevice->MemMgr()->AllocGpuMem(\n                    allocInfo,\n                    &m_staticInternalMem,\n                    pDevice->GetPalDeviceMask(),\n                    VK_OBJECT_TYPE_DESCRIPTOR_POOL,\n                    DescriptorPool::IntValueFromHandle(DescriptorPool::HandleFromObject(this)));\n\n                if (result != VK_SUCCESS)\n                {\n                    return result;\n                }\n\n                m_gpuMemHeap.BindMemory(&m_staticInternalMem);\n\n                for (uint32_t deviceIdx = 0; deviceIdx < MaxPalDevices; deviceIdx++)\n                {\n                    m_addresses[deviceIdx].staticGpuAddr = m_staticInternalMem.GpuVirtAddr(deviceIdx);\n                    m_addresses[deviceIdx].staticCpuAddr = static_cast<uint32_t*>(m_gpuMemHeap.CpuAddr(deviceIdx));",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_pool.cpp#L171-L200"
+   },
+   {
+    "id": "ds-alloc",
+    "title": "vkAllocateDescriptorSets carves a range out of the pool",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_pool.cpp",
+    "explain": "A set's size is the layout's static section (<code>sta.dwSize</code>), adjusted for a variable-count last binding. Pools created <em>without</em> <code>VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT</code> use a bump allocator (<code>oneShot</code>), which is just an aligned offset increment. Pools that allow freeing go through a slower general allocator.",
+    "symbols": [
+     "oneShot",
+     "sta.dwSize",
+     "VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT"
+    ],
+    "refs": [],
+    "start": 762,
+    "end": 791,
+    "code": "    // Figure out the byte size and alignment\n    uint32_t byteSize = 0;\n    if (variableDescriptorCounts > 0)\n    {\n        uint32_t lastBindingIdx      = pLayout->Info().count - 1;\n        uint32_t varBindingStaDWSize = pLayout->Binding(lastBindingIdx).sta.dwSize;\n\n        // Total size = STA section size - last binding STA size + last binding variable descriptor count size\n        byteSize = (pLayout->Info().sta.dwSize - varBindingStaDWSize) * sizeof(uint32_t) +\n                   (pLayout->Info().varDescStride * variableDescriptorCounts);\n    }\n    else\n    {\n        byteSize = pLayout->Info().sta.dwSize * sizeof(uint32_t);\n    }\n\n    const uint32_t alignment = m_gpuMemAddrAlignment;\n\n    if (byteSize == 0)\n    {\n        *pSetAllocHandle  = nullptr;\n        *pSetGpuMemOffset = 0;\n\n        return true;\n    }\n\n    bool oneShot = (m_usage & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT) == 0;\n\n    // For one-shot allocations, allocate forwards from the one-shot range until you hit the dynamic range\n    if (oneShot)",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_pool.cpp#L762-L791"
+   },
+   {
+    "id": "ds-update-entry",
+    "title": "vkUpdateDescriptorSets is specialised per device",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_set.cpp",
+    "explain": "The entry point jumps through the device's own entry-point table. At device creation XGL picks a template instantiation of the update function for this GPU's descriptor sizes and GPU count (<code>GetUpdateDescriptorSetsFunc</code>), so the per-descriptor work has no runtime size checks.",
+    "symbols": [
+     "GetEntryPoints().vkUpdateDescriptorSets"
+    ],
+    "refs": [
+     {
+      "label": "table filled at device creation",
+      "loc": "icd/api/vk_device.cpp:1504",
+      "repo": "xgl",
+      "anchor": "ep->vkUpdateDescriptorSets      = DescriptorUpdate::GetUpdateDescriptorSetsFunc(this);",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_device.cpp#L1504-L1504"
+     },
+     {
+      "label": "GetUpdateDescriptorSetsFunc",
+      "loc": "icd/api/vk_descriptor_set.cpp:972",
+      "repo": "xgl",
+      "anchor": "PFN_vkUpdateDescriptorSets DescriptorUpdate::GetUpdateDescriptorSetsFunc(",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set.cpp#L972-L972"
+     }
+    ],
+    "start": 1087,
+    "end": 1098,
+    "code": "VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(\n    VkDevice                                    device,\n    uint32_t                                    descriptorWriteCount,\n    const VkWriteDescriptorSet*                 pDescriptorWrites,\n    uint32_t                                    descriptorCopyCount,\n    const VkCopyDescriptorSet*                  pDescriptorCopies)\n{\n    const Device*             pDevice          = ApiDevice::ObjectFromHandle(device);\n\n    pDevice->GetEntryPoints().vkUpdateDescriptorSets(\n        device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);\n}",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set.cpp#L1087-L1098"
+   },
+   {
+    "id": "ds-write",
+    "title": "Find the destination address inside the set",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_set.cpp",
+    "explain": "For each <code>VkWriteDescriptorSet</code>, the destination is the set's CPU address plus the binding's offset in the static section plus the array element. The switch that follows picks a writer per descriptor type.",
+    "symbols": [
+     "StaticCpuAddress",
+     "GetDstStaOffset"
+    ],
+    "refs": [],
+    "start": 533,
+    "end": 554,
+    "code": "void DescriptorUpdate::WriteDescriptorSets(\n    const Device*                pDevice,\n    uint32_t                     deviceIdx,\n    uint32_t                     descriptorWriteCount,\n    const VkWriteDescriptorSet*  pDescriptorWrites)\n{\n    for (uint32_t i = 0; i < descriptorWriteCount; ++i)\n    {\n        const VkWriteDescriptorSet& params = pDescriptorWrites[i];\n\n        VK_ASSERT(params.sType == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET);\n\n        DescriptorSet<numPalDevices>* pDestSet  = DescriptorSet<numPalDevices>::ObjectFromHandle(params.dstSet);\n        const DescriptorSetLayout::BindingInfo& destBinding = pDestSet->Layout()->Binding(params.dstBinding);\n        uint32_t* pDestAddr = pDestSet->StaticCpuAddress(deviceIdx) +\n                              pDestSet->Layout()->GetDstStaOffset(destBinding, params.dstArrayElement);\n\n        uint32_t* pDestFmaskAddr = pDestSet->FmaskCpuAddress(deviceIdx) +\n                                   pDestSet->Layout()->GetDstStaOffset(destBinding, params.dstArrayElement);\n\n        // Determine whether the binding has immutable sampler descriptors.\n        bool hasImmutableSampler = (destBinding.imm.dwSize != 0);",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set.cpp#L533-L554"
+   },
+   {
+    "id": "ds-image",
+    "title": "Image descriptors: copy a pre-built SRD",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_set.cpp",
+    "explain": "Writing a sampled or storage image is a <code>memcpy</code> of an SRD that was built when the <code>VkImageView</code> was created. A null view writes zeros, which makes the hardware return zero for reads (null descriptors).",
+    "symbols": [
+     "memcpy(pDestAddr, pImageDesc, imageDescSize);",
+     "memset(pDestAddr, 0, imageDescSize);"
+    ],
+    "refs": [],
+    "start": 220,
+    "end": 246,
+    "code": "void DescriptorUpdate::WriteImageDescriptors(\n    const VkDescriptorImageInfo*    pDescriptors,\n    uint32_t                        deviceIdx,\n    uint32_t*                       pDestAddr,\n    uint32_t                        count,\n    uint32_t                        dwStride,\n    size_t                          descriptorStrideInBytes)\n{\n    const VkDescriptorImageInfo* pImageInfo      = pDescriptors;\n    const size_t                 imageInfoStride = (descriptorStrideInBytes != 0) ? descriptorStrideInBytes\n                                                                                  : sizeof(VkDescriptorImageInfo);\n\n    for (uint32_t arrayElem = 0; arrayElem < count; ++arrayElem, pDestAddr += dwStride)\n    {\n        if (pImageInfo->imageView == VK_NULL_HANDLE)\n        {\n            memset(pDestAddr, 0, imageDescSize);\n        }\n        else\n        {\n            const void* pImageDesc = ImageView::ObjectFromHandle(pImageInfo->imageView)->\n                Descriptor(deviceIdx, isShaderStorageDesc, imageDescSize);\n\n            memcpy(pDestAddr, pImageDesc, imageDescSize);\n        }\n\n        pImageInfo = static_cast<const VkDescriptorImageInfo*>(Util::VoidPtrInc(pImageInfo, imageInfoStride));",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set.cpp#L220-L246"
+   },
+   {
+    "id": "ds-imageview",
+    "title": "\u2026built once, at vkCreateImageView",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_image_view.cpp",
+    "explain": "<code>ImageView</code> asks PAL to encode the view (format, swizzle, mip and layer range, address and tiling of the image) into hardware form. Storage-image usage builds a second, read-write SRD next to it.",
+    "symbols": [
+     "CreateImageViewSrds"
+    ],
+    "refs": [],
+    "start": 188,
+    "end": 191,
+    "code": "        // Create a read-only SRD\n        VK_ASSERT(Pal::Result::Success == pDevice->PalDevice(deviceIdx)->ValidateImageViewInfo(info));\n\n        pDevice->PalDevice(deviceIdx)->CreateImageViewSrds(1, &info, pReadOnlySrd);",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_image_view.cpp#L188-L191"
+   },
+   {
+    "id": "ds-buffer",
+    "title": "Buffer descriptors: built at update time",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_descriptor_set.cpp",
+    "explain": "Uniform and storage buffers have no view object, so the SRD is encoded during the update: GPU address of the buffer plus offset, range (rounded up to a DWORD; <code>VK_WHOLE_SIZE</code> means to the end of the buffer), straight into the set's memory.",
+    "symbols": [
+     "CreateUntypedBufferViewSrds",
+     "VK_WHOLE_SIZE"
+    ],
+    "refs": [],
+    "start": 431,
+    "end": 456,
+    "code": "            info.gpuAddr = Buffer::ObjectFromHandle(pBufferInfo->buffer)->GpuVirtAddr(deviceIdx) + pBufferInfo->offset;\n\n            if (pDevice->UseCompactDynamicDescriptors() &&\n                ((type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) ||\n                 (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)))\n            {\n                pDestAddr[0] = Util::LowPart(info.gpuAddr);\n                pDestAddr[1] = Util::HighPart(info.gpuAddr);\n            }\n            else\n            {\n                if (pBufferInfo->range == VK_WHOLE_SIZE)\n                {\n                    info.range = reinterpret_cast<Buffer*>(pBufferInfo->buffer)->GetSize() - pBufferInfo->offset;\n                }\n                else\n                {\n                    info.range = pBufferInfo->range;\n                }\n\n                // Align the buffer range in srd to dword. This should be safe since the buffer memory size will be\n                // dword-aligned - we have an at least 4-byte alignment requirement in vkGetBufferMemoryRequirements.\n                info.range = Util::RoundUpToMultiple(info.range, static_cast<Pal::gpusize>(sizeof(uint32_t)));\n\n                pPalDevice->CreateUntypedBufferViewSrds(1, &info, pDestAddr);\n            }",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set.cpp#L431-L456"
+   },
+   {
+    "id": "ds-srd",
+    "title": "PAL encodes a 4-DWORD buffer SRD",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/hw/gfxip/gfx9/gfx9Device.cpp",
+    "explain": "The whole descriptor is 128 bits. DW0 and DW1 hold the 48-bit address (and the stride in DW1), DW2 holds <code>NUM_RECORDS</code> (bytes for raw buffers), and DW3 holds the component swizzle, format, out-of-bounds mode and resource type. Try it in the SRD builder below.",
+    "symbols": [
+     "SqBufRsrcTWord1StrideShift",
+     "CalcNumRecords",
+     "SqBufRsrcTWord3DstSelXShift"
+    ],
+    "refs": [],
+    "start": 3495,
+    "end": 3524,
+    "code": "        pOutSrd->u32All[0] = LowPart(pBufferViewInfo->gpuAddr);\n\n        pOutSrd->u32All[1] =\n            (HighPart(pBufferViewInfo->gpuAddr) |\n             (static_cast<uint32>(pBufferViewInfo->stride) << SqBufRsrcTWord1StrideShift));\n\n        pOutSrd->u32All[2] = Device::CalcNumRecords(static_cast<size_t>(pBufferViewInfo->range),\n                                                    static_cast<uint32>(pBufferViewInfo->stride));\n\n        PAL_DEBUG_BUILD_ONLY_ASSERT(Formats::IsUndefined(pBufferViewInfo->swizzledFormat.format));\n\n        // The SRD has a two-bit field where the high-bit is the control for \"read\" operations\n        // and the low bit is the control for bypassing the MALL on write operations.\n        // For parts that do not have MALL - HW ignores these fields!\n        const uint32 llcNoalloc = CalcLlcNoalloc(pBufferViewInfo->flags.bypassMallRead,\n                                                 pBufferViewInfo->flags.bypassMallWrite);\n\n        if (pBufferViewInfo->gpuAddr != 0)\n        {\n            const uint32 oobSelect = ((pBufferViewInfo->stride == 1) ||\n                                      (pBufferViewInfo->stride == 0)) ? SQ_OOB_COMPLETE : SQ_OOB_INDEX_ONLY;\n\n            pOutSrd->u32All[3] = ((SQ_SEL_X               << SqBufRsrcTWord3DstSelXShift)            |\n                                  (SQ_SEL_Y               << SqBufRsrcTWord3DstSelYShift)            |\n                                  (SQ_SEL_Z               << SqBufRsrcTWord3DstSelZShift)            |\n                                  (SQ_SEL_W               << SqBufRsrcTWord3DstSelWShift)            |\n                                  (BUF_FMT_32_UINT        << Gfx10SqBufRsrcTWord3FormatShift)        |\n                                  (BufferSrdResourceLevel << Gfx10SqBufRsrcTWord3ResourceLevelShift) |\n                                  (oobSelect              << SqBufRsrcTWord3OobSelectShift)          |\n                                  (llcNoalloc             << BvhSqBufRsrcTWord3LlcNoallocShift)      |",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9Device.cpp#L3495-L3524"
+   },
+   {
+    "id": "ds-bind",
+    "title": "vkCmdBindDescriptorSets: dynamic SRDs go straight to user data",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_cmdbuffer.cpp",
+    "explain": "Binding records each set's GPU address in a per-command-buffer shadow (<code>setBindingData</code>). Dynamic uniform and storage buffers are patched with the dynamic offset right here and stored in the same shadow, so no memory write is needed per draw.",
+    "symbols": [
+     "setBindingData",
+     "PatchedDynamicDataFromHandle"
+    ],
+    "refs": [
+     {
+      "label": "CmdBuffer::BindDescriptorSets",
+      "loc": "icd/api/vk_cmdbuffer.cpp:2471",
+      "repo": "xgl",
+      "anchor": "void CmdBuffer::BindDescriptorSets(",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L2471-L2471"
+     }
+    ],
+    "start": 2515,
+    "end": 2530,
+    "code": "                // If this descriptor set has any dynamic descriptor data then write them into the shadow.\n                if (setLayoutInfo.dynDescCount > 0)\n                {\n                    // NOTE: We supply patched SRDs directly in used data registers.\n                    utils::IterateMask deviceGroup(m_curDeviceMask);\n                    do\n                    {\n                        const uint32_t deviceIdx = deviceGroup.Index();\n\n                        DescriptorSet<numPalDevices>::PatchedDynamicDataFromHandle(\n                            pDescriptorSets[i],\n                            deviceIdx,\n                            &(PerGpuState(deviceIdx)->\n                                setBindingData[apiBindPoint][setLayoutInfo.dynDescDataRegOffset]),\n                            pDynamicOffsets,\n                            setLayoutInfo.dynDescCount,",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L2515-L2530"
+   },
+   {
+    "id": "ds-userdata",
+    "title": "Set addresses become PAL user data",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_cmdbuffer.cpp",
+    "explain": "The pipeline layout decides which user-data entries each set occupies (<code>setBindingRegBase</code>). XGL writes the changed range with <code>CmdSetUserData</code>, but only if the currently bound pipeline uses the same layout base. Otherwise the next <code>vkCmdBindPipeline</code> rewrites them.",
+    "symbols": [
+     "setBindingRegBase",
+     "CmdSetUserData"
+    ],
+    "refs": [],
+    "start": 2659,
+    "end": 2680,
+    "code": "\n        if (rangeRegCount > 0)\n        {\n            // Program the user data register only if the current user data layout base matches that of the given\n            // layout.  Otherwise, what's happening is that the application is binding descriptor sets for a future\n            // pipeline layout (e.g. at the top of the command buffer) and this register write will be redundant.\n            // A future vkCmdBindPipeline will reprogram the user data register.\n            if (PalPipelineBindingOwnedBy(palBindPoint, apiBindPoint) &&\n                (pBindState->userDataLayout.compact.setBindingRegBase ==\n                    layoutInfo.userDataLayout.compact.setBindingRegBase))\n            {\n                utils::IterateMask deviceGroup(m_curDeviceMask);\n                do\n                {\n                    const uint32_t deviceIdx = deviceGroup.Index();\n\n                    PalCmdBuffer(deviceIdx)->CmdSetUserData(\n                        palBindPoint,\n                        pBindState->userDataLayout.compact.setBindingRegBase + rangeOffsetBegin,\n                        rangeRegCount,\n                        &(PerGpuState(deviceIdx)->setBindingData[apiBindPoint][rangeOffsetBegin]));\n                }",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L2659-L2680"
+   },
+   {
+    "id": "ds-pal-userdata",
+    "title": "PAL only records user data\u2026",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/hw/gfxip/universalCmdBuffer.cpp",
+    "explain": "<code>CmdSetUserData</code> writes no PM4. It updates PAL's tracked copy of the user-data entries, filtering out values that didn't change, and marks them dirty.",
+    "symbols": [
+     "FilterSetUserData",
+     "gfxUserDataEntries"
+    ],
+    "refs": [
+     {
+      "label": "ICmdBuffer::CmdSetUserData (function table)",
+      "loc": "inc/core/palCmdBuffer.h:2450",
+      "repo": "pal",
+      "anchor": "{ (m_funcTable.pfnCmdSetUserData[static_cast<uint32>(bindPoint)])(this, firstEntry, entryCount, pEntryValues); }",
+      "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/inc/core/palCmdBuffer.h#L2450-L2450"
+     }
+    ],
+    "start": 294,
+    "end": 316,
+    "code": "void PAL_STDCALL UniversalCmdBuffer::CmdSetUserDataGfxFiltered(\n    ICmdBuffer*   pCmdBuffer,\n    uint32        firstEntry,\n    uint32        entryCount,\n    const uint32* pEntryValues)\n{\n    PAL_DEBUG_BUILD_ONLY_ASSERT((pCmdBuffer != nullptr) && (entryCount != 0) && (pEntryValues != nullptr));\n\n    auto*const pSelf    = static_cast<UniversalCmdBuffer*>(pCmdBuffer);\n    auto*const pEntries = &pSelf->m_graphicsState.gfxUserDataEntries;\n\n    UserDataArgs userDataArgs;\n    userDataArgs.firstEntry   = firstEntry;\n    userDataArgs.entryCount   = entryCount;\n    userDataArgs.pEntryValues = pEntryValues;\n\n    if (GfxCmdBuffer::FilterSetUserData(&userDataArgs,\n                                        pSelf->m_graphicsState.gfxUserDataEntries.entries,\n                                        pSelf->m_graphicsState.gfxUserDataEntries.touched))\n    {\n        SetUserData(userDataArgs.firstEntry, userDataArgs.entryCount, pEntries, userDataArgs.pEntryValues);\n    }\n}",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/universalCmdBuffer.cpp#L294-L316"
+   },
+   {
+    "id": "ds-sgpr",
+    "title": "\u2026and writes dirty entries into shader SGPRs at draw time",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/hw/gfxip/gfx9/gfx9CmdStream.cpp",
+    "explain": "During <code>ValidateDraw</code>, each hardware stage's user-data entries are copied into its user SGPR registers with <code>SET_SH_REG</code>. The pipeline's metadata says which entry maps to which SGPR (<code>entryMap</code>), so the shader starts with the descriptor-table pointers already in scalar registers.",
+    "symbols": [
+     "BuildSetSeqShRegs",
+     "entryMap.mappedEntry",
+     "firstUserSgpr"
+    ],
+    "refs": [],
+    "start": 1149,
+    "end": 1178,
+    "code": "\n    if (IgnoreDirtyFlags)\n    {\n        if (userSgprCount != 0)\n        {\n            for (uint16 sgpr = 0; sgpr < userSgprCount; ++sgpr)\n            {\n                pCmdPayload[sgpr] = entries.entries[entryMap.mappedEntry[sgpr]];\n            }\n\n            // PM4Opt path wrote userdata to scratch space on the stack - just call normal write method.\n            if (Pm4OptEnabled)\n            {\n                pCmdSpace = WriteSetSeqShRegs<Pm4OptEnabled>(firstUserSgpr,\n                                                             (firstUserSgpr + userSgprCount - 1),\n                                                             shaderType,\n                                                             scratchMem,\n                                                             pCmdSpace);\n            }\n            // The PM4Opt off path forms the packets inline in the command buffer - just need to add header/offset.\n            else\n            {\n                const size_t totalDwords = m_cmdUtil.BuildSetSeqShRegs(firstUserSgpr,\n                                                                       (firstUserSgpr + userSgprCount - 1),\n                                                                       shaderType,\n                                                                       pCmdSpace);\n                // The packet is complete and will not be optimized, fix-up pCmdSpace and we're done.\n                PAL_ASSERT(totalDwords == (userSgprCount + CmdUtil::ShRegSizeDwords));\n                pCmdSpace += totalDwords;\n            }",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9CmdStream.cpp#L1149-L1178"
+   },
+   {
+    "id": "ds-lgc",
+    "title": "Shader side: LGC lowers a descriptor access",
+    "layer": "llpc",
+    "repo": "llpc",
+    "path": "lgc/lowering/LowerDesc.cpp",
+    "explain": "In the shader, a buffer access starts as <code>lgc.load.buffer.desc(set, binding, index)</code>. <code>LowerDesc</code> replaces it with real code that loads the SRD and turns it into a buffer fat pointer.",
+    "symbols": [
+     "CreateBufferDesc",
+     "op.getDescSet()",
+     "op.getBinding()"
+    ],
+    "refs": [],
+    "start": 86,
+    "end": 102,
+    "code": "void LowerDesc::visitLoadBufferDesc(LoadBufferDescOp &op) {\n  BuilderImpl builder(m_pipelineState);\n  builder.setShaderStage(getShaderStage(op.getFunction()));\n  builder.SetInsertPoint(&op);\n\n  unsigned flags = op.getFlags();\n  // Anyone who wants to get a 64-bit buffer descriptor address should call `CreateBufferDesc` directly. (This is only\n  // available in LGC as we don't expect front-end would required such usage.)\n  assert(!(flags & Builder::BufferFlagAddress) && \"Returning a 64-bit address is unsupported by lgc.load.buffer.desc\");\n\n  Value *desc = builder.CreateBufferDesc(op.getDescSet(), op.getBinding(), op.getDescIndex(), flags, true);\n\n  m_toErase.push_back(&op);\n\n  // Convert to fat pointer.\n  op.replaceAllUsesWith(desc);\n}",
+    "lang": "cpp",
+    "repoName": "llpc",
+    "url": "https://github.com/GPUOpen-Drivers/llpc/blob/40cb8d95ad8d6f7f1652e3fd47d39667594cce08/lgc/lowering/LowerDesc.cpp#L86-L102"
+   },
+   {
+    "id": "ds-findnode",
+    "title": "Which user-data entry holds set N?",
+    "layer": "llpc",
+    "repo": "llpc",
+    "path": "lgc/builder/DescBuilder.cpp",
+    "explain": "The builder looks up (set, binding) in the <b>resource mapping</b> that XGL built from the pipeline layout (<code>BuildPipelineResourceMapping</code>). That gives the user-data entry holding the table pointer and the binding's offset, so the generated ISA becomes \"load 4 DWORDs from (SGPR pointer + offset + index \u00d7 stride)\". This is why pipelines depend on the pipeline layout.",
+    "symbols": [
+     "findResourceNode",
+     "ResourceNodeType::DescriptorBuffer"
+    ],
+    "refs": [],
+    "start": 62,
+    "end": 91,
+    "code": "Value *BuilderImpl::createBufferDesc(uint64_t descSet, unsigned binding, Value *descIndex, unsigned flags,\n                                     unsigned stride, bool convertFatPointer, const Twine &instName) {\n  Value *desc = nullptr;\n  bool return64Address = false;\n  descIndex = scalarizeIfUniform(descIndex, flags & BufferFlagNonUniform);\n\n  if (flags & BufferFlagAddress)\n    return64Address = true;\n\n  // Find the descriptor node.\n  ResourceNodeType abstractType = ResourceNodeType::Unknown;\n  if (flags & BufferFlagConst)\n    abstractType = ResourceNodeType::DescriptorConstBuffer;\n  else if (flags & BufferFlagNonConst)\n    abstractType = ResourceNodeType::DescriptorBuffer;\n  else if (flags & BufferFlagShaderResource)\n    abstractType = ResourceNodeType::DescriptorResource;\n  else if (flags & BufferFlagSampler)\n    abstractType = ResourceNodeType::DescriptorSampler;\n  else if (flags & BufferFlagAddress)\n    abstractType = ResourceNodeType::DescriptorBufferCompact;\n\n  const ResourceNode *topNode = nullptr;\n  const ResourceNode *node = nullptr;\n  std::tie(topNode, node) = m_pipelineState->findResourceNode(abstractType, descSet, binding, m_shaderStage);\n  if (!node && (flags & BufferFlagAddress)) {\n    std::tie(topNode, node) =\n        m_pipelineState->findResourceNode(ResourceNodeType::InlineBuffer, descSet, binding, m_shaderStage);\n  }\n  if (!node) {",
+    "lang": "cpp",
+    "repoName": "llpc",
+    "url": "https://github.com/GPUOpen-Drivers/llpc/blob/40cb8d95ad8d6f7f1652e3fd47d39667594cce08/lgc/builder/DescBuilder.cpp#L62-L91"
+   },
+   {
+    "id": "ds-push",
+    "title": "Push constants are user data too",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_cmdbuffer.cpp",
+    "explain": "<code>vkCmdPushConstants</code> takes the same route. <code>WritePushConstants</code> copies the values into a per-bind-point shadow (<code>pushConstData</code>) and writes them with <code>CmdSetUserData</code> at the layout's <code>pushConstRegBase</code>. A shader therefore reads push constants from user SGPRs without loading any descriptor.",
+    "symbols": [
+     "PushConstantsIssueWrites"
+    ],
+    "refs": [
+     {
+      "label": "CmdBuffer::WritePushConstants",
+      "loc": "icd/api/vk_cmdbuffer.cpp:9624",
+      "repo": "xgl",
+      "anchor": "void CmdBuffer::WritePushConstants(",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L9624-L9624"
+     },
+     {
+      "label": "CmdSetUserData at pushConstRegBase",
+      "loc": "icd/api/vk_cmdbuffer.cpp:9660",
+      "repo": "xgl",
+      "anchor": "pBindState->userDataLayout.common.pushConstRegBase + startInDwords,",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L9660-L9660"
+     }
+    ],
+    "start": 9670,
+    "end": 9694,
+    "code": "void CmdBuffer::PushConstants(\n    VkPipelineLayout                            layout,\n    VkShaderStageFlags                          stageFlags,\n    uint32_t                                    start,\n    uint32_t                                    length,\n    const void*                                 values)\n{\n    DbgBarrierPreCmd(DbgBarrierBindSetsPushConstants);\n\n    uint32_t startInDwords  = start / sizeof(uint32_t);\n\n    uint32_t lengthInDwords = PipelineLayout::GetPushConstantSizeInDword(length);\n\n    const uint32_t* const pInputValues = reinterpret_cast<const uint32_t*>(values);\n\n    const PipelineLayout* pLayout = PipelineLayout::ObjectFromHandle(layout);\n\n    stageFlags &= m_validShaderStageFlags;\n\n    PushConstantsIssueWrites(pLayout, stageFlags, startInDwords, lengthInDwords, pInputValues);\n\n    DbgBarrierPostCmd(DbgBarrierBindSetsPushConstants);\n}\n\n// =====================================================================================================================",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L9670-L9694"
+   }
+  ]
+ },
+ "present": {
+  "title": "vkAcquireNextImageKHR \u2192 vkQueuePresentKHR \u2192 X11/Wayland",
+  "page": "present.html",
+  "steps": [
+   {
+    "id": "pr-create",
+    "title": "vkCreateSwapchainKHR creates a PAL swap chain",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_swapchain.cpp",
+    "explain": "XGL fills a <code>Pal::SwapChainCreateInfo</code> and creates a PAL <code>ISwapChain</code> with the size-then-create pattern. If PAL reports the window is already owned by another swap chain, that becomes <code>VK_ERROR_NATIVE_WINDOW_IN_USE_KHR</code>. On Linux the PAL swap chain talks to the window system through a DRI3 (X11) or Wayland window-system object.",
+    "symbols": [
+     "GetSwapChainSize",
+     "CreateSwapChain"
+    ],
+    "refs": [],
+    "start": 476,
+    "end": 489,
+    "code": "            size_t palSwapChainSize = pPalDevice->GetSwapChainSize(swapChainCreateInfo, &palResult);\n            VK_ASSERT(palResult == Pal::Result::Success);\n            pPalMemory = pDevice->VkInstance()->AllocMem(palSwapChainSize,\n                                                         VK_DEFAULT_MEM_ALIGN,\n                                                         VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);\n\n            if (pPalMemory != nullptr)\n            {\n                palResult = pPalDevice->CreateSwapChain(\n                    swapChainCreateInfo,\n                    pPalMemory,\n                    &pPalSwapChain);\n\n                result = (palResult == Pal::Result::AlreadyExists) ? VK_ERROR_NATIVE_WINDOW_IN_USE_KHR :",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_swapchain.cpp#L476-L489"
+   },
+   {
+    "id": "pr-acquire-xgl",
+    "title": "vkAcquireNextImageKHR",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_swapchain.cpp",
+    "explain": "The Vulkan semaphore and fence to signal are translated to their PAL objects and handed to <code>ISwapChain::AcquireNextImage</code>, together with the timeout.",
+    "symbols": [
+     "m_pPalSwapChain->AcquireNextImage",
+     "PalSemaphore"
+    ],
+    "refs": [],
+    "start": 861,
+    "end": 879,
+    "code": "        Fence*     pFence     = Fence::ObjectFromHandle(fence);\n\n        if (result == VK_SUCCESS)\n        {\n            acquireInfo.timeout    = timeout;\n            acquireInfo.pSemaphore = (pSemaphore != nullptr) ?\n                                      pSemaphore->PalSemaphore(DefaultDeviceIndex) :\n                                      nullptr;\n            acquireInfo.pFence     = (pFence != nullptr) ? pFence->PalFence(presentationDeviceIdx) : nullptr;\n\n            if (pFence != nullptr)\n            {\n                pFence->SetActiveDevice(presentationDeviceIdx);\n            }\n\n            {\n                result = PalToVkResult(m_pPalSwapChain->AcquireNextImage(acquireInfo, pImageIndex));\n            }\n        }",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_swapchain.cpp#L861-L879"
+   },
+   {
+    "id": "pr-acquire-amdgpu",
+    "title": "amdgpu swap chain: fast path for native window systems",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/os/amdgpu/amdgpuSwapChain.cpp",
+    "explain": "Two paths. Normally <code>OptimizedHandlingForNativeWindowSystem</code> returns false and PAL's generic acquire runs (next step). When the native window system can hand back the image index itself, the fast path is taken, and outside mailbox mode PAL only has to arrange for the app's semaphore and fence to be signalled when that image's previous present completes (<code>SignalOnAcquire</code>).",
+    "symbols": [
+     "SignalOnAcquire",
+     "Pal::SwapChain::AcquireNextImage"
+    ],
+    "refs": [],
+    "start": 461,
+    "end": 479,
+    "code": "Result SwapChain::AcquireNextImage(\n    const AcquireNextImageInfo& acquireInfo,\n    uint32*                     pImageIndex)\n{\n    Result ret = Result::Success;\n\n    if (OptimizedHandlingForNativeWindowSystem(pImageIndex) == false)\n    {\n        ret = Pal::SwapChain::AcquireNextImage(acquireInfo, pImageIndex);\n    }\n    else if (m_createInfo.swapChainMode != SwapChainMode::Mailbox)\n    {\n        ret = m_pScheduler->SignalOnAcquire(m_pPresentComplete[*pImageIndex],\n                                            acquireInfo.pSemaphore,\n                                            acquireInfo.pFence);\n    }\n\n    return ret;\n}",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuSwapChain.cpp#L461-L479"
+   },
+   {
+    "id": "pr-acquire-core",
+    "title": "Pick the least recently used free image",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/swapChain.cpp",
+    "explain": "FIFO and immediate modes block on a counting semaphore of available images; mailbox mode searches for unused ones. The image returned is the <b>least recently used</b>, not the lowest free index, because applications often key per-frame state off the index (the comment explains why).",
+    "symbols": [
+     "m_availableImageSemaphore.Wait",
+     "m_unusedImageQueue[0]"
+    ],
+    "refs": [],
+    "start": 170,
+    "end": 199,
+    "code": "    else\n    {\n#if PAL_CLIENT_INTERFACE_MAJOR_VERSION >= 863\n        result = m_availableImageSemaphore.Wait(TimeoutCast<milliseconds>(acquireInfo.timeout));\n#else\n        result = m_availableImageSemaphore.Wait(TimeoutCast<milliseconds>(\n            nanoseconds{ std::min(acquireInfo.timeout, uint64(nanoseconds::max().count())) }));\n#endif\n    }\n\n    if (result == Result::Success)\n    {\n        m_unusedImageMutex.Lock();\n\n        // It shouldn't be possible, but if this triggers we somehow have all images in use.\n        PAL_ASSERT(m_unusedImageCount > 0);\n\n        // Always select the least recently used image as the next image to acquire.\n        //\n        // We do this instead of simply returning the smallest unused index because some applications may use the swap\n        // chain index to decide which set of game state to reuse. For example, if we were to return index zero for all\n        // calls to AcquireNextImage the application may attempt to reuse the same set of state for every frame which\n        // means it must wait for the previous frame to be idle before building the next. Thus, while the use of\n        // m_unusedImageQueue complicates the swap chain it is more application friendly.\n        const uint32 imageIndex = m_unusedImageQueue[0];\n        m_unusedImageCount--;\n\n        for (uint32 dstIdx = 0; dstIdx < m_unusedImageCount; ++dstIdx)\n        {\n            m_unusedImageQueue[dstIdx] = m_unusedImageQueue[dstIdx + 1];",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/swapChain.cpp#L170-L199"
+   },
+   {
+    "id": "pr-present-xgl",
+    "title": "vkQueuePresentKHR \u2192 IQueue::PresentSwapChain",
+    "layer": "xgl",
+    "repo": "xgl",
+    "path": "icd/api/vk_queue.cpp",
+    "explain": "<code>Queue::Present</code> first turns the present's wait semaphores into queue waits (<code>PalWaitSemaphores</code>), then fills a <code>Pal::PresentSwapChainInfo</code> (image, index, mode) for each swap chain and calls <code>PresentSwapChain</code> on the presenting queue.",
+    "symbols": [
+     "PresentSwapChain(presentInfo)"
+    ],
+    "refs": [
+     {
+      "label": "Queue::Present",
+      "loc": "icd/api/vk_queue.cpp:2032",
+      "repo": "xgl",
+      "anchor": "VkResult Queue::Present(",
+      "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_queue.cpp#L2032-L2032"
+     }
+    ],
+    "start": 2210,
+    "end": 2231,
+    "code": "\n        result = NotifyFlipMetadataBeforePresent(presentationDeviceIdx,\n                                                 pPresentQueue,\n                                                 &presentInfo,\n                                                 (hasPostProcessing ? pCmdBufState : nullptr),\n                                                 pGpuMemory,\n                                                 needSemaphoreFlush,\n                                                 pSwapChain,\n                                                 skipFsfmFlags);\n\n        if (result != VK_SUCCESS)\n        {\n            break;\n        }\n        else\n        {\n            needSemaphoreFlush = false;\n        }\n\n        // Perform the actual present\n        Pal::Result palResult = pPresentQueue->PresentSwapChain(presentInfo);\n",
+    "lang": "cpp",
+    "repoName": "xgl",
+    "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_queue.cpp#L2210-L2231"
+   },
+   {
+    "id": "pr-queue",
+    "title": "PAL validates the present",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/queue.cpp",
+    "explain": "The image must be presentable (and flippable for fullscreen). Even if validation fails PAL must still release the image index, or a later acquire would deadlock (the comment explains). It also advances the frame counter.",
+    "symbols": [
+     "IsPresentable",
+     "pSwapChain->Present(presentInfo, this)",
+     "IncFrameCount"
+    ],
+    "refs": [],
+    "start": 1188,
+    "end": 1213,
+    "code": "    else if (presentInfo.imageIndex >= pSwapChain->CreateInfo().imageCount)\n    {\n        result = Result::ErrorInvalidValue;\n    }\n    // Dxgi images may not be marked flippable or presentable depending on how the presentation is done.\n    else if (pSwapChain->CreateInfo().wsiPlatform != WsiPlatform::Dxgi)\n    {\n        if ((pPresentedImage->IsPresentable() == false) ||\n            ((presentInfo.presentMode == PresentMode::Fullscreen) && (pPresentedImage->IsFlippable() == false)))\n        {\n            result = Result::ErrorInvalidValue;\n        }\n    }\n\n    if (presentInfo.flags.notifyOnly == 0)\n    {\n        if (result == Result::Success)\n        {\n            // Always execute the Present immediately, even if we are stalled. We should (and can) do this because:\n            // - The swap chain and present scheduler Present code was designed to only issue batchable queue\n            //   operations.\n            // - We must release the given swap chain image index before this function returns.\n            result = pSwapChain->Present(presentInfo, this);\n        }\n\n        IncFrameCount();",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/queue.cpp#L1188-L1213"
+   },
+   {
+    "id": "pr-swapchain",
+    "title": "SwapChain::Present hands off to the present scheduler",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/swapChain.cpp",
+    "explain": "Unless the swap chain is in mailbox mode, an image whose present is still in flight can be handed back to the application early (<code>ReuseImage</code>) when <code>canAcquireBeforeSignaling</code> is set.",
+    "symbols": [
+     "m_pScheduler->Present",
+     "ReuseImage"
+    ],
+    "refs": [],
+    "start": 239,
+    "end": 264,
+    "code": "Result SwapChain::Present(\n    const PresentSwapChainInfo& presentInfo,\n    IQueue*                     pQueue)\n{\n    if (presentInfo.pSrcImage != nullptr)\n    {\n        if (m_pDevice->GetGfxDevice()->UpdateSppState(*presentInfo.pSrcImage))\n        {\n            const uint32 pixelCount = m_pDevice->GetGfxDevice()->GetPixelCount();\n            const uint32 msaaRate   = m_pDevice->GetGfxDevice()->GetMsaaRate();\n            m_pDevice->SelectSppTable(pixelCount, msaaRate);\n        }\n    }\n    Result result = m_pScheduler->Present(presentInfo, pQueue);\n\n    if ((m_createInfo.swapChainMode != SwapChainMode::Mailbox) && (m_createInfo.flags.canAcquireBeforeSignaling == 1))\n    {\n        // Release this image at the end of the Present call so that the application can immediately reacquire it, even\n        // if we deferred the present. This permits the application to acquire an image even if its previous present is\n        // still active, improving performance in applications that acquire their image long before using it.\n        //\n        // Note that this optimization is not compatible with mailbox mode.\n        ReuseImage(presentInfo.imageIndex);\n    }\n\n    return result;",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/swapChain.cpp#L239-L264"
+   },
+   {
+    "id": "pr-scheduler",
+    "title": "Inline or on the present thread",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/presentScheduler.cpp",
+    "explain": "If the present can be processed immediately it runs inline; otherwise it is queued as a job for PAL's present worker thread, which starts on first use. Presents stay ordered: switching back to inline first drains the thread.",
+    "symbols": [
+     "CanInlinePresent",
+     "ProcessPresent",
+     "m_workerThread.Begin"
+    ],
+    "refs": [],
+    "start": 287,
+    "end": 316,
+    "code": "Result PresentScheduler::Present(\n    const PresentSwapChainInfo& presentInfo,\n    IQueue*                     pQueue)\n{\n    Result result = Result::Success;\n\n    bool isDxgiPresent = static_cast<SwapChain*>(presentInfo.pSwapChain)->CreateInfo().wsiPlatform == WsiPlatform::Dxgi;\n\n    // Check if we can immediately process a present on the current thread and queue.\n    if (CanInlinePresent(presentInfo, *pQueue))\n    {\n        if (m_activeJobList.IsEmpty() == false)\n        {\n            // If switching from non-inlined to inlined presents, wait until the present thread has drained\n            // to keep the ordering of presents intact.\n            result = WaitPresentThreadIdle();\n        }\n\n        if (result == Result::Success)\n        {\n            result = ProcessPresent(presentInfo, pQueue, true);\n        }\n    }\n    else\n    {\n        // Otherwise, we must queue this present for delayed execution on our scheduling thread.\n        if (m_workerThread.IsCreated() == false)\n        {\n            result = m_workerThread.Begin(&WorkerThreadCallback, this);\n",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/presentScheduler.cpp#L287-L316"
+   },
+   {
+    "id": "pr-process",
+    "title": "Linux: ask the window system, then honour FIFO",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/os/amdgpu/amdgpuPresentScheduler.cpp",
+    "explain": "Linux supports immediate, mailbox and FIFO. The window system is given an <b>idle fence</b> for the image. In FIFO mode PAL then waits until the request has been handed to hardware (<code>WaitForLastImagePresented</code>) before completing.",
+    "symbols": [
+     "m_pWindowSystem->Present",
+     "WaitForLastImagePresented",
+     "PresentComplete"
+    ],
+    "refs": [],
+    "start": 233,
+    "end": 262,
+    "code": "    // Ask the windowing system to present our image with the swap chain's idle fence. We don't need it to wait for\n    // prior rendering because that was already done by our caller.\n    PresentFence*const pIdleFence = pSwapChain->PresentIdleFence(presentInfo.imageIndex);\n    pIdleFence->AssociatePriorRenderFence(pQueue);\n    Result             result     = m_pWindowSystem->Present(presentInfo,\n                                                             nullptr,\n                                                             pIdleFence,\n                                                             pQueue);\n\n    if (swapChainMode == SwapChainMode::Mailbox)\n    {\n        // The image has been submitted to the mailbox so we consider the present complete.\n        const Result completedResult = pSwapChain->PresentComplete(pQueue, presentInfo.imageIndex);\n        result = CollapseResults(result, completedResult);\n    }\n    else\n    {\n        if (swapChainMode == SwapChainMode::Fifo)\n        {\n            // Present returns as soon as the windowing system has queued our request. To meet FIFO's requirements we\n            // must wait until that request has been submitted to hardware.\n            const Result waitResult = m_pWindowSystem->WaitForLastImagePresented();\n            result = CollapseResults(result, waitResult);\n        }\n\n        // Otherwise we must be doing a blit present and would rather wait for it to complete now so that the\n        // application can reacquire the image as quickly as possible.\n        const Result completedResult = pSwapChain->PresentComplete(pQueue, presentInfo.imageIndex);\n        result = CollapseResults(result, completedResult);\n    }",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuPresentScheduler.cpp#L233-L262"
+   },
+   {
+    "id": "pr-dri3",
+    "title": "X11: xcb_present_pixmap",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/os/amdgpu/dri3/dri3WindowSystem.cpp",
+    "explain": "On X11 each swap-chain image was shared with the X server as a DRI3 pixmap. Presenting is one Present extension request naming that pixmap, with a wait fence and an <b>idle fence</b> the server signals when it no longer reads the image. <code>targetMsc</code>/<code>divisor</code>/<code>remainder</code> express vsync timing.",
+    "symbols": [
+     "pfnXcbPresentPixmapChecked",
+     "idleSyncFence",
+     "targetMsc"
+    ],
+    "refs": [],
+    "start": 1166,
+    "end": 1187,
+    "code": "    }\n    else\n    {\n        cookie = m_dri3Procs.pfnXcbPresentPixmapChecked(m_pConnection,\n                                                        m_hWindow,\n                                                        pixmap,\n                                                        serial,\n                                                        0,              // valid-area\n                                                        0,              // update-area\n                                                        0,              // x-off\n                                                        0,              // y-off\n                                                        0,              // crtc\n                                                        waitSyncFence,  // wait-fence\n                                                        idleSyncFence,  // idle-fence\n                                                        options,\n                                                        targetMsc,\n                                                        divisor,\n                                                        remainder,\n                                                        0,              // notifies_len\n                                                        nullptr);       // notifies\n    }\n",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/dri3/dri3WindowSystem.cpp#L1166-L1187"
+   },
+   {
+    "id": "pr-explicit",
+    "title": "Explicit sync: timeline syncobjs shared with the compositor",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/os/amdgpu/dri3/dri3WindowSystem.cpp",
+    "explain": "When the server supports it, PAL uses explicit synchronization. Each image has an acquire and a release timeline syncobj (the same DRM syncobjs as Topic 5). The GPU signals the acquire point when rendering is done, and the compositor signals the release point when it is finished with the image.",
+    "symbols": [
+     "SignalExplicitSyncAcquire",
+     "pfnXcbPresentPixmapSyncedChecked",
+     "acquirePoint"
+    ],
+    "refs": [],
+    "start": 1143,
+    "end": 1164,
+    "code": "            // Signal acquire syncobj with the incremented value when the GPU work is done. Compositor waits on this\n            // syncobj before using the image.\n            SignalExplicitSyncAcquire(*pImageExplicitSyncData, pQueue);\n\n            cookie = m_dri3Procs.pfnXcbPresentPixmapSyncedChecked(m_pConnection,\n                                                                  m_hWindow,\n                                                                  pixmap,\n                                                                  serial,\n                                                                  0,            // valid-area\n                                                                  0,            // update-area\n                                                                  0,            // x-off\n                                                                  0,            // y-off\n                                                                  0,            // crtc\n                                                                  pImageExplicitSyncData->acquire.dri3SyncObj,\n                                                                  pImageExplicitSyncData->release.dri3SyncObj,\n                                                                  acquirePoint,\n                                                                  releasePoint,\n                                                                  options,\n                                                                  targetMsc,\n                                                                  divisor,\n                                                                  remainder,\n                                                                  0,            // notifies_len",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/dri3/dri3WindowSystem.cpp#L1143-L1164"
+   },
+   {
+    "id": "pr-wayland",
+    "title": "Wayland: attach the buffer to the surface",
+    "layer": "pal",
+    "repo": "pal",
+    "path": "src/core/os/amdgpu/wayland/waylandWindowSystem.cpp",
+    "explain": "On Wayland each image is a <code>wl_buffer</code>. Presenting attaches it to the surface, adds damage rectangles when the compositor supports them, and commits (<code>WL_SURFACE_COMMIT</code>). With the Linux DRM syncobj protocol (<code>WP_LINUX_DRM_SYNCOBJ_SURFACE_V1_SET_ACQUIRE_POINT</code>) PAL first sets the acquire and release timeline points, mirroring X11's explicit sync.",
+    "symbols": [
+     "WL_SURFACE_ATTACH"
+    ],
+    "refs": [
+     {
+      "label": "set acquire point",
+      "loc": "src/core/os/amdgpu/wayland/waylandWindowSystem.cpp:1113",
+      "repo": "pal",
+      "anchor": "WP_LINUX_DRM_SYNCOBJ_SURFACE_V1_SET_ACQUIRE_POINT,",
+      "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/wayland/waylandWindowSystem.cpp#L1113-L1113"
+     },
+     {
+      "label": "WaylandWindowSystem::Present",
+      "loc": "src/core/os/amdgpu/wayland/waylandWindowSystem.cpp:1075",
+      "repo": "pal",
+      "anchor": "Result WaylandWindowSystem::Present(",
+      "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/wayland/waylandWindowSystem.cpp#L1075-L1075"
+     }
+    ],
+    "start": 1123,
+    "end": 1130,
+    "code": "\n    m_waylandProcs.pfnWlProxyMarshal(reinterpret_cast<wl_proxy*>(m_pSurfaceWrapper),\n                                     WL_SURFACE_ATTACH,\n                                     reinterpret_cast<wl_buffer*>(pBuffer),\n                                     0,\n                                     0);\n\n    if ((m_surfaceVersion >= WL_SURFACE_DAMAGE_BUFFER_SINCE_VERSION) &&",
+    "lang": "cpp",
+    "repoName": "pal",
+    "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/wayland/waylandWindowSystem.cpp#L1123-L1130"
+   }
+  ]
  }
 };
 DRV.panels = {
@@ -3844,6 +4498,377 @@ DRV.refs = {
   "repo": "linux",
   "anchor": "struct drm_amdgpu_cs_chunk_ib {",
   "url": "https://github.com/torvalds/linux/blob/0fcb05b72344f40806cbe810de8872f1698bf053/include/uapi/drm/amdgpu_drm.h#L1018-L1018"
+ },
+ "uc_pipeline_dump": {
+  "label": "where EnablePipelineDump is read",
+  "loc": "icd/api/pipeline_compiler.cpp:1125",
+  "repo": "xgl",
+  "anchor": "if (settings.enablePipelineDump && (result == VK_SUCCESS))",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/pipeline_compiler.cpp#L1125-L1125"
+ },
+ "uc_ifh_ctx": {
+  "label": "IFH in the kernel context",
+  "loc": "src/core/os/amdgpu/amdgpuDevice.cpp:3059",
+  "repo": "pal",
+  "anchor": "flags |= (Settings().ifh == IfhModeKmd) ? AMDGPU_CTX_FLAGS_IFH : 0;",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuDevice.cpp#L3059-L3059"
+ },
+ "uc_ifh_dummy": {
+  "label": "IFH replaces command buffers",
+  "loc": "src/core/os/amdgpu/amdgpuQueue.cpp:1479",
+  "repo": "pal",
+  "anchor": "if ((internalSubmitInfo->flags.isDummySubmission) || (m_ifhMode == IfhModePal))",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuQueue.cpp#L1479-L1479"
+ },
+ "uc_wait_after_submit": {
+  "label": "waitAfterSubmit check",
+  "loc": "icd/api/vk_queue.cpp:1125",
+  "repo": "xgl",
+  "anchor": "pDevice->GetRuntimeSettings().waitAfterSubmit)",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_queue.cpp#L1125-L1125"
+ },
+ "uc_idle_after_submit": {
+  "label": "IdleAfterSubmitGpuMask",
+  "loc": "src/core/settings_core.json:271",
+  "repo": "pal",
+  "anchor": "\"Name\": \"IdleAfterSubmitGpuMask\"",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/settings_core.json#L271-L271"
+ },
+ "uc_always_resident_alloc": {
+  "label": "AlwaysResident pins every BO",
+  "loc": "src/core/os/amdgpu/amdgpuGpuMemory.cpp:203",
+  "repo": "pal",
+  "anchor": "if (pDevice->Settings().alwaysResident)",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuGpuMemory.cpp#L203-L203"
+ },
+ "uc_always_resident_submit": {
+  "label": "and skips the BO list",
+  "loc": "src/core/os/amdgpu/amdgpuQueue.cpp:687",
+  "repo": "pal",
+  "anchor": "if ((m_pDevice->Settings().alwaysResident == false) && (pInternalSubmitInfos->flags.isDummySubmission == false))",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuQueue.cpp#L687-L687"
+ },
+ "uc_dbg_barrier": {
+  "label": "DbgBarrierPostCmdEnable",
+  "loc": "icd/api/vk_cmdbuffer.cpp:625",
+  "repo": "xgl",
+  "anchor": "m_dbgBarrierPostCmdMask = settings.dbgBarrierPostCmdEnable;",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_cmdbuffer.cpp#L625-L625"
+ },
+ "uc_shader_replace": {
+  "label": "ShaderReplaceMode check",
+  "loc": "icd/api/pipeline_compiler.cpp:1095",
+  "repo": "xgl",
+  "anchor": "if ((settings.shaderReplaceMode == ShaderReplacePipelineBinaryHash) ||",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/pipeline_compiler.cpp#L1095-L1095"
+ },
+ "uc_ngg": {
+  "label": "EnableNgg per pipeline type",
+  "loc": "icd/api/pipeline_compiler.cpp:2114",
+  "repo": "xgl",
+  "anchor": "Util::TestAnyFlagSet(settings.enableNgg, pipelineType);",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/pipeline_compiler.cpp#L2114-L2114"
+ },
+ "uc_shader_cache": {
+  "label": "ShaderCacheMode check",
+  "loc": "icd/api/compiler_solution_llpc.cpp:102",
+  "repo": "xgl",
+  "anchor": "if (settings.shaderCacheMode != ShaderCacheDisable)",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/compiler_solution_llpc.cpp#L102-L102"
+ },
+ "uc_gart_override": {
+  "label": "OverrideHeapGartCacheableToUswc",
+  "loc": "icd/api/vk_memory.cpp:168",
+  "repo": "xgl",
+  "anchor": "if (settings.overrideHeapGartCacheableToUswc && (createInfo.heaps[0] == Pal::GpuHeapGartCacheable))",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_memory.cpp#L168-L168"
+ },
+ "uc_init_vram": {
+  "label": "InitializeVramToZero",
+  "loc": "icd/api/vk_memory.cpp:100",
+  "repo": "xgl",
+  "anchor": "createInfo.flags.initializeToZero = settings.initializeVramToZero;",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_memory.cpp#L100-L100"
+ },
+ "uc_skip_unmap": {
+  "label": "SkipUnMapMemory",
+  "loc": "icd/api/vk_memory.cpp:1235",
+  "repo": "xgl",
+  "anchor": "if (settings.skipUnMapMemory)",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_memory.cpp#L1235-L1235"
+ },
+ "uc_multi_submit": {
+  "label": "MultiSubmitChaining",
+  "loc": "icd/api/vk_queue.cpp:1075",
+  "repo": "xgl",
+  "anchor": "if ((settings.multiSubmitChaining == false) && (palSubmitInfo.perSubQueueInfoCount > 1))",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_queue.cpp#L1075-L1075"
+ },
+ "readme_settings": {
+  "label": "AMDVLK README: Runtime Settings",
+  "loc": "README.md:276",
+  "repo": "amdvlk",
+  "anchor": "## Runtime Settings",
+  "url": "https://github.com/GPUOpen-Drivers/AMDVLK/blob/0f7b1d76a13bb5e299856a38eecbe15167cd30ca/README.md#L276-L276"
+ },
+ "readme_dump": {
+  "label": "AMDVLK README: dump pipelines",
+  "loc": "README.md:331",
+  "repo": "amdvlk",
+  "anchor": "## Dump Pipelines and Shaders",
+  "url": "https://github.com/GPUOpen-Drivers/AMDVLK/blob/0f7b1d76a13bb5e299856a38eecbe15167cd30ca/README.md#L331-L331"
+ },
+ "readme_profiler": {
+  "label": "AMDVLK README: GpuProfiler",
+  "loc": "README.md:313",
+  "repo": "amdvlk",
+  "anchor": "The GpuProfiler is an optional layer",
+  "url": "https://github.com/GPUOpen-Drivers/AMDVLK/blob/0f7b1d76a13bb5e299856a38eecbe15167cd30ca/README.md#L313-L313"
+ },
+ "readme_overlay": {
+  "label": "AMDVLK README: debug overlay",
+  "loc": "README.md:348",
+  "repo": "amdvlk",
+  "anchor": "## PAL Debug Overlay",
+  "url": "https://github.com/GPUOpen-Drivers/AMDVLK/blob/0f7b1d76a13bb5e299856a38eecbe15167cd30ca/README.md#L348-L348"
+ },
+ "readme_vmalwaysvalid": {
+  "label": "README row for EnableVmAlwaysValid",
+  "loc": "README.md:288",
+  "repo": "amdvlk",
+  "anchor": "| `EnableVmAlwaysValid`",
+  "url": "https://github.com/GPUOpen-Drivers/AMDVLK/blob/0f7b1d76a13bb5e299856a38eecbe15167cd30ca/README.md#L288-L288"
+ },
+ "readme_diskcache": {
+  "label": "README row for AllowVkPipelineCachingToDisk",
+  "loc": "README.md:285",
+  "repo": "amdvlk",
+  "anchor": "| `AllowVkPipelineCachingToDisk`",
+  "url": "https://github.com/GPUOpen-Drivers/AMDVLK/blob/0f7b1d76a13bb5e299856a38eecbe15167cd30ca/README.md#L285-L285"
+ },
+ "settings_xgl_json": {
+  "label": "settings_xgl.json",
+  "loc": "icd/settings/settings_xgl.json:2",
+  "repo": "xgl",
+  "anchor": "\"ComponentName\"",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/settings/settings_xgl.json#L2-L2"
+ },
+ "ex_mem_map_failed": {
+  "label": "Map error code",
+  "loc": "icd/api/vk_memory.cpp:1243",
+  "repo": "xgl",
+  "anchor": "result = (palResult == Pal::Result::Success) ? VK_SUCCESS : VK_ERROR_MEMORY_MAP_FAILED;",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_memory.cpp#L1243-L1243"
+ },
+ "ex_heap_priority": {
+  "label": "heap order",
+  "loc": "icd/api/vk_physical_device.cpp:992",
+  "repo": "xgl",
+  "anchor": "constexpr Pal::GpuHeap priority[Pal::GpuHeapCount] =",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_physical_device.cpp#L992-L992"
+ },
+ "ex_va_partition": {
+  "label": "VA partition choice",
+  "loc": "src/core/gpuMemory.cpp:697",
+  "repo": "pal",
+  "anchor": "m_vaPartition    = m_pDevice->ChooseVaPartition(createInfo.vaRange, (createInfo.flags.virtualAlloc != 0));",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/gpuMemory.cpp#L697-L697"
+ },
+ "ex_num_instances_builder": {
+  "label": "NUM_INSTANCES packet",
+  "loc": "src/core/hw/gfxip/gfx9/gfx9CmdUtil.cpp:2781",
+  "repo": "pal",
+  "anchor": "PM4_ME_TYPE_3_HEADER header = Type3Header(IT_NUM_INSTANCES, PacketSize);",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9CmdUtil.cpp#L2781-L2781"
+ },
+ "ex_dispatch_initiator": {
+  "label": "wave32 bit",
+  "loc": "src/core/hw/gfxip/gfx9/gfx9CmdUtil.cpp:1220",
+  "repo": "pal",
+  "anchor": "dispatchInitiator.bits.CS_W32_EN             = isWave32;",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9CmdUtil.cpp#L1220-L1220"
+ },
+ "ex_ib_flags": {
+  "label": "IB flags",
+  "loc": "src/core/os/amdgpu/amdgpuQueue.cpp:1967",
+  "repo": "pal",
+  "anchor": "(m_numIbs == 0          ? AMDGPU_IB_FLAG_EMIT_MEM_SYNC   : 0) |",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuQueue.cpp#L1967-L1967"
+ },
+ "ex_lower_vertex_fetch": {
+  "label": "LowerVertexFetch",
+  "loc": "lgc/lowering/LgcLowering.cpp:204",
+  "repo": "llpc",
+  "anchor": "passMgr.addPass(LowerVertexFetch());",
+  "url": "https://github.com/GPUOpen-Drivers/llpc/blob/40cb8d95ad8d6f7f1652e3fd47d39667594cce08/lgc/lowering/LgcLowering.cpp#L204-L204"
+ },
+ "ex_lower_color_export": {
+  "label": "LowerFragmentColorExport",
+  "loc": "lgc/lowering/LgcLowering.cpp:205",
+  "repo": "llpc",
+  "anchor": "passMgr.addPass(LowerFragmentColorExport());",
+  "url": "https://github.com/GPUOpen-Drivers/llpc/blob/40cb8d95ad8d6f7f1652e3fd47d39667594cce08/lgc/lowering/LgcLowering.cpp#L205-L205"
+ },
+ "ex_lower_desc": {
+  "label": "LowerDesc",
+  "loc": "lgc/lowering/LgcLowering.cpp:210",
+  "repo": "llpc",
+  "anchor": "passMgr.addPass(LowerDesc());",
+  "url": "https://github.com/GPUOpen-Drivers/llpc/blob/40cb8d95ad8d6f7f1652e3fd47d39667594cce08/lgc/lowering/LgcLowering.cpp#L210-L210"
+ },
+ "ex_resource_mapping": {
+  "label": "BuildPipelineResourceMapping",
+  "loc": "icd/api/pipeline_compiler.cpp:3130",
+  "repo": "xgl",
+  "anchor": "result = BuildPipelineResourceMapping(",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/pipeline_compiler.cpp#L3130-L3130"
+ },
+ "ex_vertex_input": {
+  "label": "BuildVertexInputInterfaceState",
+  "loc": "icd/api/pipeline_compiler.cpp:3018",
+  "repo": "xgl",
+  "anchor": "BuildVertexInputInterfaceState(pDevice, pIn, dynamicStateFlags, activeStages, pCreateInfo);",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/pipeline_compiler.cpp#L3018-L3018"
+ },
+ "ex_frag_output": {
+  "label": "BuildFragmentOutputInterfaceState",
+  "loc": "icd/api/pipeline_compiler.cpp:3058",
+  "repo": "xgl",
+  "anchor": "BuildFragmentOutputInterfaceState(pDevice, pIn, extStructs, dynamicStateFlags, pCreateInfo);",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/pipeline_compiler.cpp#L3058-L3058"
+ },
+ "ex_get_proc_device": {
+  "label": "vkGetDeviceProcAddr",
+  "loc": "icd/api/vk_dispatch.cpp:1066",
+  "repo": "xgl",
+  "anchor": "return ApiDevice::ObjectFromHandle(device)->GetDispatchTable().GetEntryPoint(pName);",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_dispatch.cpp#L1066-L1066"
+ },
+ "ex_dispatchable_offset": {
+  "label": "ObjectFromHandle arithmetic",
+  "loc": "icd/api/include/vk_dispatch.h:212",
+  "repo": "xgl",
+  "anchor": "reinterpret_cast<Dispatchable<C>*>(handle)->m_C);",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/include/vk_dispatch.h#L212-L212"
+ },
+ "ds_srd_shifts": {
+  "label": "SRD field shifts",
+  "loc": "src/core/hw/gfxip/gfx9/chip/gfx10_sq_ko_reg.h:81",
+  "repo": "pal",
+  "anchor": "constexpr uint32_t SqBufRsrcTWord1StrideShift",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/chip/gfx10_sq_ko_reg.h#L81-L81"
+ },
+ "ds_srd_union": {
+  "label": "sq_buf_rsrc_t layout",
+  "loc": "src/core/hw/gfxip/gfx9/chip/gfx10_sq_ko_reg.h:36",
+  "repo": "pal",
+  "anchor": "union sq_buf_rsrc_t {",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/chip/gfx10_sq_ko_reg.h#L36-L36"
+ },
+ "ds_num_records": {
+  "label": "CalcNumRecords",
+  "loc": "src/core/hw/gfxip/gfx9/gfx9Device.cpp:3111",
+  "repo": "pal",
+  "anchor": "uint32 Device::CalcNumRecords(",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9Device.cpp#L3111-L3111"
+ },
+ "ds_sel_enum": {
+  "label": "SQ_SEL_X",
+  "loc": "src/core/hw/gfxip/gfx9/chip/gfx9_plus_merged_enum.h:11764",
+  "repo": "pal",
+  "anchor": "SQ_SEL_X                                           = 0x00000004,",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/chip/gfx9_plus_merged_enum.h#L11764-L11764"
+ },
+ "ds_buf_fmt": {
+  "label": "BUF_FMT_32_UINT",
+  "loc": "src/core/hw/gfxip/gfx9/chip/gfx9_plus_merged_enum.h:148",
+  "repo": "pal",
+  "anchor": "BUF_FMT_32_UINT                                    = 0x00000014,",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/chip/gfx9_plus_merged_enum.h#L148-L148"
+ },
+ "ds_oob": {
+  "label": "SQ_OOB_COMPLETE",
+  "loc": "src/core/hw/gfxip/gfx9/chip/gfx9_plus_merged_enum.h:10902",
+  "repo": "pal",
+  "anchor": "SQ_OOB_COMPLETE                                    = 0x00000003,",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/chip/gfx9_plus_merged_enum.h#L10902-L10902"
+ },
+ "ds_res_level": {
+  "label": "BufferSrdResourceLevel",
+  "loc": "src/core/hw/gfxip/gfx9/gfx9Chip.h:356",
+  "repo": "pal",
+  "anchor": "constexpr uint32 BufferSrdResourceLevel = 1;",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx9/gfx9Chip.h#L356-L356"
+ },
+ "ds_gfx12_srd": {
+  "label": "GFX12 buffer SRD",
+  "loc": "src/core/hw/gfxip/gfx12/gfx12Device.cpp:318",
+  "repo": "pal",
+  "anchor": "pInfo->srdSizes.untypedBufferView = sizeof(sq_buf_rsrc_t);",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/hw/gfxip/gfx12/gfx12Device.cpp#L318-L318"
+ },
+ "ds_layout_create": {
+  "label": "DescriptorSetLayout::Create",
+  "loc": "icd/api/vk_descriptor_set_layout.cpp:686",
+  "repo": "xgl",
+  "anchor": "VkResult DescriptorSetLayout::Create(",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/api/vk_descriptor_set_layout.cpp#L686-L686"
+ },
+ "pr_dri3_present": {
+  "label": "Dri3WindowSystem::Present",
+  "loc": "src/core/os/amdgpu/dri3/dri3WindowSystem.cpp:1029",
+  "repo": "pal",
+  "anchor": "Result Dri3WindowSystem::Present(",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/dri3/dri3WindowSystem.cpp#L1029-L1029"
+ },
+ "pr_wayland_present": {
+  "label": "WaylandWindowSystem::Present",
+  "loc": "src/core/os/amdgpu/wayland/waylandWindowSystem.cpp:1075",
+  "repo": "pal",
+  "anchor": "Result WaylandWindowSystem::Present(",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/wayland/waylandWindowSystem.cpp#L1075-L1075"
+ },
+ "pr_cpu_blit": {
+  "label": "DoCpuPresentBlit",
+  "loc": "src/core/os/amdgpu/amdgpuPresentScheduler.cpp:270",
+  "repo": "pal",
+  "anchor": "Result PresentScheduler::DoCpuPresentBlit(",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuPresentScheduler.cpp#L270-L270"
+ },
+ "uc_profiler": {
+  "label": "GpuProfiler layer reads GpuProfilerMode",
+  "loc": "src/core/layers/gpuProfiler/gpuProfilerPlatform.cpp:73",
+  "repo": "pal",
+  "anchor": "GpuProfilerMode mode      = pNextPlatform->PlatformSettings().gpuProfilerMode;",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/layers/gpuProfiler/gpuProfilerPlatform.cpp#L73-L73"
+ },
+ "uc_overlay": {
+  "label": "debug overlay layer",
+  "loc": "src/core/libInit.cpp:230",
+  "repo": "pal",
+  "anchor": "pCorePlatform->PlatformSettings().debugOverlayEnabled,",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/libInit.cpp#L230-L230"
+ },
+ "uc_shader_cache_modes": {
+  "label": "ShaderCacheMode definition",
+  "loc": "icd/settings/settings_xgl.json:2639",
+  "repo": "xgl",
+  "anchor": "\"Name\": \"ShaderCacheMode\"",
+  "url": "https://github.com/GPUOpen-Drivers/xgl/blob/e9782eb33ce5e5e4ed2e339542a28c1b933624b4/icd/settings/settings_xgl.json#L2639-L2639"
+ },
+ "uc_vram_cleared": {
+  "label": "PAL adds VRAM_CLEARED",
+  "loc": "src/core/os/amdgpu/amdgpuGpuMemory.cpp:294",
+  "repo": "pal",
+  "anchor": "if (((pDevice->Settings().clearAllocatedLfb) || (m_flags.initializeToZero == 1)) &&",
+  "url": "https://github.com/GPUOpen-Drivers/pal/blob/c5e800072a32f68b6ccc4422936d96167c6e0728/src/core/os/amdgpu/amdgpuGpuMemory.cpp#L294-L294"
+ },
+ "k_always_clear": {
+  "label": "kernel always clears VRAM",
+  "loc": "drivers/gpu/drm/amd/amdgpu/amdgpu_gem.c:451",
+  "repo": "linux",
+  "anchor": "/* always clear VRAM */",
+  "url": "https://github.com/torvalds/linux/blob/0fcb05b72344f40806cbe810de8872f1698bf053/drivers/gpu/drm/amd/amdgpu/amdgpu_gem.c#L451-L451"
  }
 };
 DRV.glossary = {

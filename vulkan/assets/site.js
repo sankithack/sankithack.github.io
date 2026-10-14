@@ -16,6 +16,19 @@
     return e;
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  // Small inline icons (stroke = currentColor) so buttons work in both themes.
+  function svg(d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + "</svg>"; }
+  var ICON = {
+    menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+    search: svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>'),
+    moon: svg('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
+    sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+    motion: svg('<rect x="9" y="9" width="6" height="6" rx="1"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/>'),
+  };
+  // Brand mark: a gold pad on a green trace, the site's call token.
+  var BRAND_SVG = '<svg class="brand-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/>' +
+    '<path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>';
+  function pageTitle() { return document.title.split(/\s[–·|]\s/)[0].trim(); }
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
   /* ------------------------------------------------------------------ motion
@@ -35,7 +48,7 @@
   /* ------------------------------------------------------------------ navigation */
   var NAV = [
     { group: "Start", items: [
-      { href: "index.html", label: "Overview & layer diagram", num: "◆" },
+      { href: "index.html", label: "Overview", num: "" },
     ] },
     { group: "Topics", items: [
       { href: "architecture.html", label: "Architecture & loader entry", num: "1" },
@@ -43,10 +56,14 @@
       { href: "shaders.html", label: "Shader compilation", num: "3" },
       { href: "cmdbuf.html", label: "Command buffers & PM4", num: "4" },
       { href: "submit.html", label: "Submission & sync", num: "5" },
+      { href: "descriptors.html", label: "Descriptor sets", num: "6" },
+      { href: "present.html", label: "Presentation", num: "7" },
     ] },
-    { group: "Reference", items: [
-      { href: "glossary.html", label: "Glossary", num: "§" },
-      { href: "versions.html", label: "Sources, SHAs & status", num: "#" },
+    { group: "Use and look up", items: [
+      { href: "usecases.html", label: "Use cases & settings", num: "" },
+      { href: "reference.html", label: "Code reference", num: "" },
+      { href: "glossary.html", label: "Glossary", num: "" },
+      { href: "versions.html", label: "Sources and status", num: "" },
     ] },
   ];
   var here = (location.pathname.split("/").pop() || "index.html");
@@ -54,11 +71,11 @@
   function buildChrome() {
     var side = $("#sidebar");
     if (side) {
-      var h = '<a class="brand" href="index.html"><span class="brand-mark">VK</span><span><b>AMDVLK Driver Atlas</b>' +
-        '<small>XGL · PAL · LLPC · libdrm · amdgpu</small></span></a>' +
+      var h = '<a class="brand" href="index.html">' + BRAND_SVG + '<span><b>AMDVLK Driver Atlas</b>' +
+        '<small>XGL, PAL, LLPC, libdrm and amdgpu, read from source</small></span></a>' +
         '<div class="search" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">' +
         '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>' +
-        '<input id="q" type="search" placeholder="Search pages, steps, symbols…  ( / )" autocomplete="off" aria-label="Search the site">' +
+        '<input id="q" type="search" placeholder="Search pages, steps and symbols" autocomplete="off" aria-label="Search the site">' +
         '<div class="search-results" id="results" role="listbox"></div></div>';
       NAV.forEach(function (g) {
         h += '<nav class="nav-group" aria-label="' + esc(g.group) + '"><h4>' + esc(g.group) + "</h4>";
@@ -80,15 +97,23 @@
     }
     var top = $("#topbar");
     if (top) {
-      var title = document.title.split("·")[0].trim();
-      top.innerHTML = '<button class="icon-btn menu-btn" id="menuBtn" aria-label="Open navigation">☰</button>' +
-        '<div class="crumbs">AMDVLK Driver Atlas › ' + esc(title) + "</div>" +
-        '<button class="icon-btn" id="motionBtn" aria-label="Toggle animations"></button>' +
-        '<button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode"></button>';
-      $("#menuBtn").addEventListener("click", function (e) { e.stopPropagation(); document.body.classList.toggle("nav-open"); });
-      document.addEventListener("click", function (e) {
-        if (document.body.classList.contains("nav-open") && !e.target.closest("#sidebar")) document.body.classList.remove("nav-open");
-      });
+      var title = pageTitle();
+      top.innerHTML = '<button class="icon-btn menu-btn" id="menuBtn" aria-label="Open navigation" aria-expanded="false">' + ICON.menu + '</button>' +
+        '<div class="crumbs">' + esc(title) + "</div>" +
+        '<button class="icon-btn search-btn" id="searchBtn" aria-label="Search">' + ICON.search + '</button>' +
+        '<button class="icon-btn" id="motionBtn"></button>' +
+        '<button class="icon-btn" id="themeBtn"></button>';
+      var scrim = el("div", { class: "scrim", "aria-hidden": "true" });
+      document.body.appendChild(scrim);
+      function setNav(open) {
+        document.body.classList.toggle("nav-open", open);
+        $("#menuBtn").setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      $("#menuBtn").addEventListener("click", function (e) { e.stopPropagation(); setNav(!document.body.classList.contains("nav-open")); });
+      $("#searchBtn").addEventListener("click", function (e) { e.stopPropagation(); setNav(true); setTimeout(function () { $("#q").focus(); }, 60); });
+      scrim.addEventListener("click", function () { setNav(false); });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") setNav(false); });
+      $$("#sidebar a").forEach(function (a) { a.addEventListener("click", function () { setNav(false); }); });
       setupTheme();
       setupMotionToggle();
     }
@@ -96,8 +121,9 @@
   function setupMotionToggle() {
     var b = $("#motionBtn");
     function paint() {
-      b.textContent = motionOff() ? "◌ Motion off" : "◉ Motion";
+      b.innerHTML = ICON.motion + '<span class="lbl">' + (motionOff() ? "Motion off" : "Motion on") + "</span>";
       b.setAttribute("aria-pressed", motionOff() ? "false" : "true");
+      b.setAttribute("aria-label", motionOff() ? "Turn animations on" : "Turn animations off");
       b.title = osReduced ? "Your system asks for reduced motion" : "Turn animations on or off";
       b.disabled = osReduced;
     }
@@ -106,30 +132,8 @@
       var off = !motionOff();
       if (off) document.documentElement.setAttribute("data-motion", "off"); else document.documentElement.removeAttribute("data-motion");
       store("drv-motion", off ? "off" : "on");
-      if (off) {
-        $$(".reveal").forEach(function (e) { e.classList.add("in"); });
-        document.getAnimations && document.getAnimations().forEach(function (a) { a.finish && a.finish(); });
-      }
+      if (off && document.getAnimations) document.getAnimations().forEach(function (a) { a.finish && a.finish(); });
       paint();
-    });
-  }
-
-  /* ------------------------------------------------------------------ scroll reveal */
-  function setupReveal() {
-    if (motionOff() || !("IntersectionObserver" in window)) return;
-    var els = $$("main > h2, main > .lede, main .prose > h2, main .prose > p, main .prose > ul, main .prose > ol, " +
-      "main .table-wrap, main .callout, main .cards > .card, main .pm4, main .two-col, main .prose > figure.code-panel, main .diagram-wrap");
-    els = els.filter(function (e) { return !e.closest(".tracer"); });
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
-      });
-    }, { rootMargin: "0px 0px -6% 0px" });
-    els.forEach(function (e) {
-      var sib = e.parentNode && e.parentNode.classList.contains("cards") ? Array.prototype.indexOf.call(e.parentNode.children, e) : 0;
-      if (sib) e.style.transitionDelay = (sib * 70) + "ms";
-      e.classList.add("reveal");
-      io.observe(e);
     });
   }
 
@@ -141,7 +145,11 @@
   }
   function setupTheme() {
     var b = $("#themeBtn");
-    function paint() { b.textContent = currentTheme() === "dark" ? "☀ Light" : "☾ Dark"; }
+    function paint() {
+      var dark = currentTheme() === "dark";
+      b.innerHTML = (dark ? ICON.sun : ICON.moon) + '<span class="lbl">' + (dark ? "Light" : "Dark") + "</span>";
+      b.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+    }
     paint();
     b.addEventListener("click", function () {
       var next = currentTheme() === "dark" ? "light" : "dark";
@@ -162,7 +170,7 @@
       if (!r) { a.classList.add("not-traced"); a.title = "unresolved reference"; return; }
       a.href = r.url; a.target = "_blank"; a.rel = "noopener";
       a.classList.add("src");
-      a.title = D.sources[r.repo].name + " · " + r.loc + " @ " + D.sources[r.repo].sha.slice(0, 10);
+      a.title = D.sources[r.repo].name + ", " + r.loc + " at " + D.sources[r.repo].sha.slice(0, 10);
       if (!a.textContent.trim()) a.textContent = r.label;
     });
   }
@@ -182,7 +190,7 @@
     var head = el("figcaption", { class: "code-head" },
       '<span class="code-path"><span class="repo">' + esc(step.repoName) + " / </span>" + esc(step.path) +
       ' <span class="lines">' + lines + "</span></span>" +
-      '<a href="' + esc(step.url) + '" target="_blank" rel="noopener" title="Open the full file at the pinned commit">full source @ ' + short + " ↗</a>");
+      '<a href="' + esc(step.url) + '" target="_blank" rel="noopener" title="Open the full file at the pinned commit">Open at ' + short + "</a>");
     var gutter = [];
     for (var i = step.start; i <= step.end; i++) gutter.push(i);
     var body = el("div", { class: "code-body" });
@@ -194,7 +202,7 @@
     p.appendChild(head);
     p.appendChild(body);
     if (step.explain && opts.explain !== false) {
-      var ex = el("div", { class: "explain" }, step.explain);
+      var ex = el("div", { class: "explain" }, '<span class="explain-label">What this does</span>' + step.explain);
       p.appendChild(ex);
     }
     return p;
@@ -303,45 +311,43 @@
       var left = el("div");
       var holder = el("div");
       var ctl = el("div", { class: "flow-ctl" },
-        '<button type="button" class="btn flow-toggle" aria-pressed="false">⏸ Pause flow</button>' +
-        '<span>The moving dot is one Vulkan call going down the stack. The detour to LLPC happens at pipeline creation.</span>');
+        '<button type="button" class="btn replay">Replay the call</button>' +
+        '<span>The gold pad is one Vulkan call travelling down the stack. It detours to LLPC because pipelines are compiled there.</span>');
       left.appendChild(holder); left.appendChild(ctl);
-      var detail = el("div", { class: "layer-detail", "aria-live": "polite" }, '<p class="placeholder">Click a layer to see what it does, its key classes, and links into the code.</p>');
+      var detail = el("div", { class: "layer-detail", "aria-live": "polite" }, '<p class="placeholder">Select a layer to see what it does, its key classes, and links into the code.</p>');
       wrap.classList.add("diagram-wrap");
       wrap.appendChild(left); wrap.appendChild(detail);
       var api = renderStack(holder, false, show);
-      holder.classList.add("flowing");
       var first = true;
       function show(id) {
         api.selected(id);
         detail.style.setProperty("--lc", "var(--l-" + id + ")");
         detail.innerHTML = layerDetailHTML(id);
         glossarize(detail);
-        if (!first) anim(detail, [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 240, easing: "ease-out" });
+        if (!first) anim(detail, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 220, easing: "ease-out" });
         first = false;
       }
       show(wrap.getAttribute("data-diagram") || "xgl");
 
-      // Looping "call" animation: App → Loader → XGL → LLPC → XGL → PAL → libdrm → kernel → GPU.
-      var loop = ["app", "loader", "xgl", "llpc", "xgl", "pal", "libdrm", "kernel", "gpu"], li = 0, paused = false;
-      var btn = $(".flow-toggle", ctl);
-      btn.addEventListener("click", function () {
-        paused = !paused;
-        btn.textContent = paused ? "▶ Play flow" : "⏸ Pause flow";
-        btn.setAttribute("aria-pressed", paused ? "true" : "false");
-        holder.classList.toggle("flowing", !paused);
-      });
-      api.moveTo(loop[0], false);
-      (function tick() {
-        var wait = 750;
-        if (!(paused || motionOff() || document.hidden)) {
-          li = (li + 1) % loop.length;
-          api.moveTo(loop[li], li !== 0);
-          if (li === loop.length - 1) wait = 1700;
-          if (li === 0) wait = 900;
-        }
-        setTimeout(tick, wait);
-      })();
+      // The page's one orchestrated moment: the call runs once from App to GPU, lighting each layer it passes.
+      var path = ["app", "loader", "xgl", "llpc", "xgl", "pal", "libdrm", "kernel", "gpu"], timers = [];
+      function run() {
+        timers.forEach(clearTimeout); timers = [];
+        $$(".layer.lit", holder).forEach(function (b) { b.classList.remove("lit"); });
+        api.moveTo(path[0], false);
+        if (motionOff()) { api.moveTo("gpu", false); return; }
+        path.forEach(function (id, k) {
+          if (!k) return;
+          timers.push(setTimeout(function () {
+            api.moveTo(id, true);
+            var b = $('.layer[data-layer="' + id + '"]', holder);
+            if (b) b.classList.add("lit");
+          }, 280 + k * 520));
+        });
+        timers.push(setTimeout(function () { $$(".layer.lit", holder).forEach(function (b) { b.classList.remove("lit"); }); }, 280 + path.length * 520 + 900));
+      }
+      $(".replay", ctl).addEventListener("click", run);
+      run();
     });
   }
 
@@ -369,7 +375,22 @@
     list.innerHTML = "<summary>All " + steps.length + " steps in this trace</summary><ol>" + steps.map(function (s, i) {
       return '<li data-i="' + i + '"><span class="dot" style="background:var(--l-' + s.layer + ')"></span><button type="button">' + esc(s.title) + "</button></li>";
     }).join("") + "</ol>";
-    mainCol.appendChild(bar); mainCol.appendChild(view); mainCol.appendChild(list);
+    mainCol.appendChild(bar);
+    mainCol.appendChild(el("p", { class: "swipe-hint" }, "Swipe the step sideways, or use the buttons at the bottom of the screen."));
+    mainCol.appendChild(view); mainCol.appendChild(list);
+    // Touch: a horizontal swipe on the step moves through the trace. Swipes that start inside a code panel are
+    // left alone, because the code scrolls sideways.
+    var touch = null;
+    view.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1 || e.target.closest(".code-body")) { touch = null; return; }
+      touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }, { passive: true });
+    view.addEventListener("touchend", function (e) {
+      if (!touch) return;
+      var dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y;
+      touch = null;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + (dx < 0 ? 1 : -1), true);
+    }, { passive: true });
 
     var stack = renderStack(stackHolder, true, function (layerId) {
       for (var k = 1; k <= steps.length; k++) {
@@ -428,7 +449,7 @@
         '<h3 id="step-' + (i + 1) + '">' + esc(s.title) + '</h3><span class="chip" style="color:var(--l-' + s.layer + ')"><i></i>' + esc(l.name) + "</span>");
       view.appendChild(t);
       if (s.code != null) view.appendChild(renderCodePanel(s));
-      else if (s.explain) view.appendChild(el("div", { class: "explain" }, s.explain));
+      else if (s.explain) view.appendChild(el("div", { class: "explain" }, '<span class="explain-label">What this does</span>' + s.explain));
       var r = renderRefs(s.refs);
       if (r) view.appendChild(r);
       glossarize(view);
@@ -505,7 +526,7 @@
       var g = D.glossary[t.getAttribute("data-term")];
       if (!g) return;
       hide();
-      tip = el("div", { class: "tip", role: "tooltip" }, "<b>" + esc(t.getAttribute("data-term")) + " — " + esc(g.long) + "</b>" + g.def);
+      tip = el("div", { class: "tip", role: "tooltip" }, "<b>" + esc(t.getAttribute("data-term")) + " (" + esc(g.long) + ")</b>" + g.def);
       document.body.appendChild(tip);
       var r = t.getBoundingClientRect(), w = tip.offsetWidth;
       var left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - w - 8));
@@ -524,7 +545,7 @@
   function setupSearch() {
     var q = $("#q"), box = $("#results");
     if (!q || !D.searchIndex) return;
-    var idx = D.searchIndex.map(function (r) { return { r: r, t: r.t.toLowerCase(), x: r.x.toLowerCase() }; });
+    var idx = D.searchIndex.concat(refSearchEntries()).map(function (r) { return { r: r, t: r.t.toLowerCase(), x: r.x.toLowerCase() }; });
     var active = -1;
     function snippet(x, terms) {
       var lx = x.toLowerCase(), pos = lx.indexOf(terms[0]);
@@ -553,7 +574,7 @@
         hits.push({ e: e, s: score });
       });
       hits.sort(function (a, b) { return b.s - a.s; });
-      if (!hits.length) { box.innerHTML = '<div class="search-empty">No matches for “' + esc(v) + "”.</div>"; box.classList.add("open"); return; }
+      if (!hits.length) { box.innerHTML = '<div class="search-empty">Nothing matches “' + esc(v) + '”. Try a function, class or setting name, such as vkCmdDraw or AlwaysResident.</div>'; box.classList.add("open"); return; }
       box.innerHTML = hits.slice(0, 14).map(function (h) {
         var r = h.e.r;
         return '<a href="' + esc(r.u) + '" role="option"><div class="r-t">' + esc(r.t) + '</div><div class="r-p">' + esc(r.p) +
@@ -676,10 +697,111 @@
       DW.forEach(function (dw) { dw.fields.forEach(function (x) { if (x.n === sel) f = x; }); });
       if (!f) return;
       var v = values()[f.n];
-      $("#pm4-detail").innerHTML = "<b><code>" + f.n + "</code></b> — bits [" + (f.lo + f.w - 1) + (f.w > 1 ? ":" + f.lo : "") + "], value " + v + " (0x" + v.toString(16).toUpperCase() + "). " + f.d;
+      $("#pm4-detail").innerHTML = "<b><code>" + f.n + "</code></b>, bits [" + (f.lo + f.w - 1) + (f.w > 1 ? ":" + f.lo : "") + "], value " + v + " (0x" + v.toString(16).toUpperCase() + "). " + f.d;
       glossarize($("#pm4-detail"));
     }
     [nIn, pIn, oIn].forEach(function (i) { i.addEventListener("input", function () { render(); detail(); }); });
+    render();
+  }
+
+  /* ------------------------------------------------------------------ buffer SRD builder (descriptors page) */
+  // Mirrors Gfx9::Device::CreateUntypedBufferViewSrds and the sq_buf_rsrc_t layout in gfx10_sq_ko_reg.h (GFX10/11).
+  function setupSrd() {
+    var host = $("#srd-widget");
+    if (!host) return;
+    var REF = D.refs || {};
+    function link(id, txt) { var r = REF[id]; return r ? '<a class="src" target="_blank" rel="noopener" href="' + r.url + '" title="' + r.loc + '">' + txt + "</a>" : txt; }
+    var DW = [
+      { name: "DW0, base_address [31:0]", fields: [{ n: "base_address_lo", lo: 0, w: 32, c: "--l-xgl", d: "Low 32 bits of the buffer's GPU virtual address: the <code>VkBuffer</code>'s VA plus the descriptor's offset." }] },
+      { name: "DW1, base_address [47:32], stride, swizzle", fields: [
+        { n: "swizzle_enable", lo: 31, w: 1, c: "--l-app", d: "Not set for raw buffers; 0." },
+        { n: "cache_swizzle", lo: 30, w: 1, c: "--l-app", d: "Not set for raw buffers; 0." },
+        { n: "stride", lo: 16, w: 14, c: "--l-pal", d: "Record stride in bytes (<code>SqBufRsrcTWord1StrideShift</code> = 16). Uniform and storage buffers use 0." },
+        { n: "base_address_hi", lo: 0, w: 16, c: "--l-xgl", d: "Bits 47:32 of the VA. GPU virtual addresses are 48 bits." } ] },
+      { name: "DW2, num_records", fields: [{ n: "num_records", lo: 0, w: 32, c: "--l-kernel", d: "<code>CalcNumRecords</code>: the range in bytes, divided by the stride when the stride is greater than 1. Accesses beyond it are out of bounds." }] },
+      { name: "DW3, swizzle, format, OOB mode, type", fields: [
+        { n: "type", lo: 30, w: 2, c: "--l-gpu", d: "<code>SQ_RSRC_BUF</code> = 0: this is a buffer resource." },
+        { n: "oob_select", lo: 28, w: 2, c: "--l-kernel", d: "Out-of-bounds checking. <code>SQ_OOB_COMPLETE</code> (3) when the stride is 0 or 1, otherwise <code>SQ_OOB_INDEX_ONLY</code> (1)." },
+        { n: "llc_noalloc", lo: 26, w: 2, c: "--l-libdrm", d: "MALL (last-level cache) policy: bit 1 bypasses on read, bit 0 on write (<code>CalcLlcNoalloc</code>). Parts without MALL ignore it." },
+        { n: "(25)", lo: 25, w: 1, c: "--l-app", d: "Unused; 0." },
+        { n: "resource_level", lo: 24, w: 1, c: "--l-llpc", d: "<code>BufferSrdResourceLevel</code> = 1 on GFX10/11." },
+        { n: "add_tid_enable", lo: 23, w: 1, c: "--l-app", d: "Not set; 0." },
+        { n: "index_stride", lo: 21, w: 2, c: "--l-app", d: "Not set; 0." },
+        { n: "(20:19)", lo: 19, w: 2, c: "--l-app", d: "Unused; 0." },
+        { n: "format", lo: 12, w: 7, c: "--l-pal", d: "<code>BUF_FMT_32_UINT</code> = 0x14 for raw (untyped) buffers." },
+        { n: "dst_sel_w", lo: 9, w: 3, c: "--l-loader", d: "<code>SQ_SEL_W</code> = 7." },
+        { n: "dst_sel_z", lo: 6, w: 3, c: "--l-loader", d: "<code>SQ_SEL_Z</code> = 6." },
+        { n: "dst_sel_y", lo: 3, w: 3, c: "--l-loader", d: "<code>SQ_SEL_Y</code> = 5." },
+        { n: "dst_sel_x", lo: 0, w: 3, c: "--l-loader", d: "<code>SQ_SEL_X</code> = 4." } ] },
+    ];
+    host.innerHTML =
+      '<div class="pm4-controls">' +
+      '<label>GPU address <input type="text" id="srd-va" value="0x800012340000" spellcheck="false" size="16"></label>' +
+      '<label>Range (bytes) <input type="number" id="srd-range" min="0" value="65536"></label>' +
+      '<label>Stride <input type="number" id="srd-stride" min="0" max="16383" value="0"></label>' +
+      '<label><input type="checkbox" id="srd-br"> bypass MALL on read</label>' +
+      '<label><input type="checkbox" id="srd-bw"> bypass MALL on write</label></div>' +
+      '<div id="srd-dws"></div><div class="field-detail" id="srd-detail">Select a field to see where its value comes from.</div><p class="pm4-check" id="srd-note"></p>';
+    var sel = null, prev = null;
+    function vals() {
+      var vaTxt = $("#srd-va").value.trim(), va;
+      try { va = BigInt(vaTxt.startsWith("0x") || vaTxt.startsWith("0X") ? vaTxt : "0x" + vaTxt); } catch (e) { va = 0n; }
+      va = va & ((1n << 48n) - 1n);
+      var range = Math.max(0, Math.floor(+$("#srd-range").value || 0));
+      var stride = Math.max(0, Math.min(16383, Math.floor(+$("#srd-stride").value || 0)));
+      range = Math.ceil(range / 4) * 4;                   // XGL rounds the range up to a DWORD
+      var numRecords = stride > 1 ? Math.floor(range / stride) : range;
+      var br = $("#srd-br").checked ? 1 : 0, bw = $("#srd-bw").checked ? 1 : 0;
+      var valid = va !== 0n;
+      return {
+        base_address_lo: Number(va & 0xFFFFFFFFn), base_address_hi: Number((va >> 32n) & 0xFFFFn), stride: stride,
+        swizzle_enable: 0, cache_swizzle: 0, num_records: numRecords >>> 0,
+        type: 0, oob_select: valid ? (stride <= 1 ? 3 : 1) : 0, llc_noalloc: valid ? (br << 1) | bw : 0, "(25)": 0,
+        resource_level: valid ? 1 : 0, add_tid_enable: 0, index_stride: 0, "(20:19)": 0, format: valid ? 0x14 : 0,
+        dst_sel_w: valid ? 7 : 0, dst_sel_z: valid ? 6 : 0, dst_sel_y: valid ? 5 : 0, dst_sel_x: valid ? 4 : 0,
+        _valid: valid, _range: range,
+      };
+    }
+    function hex(v) { return "0x" + (v >>> 0).toString(16).toUpperCase().padStart(8, "0"); }
+    function render() {
+      var v = vals(), out = "";
+      var words = DW.map(function (dw) {
+        var w = 0;
+        dw.fields.forEach(function (f) { w = (w + (v[f.n] % Math.pow(2, f.w)) * Math.pow(2, f.lo)) >>> 0; });
+        return w >>> 0;
+      });
+      DW.forEach(function (dw, k) {
+        var word = words[k], bits = "", nums = "", fields = "", owner = [];
+        dw.fields.forEach(function (f) { for (var b = f.lo; b < f.lo + f.w; b++) owner[b] = f; });
+        for (var b = 31; b >= 0; b--) {
+          var f = owner[b], on = Math.floor(word / Math.pow(2, b)) % 2;
+          var flipped = prev && Math.floor(((prev[k] ^ word) >>> 0) / Math.pow(2, b)) % 2;
+          bits += '<div class="bit' + (f && sel === f.n ? " inf" : "") + (flipped ? " flip" : "") + '" style="--fc:var(' + (f ? f.c : "--rule") + ')">' + on + "</div>";
+          nums += "<div>" + (b % 4 === 0 || b === 31 ? b : "") + "</div>";
+        }
+        dw.fields.slice().sort(function (a, c) { return c.lo - a.lo; }).forEach(function (f) {
+          var shown = f.n === "base_address_lo" || f.n === "base_address_hi" || f.n === "num_records" ? "0x" + v[f.n].toString(16).toUpperCase() : String(v[f.n]);
+          fields += '<button type="button" class="field' + (sel === f.n ? " sel" : "") + '" data-f="' + f.n + '" style="flex:' + f.w + ";--fc:var(" + f.c + ')" title="' +
+            f.n + " [" + (f.lo + f.w - 1) + (f.w > 1 ? ":" + f.lo : "") + ']">' + f.n + "<small>" + shown + "</small></button>";
+        });
+        out += '<div class="dw"><div class="dw-head"><span>' + dw.name + '</span><span class="hex' + (prev && prev[k] !== word ? " changed" : "") + '">' + hex(word) + "</span></div>" +
+          '<div class="bits">' + bits + '</div><div class="bitnums">' + nums + '</div><div class="fields">' + fields + "</div></div>";
+      });
+      $("#srd-dws").innerHTML = out;
+      prev = words;
+      $$("#srd-dws .field").forEach(function (b) { b.addEventListener("click", function () { sel = b.getAttribute("data-f"); render(); detail(); }); });
+      $("#srd-note").innerHTML = (v._valid ? "" : "A null address produces DW3 = 0, as in PAL's <code>gpuAddr == 0</code> branch. ") +
+        "Range after DWORD rounding: " + v._range + " bytes. Layout: " + link("ds_srd_union", "sq_buf_rsrc_t") + ", shifts: " + link("ds_srd_shifts", "gfx10_sq_ko_reg.h") +
+        ". GFX12 uses its own " + link("ds_gfx12_srd", "sq_buf_rsrc_t") + ", not shown here.";
+    }
+    function detail() {
+      var f = null;
+      DW.forEach(function (dw) { dw.fields.forEach(function (x) { if (x.n === sel) f = x; }); });
+      if (!f) return;
+      $("#srd-detail").innerHTML = "<b><code>" + esc(f.n) + "</code></b>, bits [" + (f.lo + f.w - 1) + (f.w > 1 ? ":" + f.lo : "") + "]: " + f.d;
+      glossarize($("#srd-detail"));
+    }
+    $$("input", host).forEach(function (i) { i.addEventListener("input", function () { render(); detail(); }); });
     render();
   }
 
@@ -707,8 +829,229 @@
     if (!host) return;
     host.innerHTML = Object.keys(D.glossary).sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; }).map(function (k) {
       var g = D.glossary[k];
-      return '<dt id="g-' + g.slug + '">' + esc(k) + " <small>— " + esc(g.long) + "</small></dt><dd>" + g.def + "</dd>";
+      return '<dt id="g-' + g.slug + '">' + esc(k) + " <small>" + esc(g.long) + "</small></dt><dd>" + g.def + "</dd>";
     }).join("");
+  }
+
+  /* ------------------------------------------------------------------ code reference (generated by tools/extract.py) */
+  function srcLink(repo, path, line, label) {
+    if (!repo || !path || !line) return "";
+    return '<a class="src" target="_blank" rel="noopener" href="' + esc(permalink(repo, path, line)) + '" title="' + esc(path + ":" + line) + '">' +
+      esc(label || (path.split("/").pop() + ":" + line)) + "</a>";
+  }
+  function hex2(v) { return "0x" + v.toString(16).toUpperCase().padStart(2, "0"); }
+  var REF_TABS = [
+    { id: "entrypoints", label: "Vulkan entry points",
+      intro: "Every function in XGL's dispatch table, where XGL defines it, and the first call its body makes. Aliases (e.g. the KHR names of promoted functions) share an implementation.",
+      rows: function () { return D.ref.entrypoints; }, group: "cat", filter: "cat", filterLabel: "All areas",
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + (r.calls || "") + " " + r.cat; },
+      head: ["Entry point", "Defined in", "First call in its body"],
+      cells: function (r) {
+        return [
+          [r.name + (r.alias ? '<span class="sub">alias of ' + esc(r.impl) + "</span>" : ""), "name"],
+          srcLink(r.repo, r.path, r.line),
+          r.calls ? "<code>" + esc(r.calls) + "</code> " + srcLink(r.repo, r.path, r.callLine, "line " + r.callLine) : '<span class="sub">no single forwarding call</span>',
+        ];
+      } },
+    { id: "palapi", label: "PAL interfaces",
+      intro: "The public classes XGL programs against (pal/inc/core). Each method's summary is the first sentence of its doc comment.",
+      rows: function () {
+        var out = [];
+        D.ref.palapi.forEach(function (c) { c.methods.forEach(function (m) { out.push({ c: c, m: m, grp: c.cls }); }); });
+        return out;
+      }, group: "grp", filter: "grp", filterLabel: "All classes",
+      groupHTML: function (r) { return esc(r.c.cls) + (r.c.base ? ' <span class="sub">derives from ' + esc(r.c.base) + "</span>" : "") + (r.c.brief ? '<span class="sub">' + esc(r.c.brief) + "</span>" : ""); },
+      key: function (r) { return r.c.cls + "::" + r.m.m; },
+      text: function (r) { return r.c.cls + " " + r.m.m + " " + r.m.brief; },
+      head: ["Method", "What it does", "Declared at"],
+      cells: function (r) {
+        return [[esc(r.m.m) + (r.m.virtual ? '<span class="sub">virtual</span>' : ""), "name"], esc(r.m.brief) || '<span class="sub">no doc comment</span>',
+          srcLink("pal", r.c.path, r.m.line)];
+      } },
+    { id: "settings", label: "Driver settings",
+      intro: "Every runtime setting defined in XGL's and PAL's settings files, with its type, default and description. Settings are read from amdVulkanSettings.cfg or amdPalSettings.cfg; see Use cases.",
+      rows: function () { return D.ref.settings; }, filter: "comp", filterLabel: "All components",
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + r.desc + " " + r.tags.join(" ") + " " + r.comp + " " + (r.values || []).map(function (v) { return v[0]; }).join(" "); },
+      head: ["Setting", "Type and default", "Description", "Defined in"],
+      cells: function (r) {
+        return [[esc(r.name) + '<span class="sub">' + esc(r.comp) + "</span>", "name"],
+          "<code>" + esc(r.type) + "</code><span class=\"sub\">" + esc(r.default) + "</span>",
+          esc(r.desc) +
+            (r.values && r.values.length ? '<span class="sub">' + (r.bitmask ? "Bits (combine with |): " : "Values: ") +
+              r.values.map(function (v) { return "<code>" + esc(v[1]) + "</code> " + esc(v[0]); }).join(", ") + "</span>" : "") +
+            (r.tags.length ? "<br>" + r.tags.map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") : ""),
+          srcLink(r.repo, r.path, r.line)];
+      } },
+    { id: "drmprocs", label: "PAL → libdrm",
+      intro: "Every function PAL loads at runtime from libdrm (and a few system libraries), how many call sites PAL has for it, and the kernel ioctl it ends in.",
+      rows: function () { return D.ref.drmprocs; }, filter: "lib", filterLabel: "All libraries",
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + r.pfn + " " + (r.ioctls || []).join(" "); },
+      head: ["Function", "Called from PAL", "Ioctl", "Defined in libdrm"],
+      cells: function (r) {
+        return [[esc(r.name) + '<span class="sub">' + esc(r.lib) + "</span>", "name"],
+          r.uses + " site" + (r.uses === 1 ? "" : "s") + (r.usePath ? '<span class="sub">first: ' + srcLink("pal", r.usePath, r.useLine) + "</span>" : ""),
+          (r.ioctls && r.ioctls.length) ? r.ioctls.map(function (x) { return "<code>" + esc(x) + "</code>"; }).join(" ") : '<span class="sub">none</span>',
+          r.defPath ? srcLink("drm", r.defPath, r.defLine) : '<span class="sub">not in libdrm_amdgpu</span>'];
+      } },
+    { id: "libdrm", label: "libdrm_amdgpu API",
+      intro: "Every public function in libdrm's amdgpu library, and the DRM ioctls its body issues.",
+      rows: function () { return D.ref.libdrm; },
+      filter: function (r) { return r.ioctls.length ? "Issues an ioctl" : "No ioctl (user-space only)"; }, filterLabel: "All functions",
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + r.ioctls.join(" ") + " " + r.calls.join(" "); },
+      head: ["Function", "Ioctls issued", "Calls", "Defined in"],
+      cells: function (r) {
+        return [[esc(r.name), "name"], r.ioctls.length ? r.ioctls.map(function (x) { return "<code>" + esc(x) + "</code>"; }).join(" ") : '<span class="sub">none</span>',
+          r.calls.length ? '<span class="sub">' + r.calls.map(esc).join(", ") + "</span>" : "", srcLink("drm", r.path, r.line)];
+      } },
+    { id: "ioctls", label: "Kernel ioctls",
+      intro: "Every ioctl the amdgpu kernel driver registers, its handler, and the argument structure from the uAPI header.",
+      rows: function () { return D.ref.ioctls; },
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + r.handler + " " + (r.arg || ""); },
+      head: ["Ioctl", "Handler", "Argument", "Flags"],
+      cells: function (r) {
+        return [[esc(r.name), "name"], "<code>" + esc(r.handler) + "</code> " + srcLink("linux", r.hPath, r.hLine),
+          r.arg ? "<code>" + esc(r.arg) + "</code> " + srcLink("linux", "include/uapi/drm/amdgpu_drm.h", r.uLine, "uapi") : "",
+          r.flags.map(function (f) { return '<span class="tag">' + esc(f) + "</span>"; }).join("")];
+      } },
+    { id: "pm4", label: "PM4 opcodes",
+      intro: "Every PM4 type-3 opcode in PAL's GFX10/11 and GFX12 hardware layers, and how many places in each layer reference it.",
+      rows: function () { return D.ref.pm4; },
+      filter: function (r) { return r.gens.length === 2 ? "Both layers" : r.gens[0].gen + " only"; }, filterLabel: "All opcodes",
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + hex2(r.value) + " " + r.gens.map(function (g) { return g.sym; }).join(" "); },
+      head: ["Opcode", "Value", "GFX10/11 layer", "GFX12 layer"],
+      cells: function (r) {
+        function g(gen) {
+          var x = r.gens.filter(function (y) { return y.gen === gen; })[0];
+          if (!x) return '<span class="sub">absent</span>';
+          return x.uses + " ref" + (x.uses === 1 ? "" : "s") + " " + srcLink("pal", x.path, x.line, "enum") +
+            (x.usePath ? '<span class="sub">first use: ' + srcLink("pal", x.usePath, x.useLine) + "</span>" : "");
+        }
+        return [[esc(r.name), "name"], "<code>" + hex2(r.value) + "</code>", g("GFX10/11"), g("GFX12")];
+      } },
+    { id: "passes", label: "Compiler passes",
+      intro: "The LLPC front-end and LGC middle-end pass pipelines in the order they are added. Some passes only run under a condition, shown when it is on the line before. Passes without a source file here are upstream LLVM passes.",
+      rows: function () { return D.ref.passes; }, group: "stage", filter: "stage", filterLabel: "Both pipelines",
+      key: function (r) { return r.stage + r.order; },
+      text: function (r) { return r.name + " " + (r.about || "") + " " + r.cond; },
+      head: ["#", "Pass", "What its source file says", "Added at"],
+      cells: function (r) {
+        return [String(r.order), [esc(r.name) + (r.cond ? '<span class="sub">' + esc(r.cond) + "</span>" : ""), "name"],
+          r.external ? '<span class="sub">upstream LLVM pass</span>' : esc(r.about) + (r.defPath ? '<span class="sub">' + srcLink("llpc", r.defPath, r.defLine, "run()") + "</span>" : ""),
+          srcLink("llpc", r.path, r.line)];
+      } },
+    { id: "extensions", label: "Vulkan extensions",
+      intro: "Every extension XGL adds to its available list. Many are conditional on GPU features or settings; the guarding condition is shown when it directly encloses the line.",
+      rows: function () { return D.ref.extensions; }, filter: "kind", filterLabel: "Instance and device",
+      key: function (r) { return r.name; },
+      text: function (r) { return r.name + " " + r.cond; },
+      head: ["Extension", "Kind", "Condition", "Added at"],
+      cells: function (r) {
+        return [[esc(r.name), "name"], esc(r.kind), r.cond ? "<code>" + esc(r.cond) + "</code>" : '<span class="sub">always</span>', srcLink("xgl", r.path, r.line)];
+      } },
+  ];
+  function refSearchEntries() {
+    if (!D.ref) return [];
+    var out = [];
+    REF_TABS.forEach(function (t) {
+      t.rows().forEach(function (r) {
+        var k = t.key(r);
+        out.push({ t: k, p: "Code reference, " + t.label, u: "reference.html#" + t.id + "/" + encodeURIComponent(k), x: t.text(r) });
+      });
+    });
+    return out;
+  }
+  function setupReference() {
+    var host = $("#ref-app");
+    if (!host || !D.ref) return;
+    var PAGE = 200;
+    host.innerHTML = '<div class="ref-tabs" role="tablist">' + REF_TABS.map(function (t) {
+      return '<button role="tab" type="button" id="tab-' + t.id + '" data-t="' + t.id + '" aria-selected="false">' + esc(t.label) + '<span class="n">' + t.rows().length + "</span></button>";
+    }).join("") + '</div><p class="ref-intro"></p><div class="ref-tools"><input type="search" aria-label="Filter rows" placeholder="Filter by name or text">' +
+      '<select aria-label="Narrow to"></select><span class="ref-count" aria-live="polite"></span></div><div class="table-wrap"><table class="ref"><thead></thead><tbody></tbody></table></div>' +
+      '<div class="ref-more"></div>';
+    var tab = null, shown = PAGE;
+    var input = $(".ref-tools input", host), sel = $(".ref-tools select", host);
+    function fval(t, r) { return typeof t.filter === "function" ? t.filter(r) : r[t.filter]; }
+    function setTab(id, q, focusKey) {
+      tab = REF_TABS.filter(function (t) { return t.id === id; })[0] || REF_TABS[0];
+      $$(".ref-tabs button", host).forEach(function (b) { b.setAttribute("aria-selected", b.getAttribute("data-t") === tab.id ? "true" : "false"); });
+      $(".ref-intro", host).textContent = tab.intro;
+      $("thead", host).innerHTML = "<tr>" + tab.head.map(function (h) { return "<th>" + esc(h) + "</th>"; }).join("") + "</tr>";
+      var opts = [];
+      if (tab.filter) tab.rows().forEach(function (r) { var v = fval(tab, r); if (opts.indexOf(v) < 0) opts.push(v); });
+      sel.hidden = !tab.filter;
+      sel.innerHTML = '<option value="">' + esc(tab.filterLabel || "All") + "</option>" + opts.map(function (o) { return '<option>' + esc(o) + "</option>"; }).join("");
+      input.value = q || "";
+      shown = PAGE;
+      render(focusKey);
+    }
+    function render(focusKey) {
+      var q = input.value.trim().toLowerCase(), f = sel.value;
+      var rows = tab.rows().filter(function (r) {
+        if (f && fval(tab, r) !== f) return false;
+        return !q || tab.text(r).toLowerCase().indexOf(q) >= 0;
+      });
+      if (focusKey) rows.sort(function (a, b) { return (tab.key(b) === focusKey) - (tab.key(a) === focusKey); });
+      var html = "", lastGroup = null, n = 0;
+      rows.slice(0, shown).forEach(function (r) {
+        if (tab.group && !focusKey) {
+          var g = r[tab.group];
+          if (g !== lastGroup) {
+            html += '<tr class="group"><td colspan="' + tab.head.length + '">' + (tab.groupHTML ? tab.groupHTML(r) : esc(g)) + "</td></tr>";
+            lastGroup = g;
+          }
+        }
+        var cells = tab.cells(r);
+        html += '<tr' + (focusKey && tab.key(r) === focusKey ? ' class="focus"' : "") + ">" + cells.map(function (c, i) {
+          var cls = Array.isArray(c) ? c[1] : "", v = Array.isArray(c) ? c[0] : c;
+          return "<td" + (cls ? ' class="' + cls + '"' : "") + ' data-l="' + esc(tab.head[i]) + '">' + v + "</td>";
+        }).join("") + "</tr>";
+        n++;
+      });
+      $("tbody", host).innerHTML = html || '<tr><td colspan="' + tab.head.length + '" class="ref-empty">No rows match. Clear the filter or pick “' + esc(tab.filterLabel || "All") + '”.</td></tr>';
+      $(".ref-count", host).textContent = rows.length === tab.rows().length ? rows.length + " rows" : rows.length + " of " + tab.rows().length + " rows";
+      var more = $(".ref-more", host);
+      more.innerHTML = rows.length > shown ? '<button type="button" class="btn">Show ' + Math.min(PAGE, rows.length - shown) + " more</button>" : "";
+      if (more.firstChild) more.firstChild.addEventListener("click", function () { shown += PAGE; render(); });
+      if (history.replaceState) history.replaceState(null, "", "#" + tab.id + (input.value ? "/" + encodeURIComponent(input.value) : ""));
+      anim($("tbody", host), [{ opacity: .35 }, { opacity: 1 }], { duration: 160 });
+    }
+    $$(".ref-tabs button", host).forEach(function (b) { b.addEventListener("click", function () { setTab(b.getAttribute("data-t")); }); });
+    $(".ref-tabs", host).addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      var i = REF_TABS.indexOf(tab) + (e.key === "ArrowRight" ? 1 : -1);
+      i = (i + REF_TABS.length) % REF_TABS.length;
+      setTab(REF_TABS[i].id); $("#tab-" + REF_TABS[i].id).focus(); e.preventDefault();
+    });
+    var deb;
+    input.addEventListener("input", function () { clearTimeout(deb); deb = setTimeout(function () { shown = PAGE; render(); }, 120); });
+    sel.addEventListener("change", function () { shown = PAGE; render(); });
+    function fromHash() {
+      var m = /^#(\w+)(?:\/(.*))?$/.exec(location.hash);
+      if (m) setTab(m[1], m[2] ? decodeURIComponent(m[2]) : "", m[2] ? decodeURIComponent(m[2]) : null);
+      else setTab(REF_TABS[0].id);
+    }
+    window.addEventListener("hashchange", fromHash);   // replaceState() above does not fire this; only real navigation does
+    fromHash();
+  }
+
+  // Numbers in prose come from the generated data, so they never drift from the code.
+  function setupCounts() {
+    $$("[data-steps]").forEach(function (e) {
+      var f = D.flows[e.getAttribute("data-steps")];
+      if (f) e.textContent = f.steps.length + " steps";
+    });
+    $$("[data-count]").forEach(function (e) {
+      var k = e.getAttribute("data-count"), v = D.ref && D.ref[k];
+      if (!v) return;
+      e.textContent = k === "palapi" ? v.reduce(function (n, c) { return n + c.methods.length; }, 0) : v.length;
+    });
   }
 
   /* ------------------------------------------------------------------ boot */
@@ -722,10 +1065,12 @@
     setupDiagram();
     setupTracer();
     setupPm4();
+    setupSrd();
     glossarize($("main"));
     setupTooltips();
+    setupReference();
+    setupCounts();
     setupSearch();
-    setupReveal();
     if (location.hash && !/^#step-/.test(location.hash)) {
       var t = document.getElementById(location.hash.slice(1));
       if (t) t.scrollIntoView();

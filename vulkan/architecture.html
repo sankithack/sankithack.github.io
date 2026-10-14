@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Architecture &amp; loader entry · AMDVLK Driver Atlas</title>
+<title>Architecture &amp; loader entry – AMDVLK Driver Atlas</title>
 <meta name="description" content="How XGL, PAL and LLPC relate; how the Vulkan loader enters the AMDVLK ICD; dispatch tables and handle wrapping.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body data-page="architecture">
@@ -15,7 +18,7 @@
   <div class="main">
     <header class="topbar" id="topbar"></header>
     <main id="main" class="content">
-      <h1>1 · Architecture &amp; loader entry</h1>
+      <h1>Architecture &amp; loader entry</h1>
       <p class="lede">Three AMD libraries make up the driver, and each has one job. <b>XGL</b> speaks Vulkan. <b>PAL</b>
         speaks GPU and OS. <b>LLPC</b> turns SPIR-V pipelines into machine code. This page shows how they connect and how
         a Vulkan call enters them.</p>
@@ -44,6 +47,31 @@
 
       <h2 id="trace">Step-through: from loader to PAL</h2>
       <div data-flow="arch"></div>
+
+      <h2 id="example">Worked example: what happens when an app calls vkCmdDraw</h2>
+      <div class="example-walk">
+<pre class="example"><code class="language-c ex">PFN_vkCmdDraw pfnDraw = (PFN_vkCmdDraw)vkGetDeviceProcAddr(device, "vkCmdDraw");
+pfnDraw(cmd, 3, 1, 0, 0);   /* or plain vkCmdDraw(cmd, 3, 1, 0, 0) through the loader */</code></pre>
+        <ol>
+          <li><b>Lookup:</b> <code>vkGetDeviceProcAddr</code> uses the <em>device</em> dispatch table
+            (<a data-ref="ex_get_proc_device">vk_dispatch.cpp</a>). <code>GetEntryPoint</code> finds
+            <code>vkCmdDraw</code> in <code>g_EntryPointMetadataTable</code>, sees it is a DEVICE-level entry point, and
+            returns XGL's <code>vk::entry::vkCmdDraw</code>. Calling the returned pointer skips the loader's trampoline;
+            calling <code>vkCmdDraw</code> directly goes through the loader, which reads the dispatch pointer from the
+            first word of the <code>VkCommandBuffer</code>.</li>
+          <li><b>Handle to object:</b> <code>VkCommandBuffer</code> is dispatchable, so it points at a
+            <code>Dispatchable&lt;CmdBuffer&gt;</code>. <code>ApiCmdBuffer::ObjectFromHandle</code> skips the
+            <code>VK_LOADER_DATA</code> word to reach the <code>CmdBuffer</code> object
+            (<a data-ref="ex_dispatchable_offset">pointer arithmetic</a>).</li>
+          <li><b>XGL to PAL:</b> <code>CmdBuffer::Draw</code> calls <code>ICmdBuffer::CmdDraw</code> on the PAL command
+            buffer it owns, once per GPU in the device mask.</li>
+          <li><b>PAL to hardware layer:</b> the call jumps through <code>m_funcTable</code> into the GFX10/11 or GFX12
+            hardware layer chosen at device creation. <a href="cmdbuf.html">Topic 4</a> follows it down to PM4.</li>
+        </ol>
+        <p>Every arrow in this chain is a direct call or a table jump in user space. Nothing reaches the kernel until
+          <code>vkQueueSubmit</code>.</p>
+      </div>
+
 
       <div class="prose">
       <h2 id="loader">Loader entry and dispatch tables</h2>
@@ -113,6 +141,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="assets/data/flows.js"></script>
+<script src="assets/data/reference.js"></script>
 <script src="assets/data/search-index.js"></script>
 <script src="assets/site.js"></script>
 </body>
