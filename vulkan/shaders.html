@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shader compilation · AMDVLK Driver Atlas</title>
+<meta name="description" content="VkShaderModule and pipeline creation in XGL, handoff to LLPC, SPIR-V to LLVM IR, LGC lowering, the AMDGPU backend, the PAL ELF, caching and GFX-level differences.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="shaders">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>3 · Shader compilation</h1>
+      <p class="lede">AMDVLK compiles <em>pipelines</em>, not shaders. A shader module is only hashed and preprocessed;
+        when a pipeline is created, LLPC translates each stage's SPIR-V to LLVM IR, links the stages into one module,
+        lowers it with full knowledge of the pipeline state, and has LLVM emit a single ELF that PAL loads.</p>
+
+      <div class="prose">
+      <h2 id="overview">The pipeline in one picture</h2>
+      <ol class="path">
+        <li><b>XGL</b>: <code>vkCreateShaderModule</code> → <code>PipelineCompiler::BuildShaderModule</code> → LLPC
+          <code>BuildShaderModule</code>, which hashes the SPIR-V and records usage. No ISA is produced yet.</li>
+        <li><b>XGL</b>: <code>vkCreateGraphicsPipelines</code> → cache lookups → <code>ConvertGraphicsPipelineInfo</code>
+          builds a <code>Vkgc::GraphicsPipelineBuildInfo</code> from all the Vulkan state.</li>
+        <li><b>LLPC front end</b>: per stage, <code>LowerTranslator</code> → SPIRV reader (<code>SPIRVToLLVM</code>)
+          → front-end lowering passes. The stages are then linked into one pipeline module.</li>
+        <li><b>LGC middle end</b>: <code>PipelineState::generate</code> → <code>LgcLowering::addPasses</code>:
+          state-dependent lowering, hardware stage mapping, NGG.</li>
+        <li><b>LLVM AMDGPU backend</b>: <code>addPassesToEmitFile</code> on target <code>amdgcn--amdpal</code> with
+          CPU <code class="nv">gfx10xx</code>/<code class="nv">gfx11xx</code>/<code class="nv">gfx12xx</code>. It produces ISA plus a PAL metadata note,
+          packaged as an ELF.</li>
+        <li><b>PAL</b>: <code>IDevice::CreateGraphicsPipeline</code> reads the ELF with <code>PipelineAbiReader</code>,
+          uploads code with <code>CodeObjectUploader</code>, and turns the metadata into register state.</li>
+      </ol>
+      </div>
+
+      <h2 id="trace">Step-through: shader module → pipeline → ELF → PAL</h2>
+      <div data-flow="shaders"></div>
+
+      <div class="prose">
+      <h2 id="spirv">SPIR-V → LLVM IR</h2>
+      <p><a data-ref="llpc_lowertranslator">LowerTranslator</a> is an LLVM module pass that runs the SPIRV reader on one
+        shader stage. Before translating, it optionally runs a SPIR-V optimizer and builds the specialization-constant
+        map from <code>VkSpecializationInfo</code>. <a data-ref="llpc_readspirv">llvm::readSpirv</a> parses the binary into
+        a <code>SPIRVModule</code>, and <code>SPIRVToLLVM::translate</code> picks the requested entry point and emits
+        IR. The translator is constructed with an <code>lgc::Builder</code>, so resource and built-in operations become
+        LGC operations that are resolved later, not raw hardware intrinsics.</p>
+      <p>Front-end lowering (<a data-ref="llpc_lowering_addpasses">Lowering::addPasses</a>) then cleans up SPIR-V
+        constructs: CFG merges, aggressive inlining, access chains, terminators, globals, memory operations, math
+        precision. Once every stage is lowered, the per-stage modules are linked into one pipeline module.</p>
+
+      <h2 id="lgc">LGC: pipeline-state-dependent lowering</h2>
+      <p>LGC receives the pipeline state that XGL converted (vertex input formats, color target formats and blend,
+        descriptor layout as user-data nodes, GFX IP, options) through <code>setPipelineState</code>. Its pass list
+        (<a data-ref="lgc_addpasses">LgcLowering::addPasses</a>) is where that state is consumed:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Pass</th><th>Needs which pipeline state</th></tr></thead>
+        <tbody>
+          <tr><td><code>LowerVertexFetch</code></td><td>Vertex binding/attribute formats and strides, to generate fetch code for VS inputs.</td></tr>
+          <tr><td><code>LowerFragmentColorExport</code></td><td>Color attachment formats and blend, to pick export formats and conversions.</td></tr>
+          <tr><td><code>LowerDesc</code></td><td>Descriptor layout (resource mapping), to turn descriptor accesses into loads from user data/descriptor tables.</td></tr>
+          <tr><td><code>LowerInOut</code></td><td>Which stages exist and how they are merged, to lower inter-stage I/O.</td></tr>
+          <tr><td><code>PreparePipelineAbi</code></td><td>Which stages exist, to merge API stages into hardware stages and lay out the PAL ABI.</td></tr>
+          <tr><td><code>CheckShaderCache</code></td><td>Runs after <code>CollectResourceUsage</code>, so a stage can be skipped if an identical one was already compiled.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="caching">Where caching happens</h2>
+      <p>Pipeline creation tries four lookups, roughly from cheapest to most expensive to miss:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Cache</th><th>Key</th><th>Code</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>XGL shader-module cache (in-memory map, then the internal binary cache)</td><td>hash of SPIR-V</td>
+            <td><a data-ref="xgl_load_module_cache">LoadShaderModuleFromCache</a></td></tr>
+          <tr><td>2</td><td>XGL pipeline-binary cache: the app's <code>VkPipelineCache</code> first, then XGL's internal
+            <code>PipelineBinaryCache</code></td><td>pipeline cache ID (MetroHash of create info)</td>
+            <td><a data-ref="xgl_get_cached_pipeline">GetCachedPipelineBinary</a></td></tr>
+          <tr><td>3</td><td>LLPC whole-pipeline cache (<code>CacheFullPipelines</code>, on by default)</td><td>LLPC <code>cacheHash</code></td>
+            <td><a data-ref="llpc_cache_full">BuildGraphicsPipeline</a></td></tr>
+          <tr><td>4</td><td>LGC per-stage cache (<code>EnablePerStageCache</code>, on by default)</td><td>per-stage hash</td>
+            <td><code>CheckShaderCache</code> pass</td></tr>
+        </tbody>
+      </table></div>
+      <p>LLPC's "internal" caches are XGL's <code>PipelineBinaryCache</code> exposed through a <code>Vkgc::ICache</code>
+        adapter (<a data-ref="xgl_cache_adapter">GetCacheAdapter</a>), unless the <code>shaderCacheMode</code> setting
+        disables it. The AMDVLK README documents on-disk caching under <code class="nv">~/.cache/AMD/VkCache</code>
+        (setting <code>AllowVkPipelineCachingToDisk</code>). PAL's archive-file layer behind that is
+        <span class="not-traced">not traced</span> here.</p>
+
+      <h2 id="backend">AMDGPU backend → ELF → PAL</h2>
+      <p>LGC creates an LLVM <code>TargetMachine</code> for triple <code>amdgcn--amdpal</code> with a CPU name derived
+        from the GFX IP (<a data-ref="lgc_gpuname">getGpuNameString</a>: {11,0,0} → <code>gfx1100</code>) and calls
+        <code>addPassesToEmitFile</code>. Inside LLVM, <a data-ref="llvm_emit_palmd">AMDGPUAsmPrinter::EmitPALMetadata</a>
+        records each hardware stage's entry symbol and register usage into <code>AMDGPUPALMetadata</code>, which is
+        written as a MsgPack note (<a data-ref="llvm_palmd_blob">toBlob</a>). The instruction selection, register
+        allocation and scheduling that produce the ISA are standard LLVM codegen and are
+        <span class="not-traced">not traced</span> on this site.</p>
+      <p>PAL never interprets the ISA. <a data-ref="pal_abireader_init">PipelineAbiReader</a> finds the symbols and
+        metadata; <code>CodeObjectUploader</code> copies the code into GPU memory and applies relocations; the HWL
+        (<a data-ref="pal_gfx9_hwlinit">Gfx9</a> / <a data-ref="pal_gfx12_hwlinit">Gfx12</a>
+        <code>GraphicsPipeline::HwlInit</code>) builds the register values it will later write with SET_SH_REG /
+        SET_CONTEXT_REG when the pipeline is bound.</p>
+      <div data-panel="llvm-processors"></div>
+
+      <h2 id="gfx">How the GFX IP level changes the output</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Aspect</th><th>GFX10 (10.1, 10.3)</th><th>GFX11 (11.0, 11.5)</th><th>GFX12</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>LLVM CPU</td><td><code>gfx1010</code>…<code>gfx1036</code></td><td><code>gfx1100</code>…<code>gfx1151</code></td><td><code>gfx1201</code></td>
+            <td><a data-ref="lgc_gpunamemap">GpuNameMap</a></td></tr>
+          <tr><td>NGG (primitive shaders)</td><td>on unless <code>NggFlagDisable</code></td><td><b>mandatory</b></td><td><b>mandatory</b></td>
+            <td><a data-ref="lgc_ngg">LgcLowering</a></td></tr>
+          <tr><td>Extra LGC passes</td><td>—</td><td><code>CollectImageOperations</code></td><td><code>CollectImageOperations</code>, <code>AddBufferOperationMetadata</code></td>
+            <td><a data-ref="lgc_collect_image_ops">≥ 11</a>, <a data-ref="lgc_buffer_md">≥ 12</a></td></tr>
+          <tr><td>Buffer format encodings</td><td>e.g. <code>BUF_FORMAT_32_32_32_32_FLOAT_GFX10</code></td><td colspan="2">e.g. <code>BUF_FORMAT_32_32_32_32_FLOAT_GFX11</code></td>
+            <td><a data-ref="lgc_buf_format">PreparePipelineAbi</a></td></tr>
+          <tr><td>PAL HWL that loads it</td><td colspan="2"><code>Gfx9::GraphicsPipeline</code> (dir <code class="nv">hw/gfxip/gfx9</code>)</td><td><code>Gfx12::GraphicsPipeline</code></td>
+            <td><a data-ref="pal_hwl_select">HWL selection</a></td></tr>
+          <tr><td>GFX9 (Vega)</td><td colspan="3">Not supported by these sources: LLPC asserts <code>gfxIp.major &gt;= 10</code>; no <code>GfxIp9</code> for current PAL clients.</td>
+            <td><a data-ref="llpc_gfx10_assert">ICompiler::Create</a></td></tr>
+        </tbody>
+      </table></div>
+      <p>Beyond these switches, most generation differences sit inside the LLVM backend (instruction encodings and
+        scheduling models such as <code>GFX12SpeedModel</code>) and are not traced here.</p>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

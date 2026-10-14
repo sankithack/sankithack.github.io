@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sources, SHAs &amp; status · AMDVLK Driver Atlas</title>
+<meta name="description" content="Pinned commits, archive status and what was not traced.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="versions">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>Sources, SHAs &amp; status</h1>
+      <p class="lede">Every code panel and source link on this site points at the commits below. Excerpts are cut from
+        these checkouts by <code class="nv">tools/build.py</code>, and <code class="nv">tools/verify.py</code> checks every
+        identifier and reference against them.</p>
+      <div class="prose">
+      <h2 id="shas">Pinned commits</h2>
+      <div id="versions-table"></div>
+      <p>The same table, with branch names and dates, is in <code class="nv">src/VERSIONS.md</code>. xgl, pal and llpc were
+        cloned from branch <code class="nv">dev</code>, which AMDVLK's <code class="nv">default.xml</code> manifest pins; at clone
+        time <code class="nv">dev</code> and <code class="nv">master</code> pointed to the same final commit. The LLVM fork is
+        the manifest's <code class="nv">amd-gfx-gpuopen-dev</code> branch, sparse-checked-out to
+        <code class="nv">llvm/lib/Target/AMDGPU</code>. Linux is a sparse checkout of
+        <code class="nv">drivers/gpu/drm/amd/amdgpu</code> and <code class="nv">include/uapi/drm</code>.</p>
+
+      <h2 id="status">Archive / discontinuation status (checked 2026-10-14)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Repository</th><th>GitHub “archived”</th><th>README / notes</th><th>Last commit</th></tr></thead>
+        <tbody>
+          <tr><td>AMDVLK</td><td>no</td><td>README line 2: “This project is discontinued” (links discussion #416)</td><td>2025-09-15</td></tr>
+          <tr><td>xgl</td><td><span class="badge-arch">archived</span></td><td>no notice in README</td><td>2025-04-29</td></tr>
+          <tr><td>pal</td><td><span class="badge-arch">archived</span></td><td>no notice in README</td><td>2025-04-29</td></tr>
+          <tr><td>llpc</td><td><span class="badge-arch">archived</span></td><td>no notice in README</td><td>2025-04-29</td></tr>
+          <tr><td>llvm-project (GPUOpen)</td><td><span class="badge-arch">archived</span></td><td>AMD's LLVM fork used by LLPC</td><td>2025-04-22</td></tr>
+          <tr><td>libdrm (freedesktop GitLab)</td><td>active</td><td>—</td><td>2026-09-17</td></tr>
+          <tr><td>linux (torvalds)</td><td>active</td><td>—</td><td>2026-10-14</td></tr>
+        </tbody>
+      </table></div>
+      <p class="callout warn">Because libdrm and Linux are much newer than the frozen AMDVLK code, the kernel and libdrm
+        line numbers match today's code, which may differ from the versions AMDVLK last shipped against. The
+        interfaces used here (GEM create/VA/mmap, CS with chunks, syncobjs) are long-standing uAPI.</p>
+
+      <h2 id="not-traced">Not traced, or traced only to the entry point</h2>
+      <ul>
+        <li><b>Vulkan loader internals</b>: the Khronos loader isn't in any cloned repo. Only the ICD interface XGL
+          exports is shown.</li>
+        <li><b>PAL <code>ValidateDraw</code> register sequence</b>: shown at the call site only.</li>
+        <li><b>LLVM AMDGPU instruction selection, register allocation and scheduling</b>: entry points only
+          (<code>addPassesToEmitFile</code>, <code>AMDGPUAsmPrinter</code>, PAL metadata).</li>
+        <li><b>gpurt</b> (ray-tracing library), <b>MetroHash</b> and <b>CWPack</b>: listed in the manifest but not
+          cloned. Ray-tracing pipelines are out of scope.</li>
+        <li><b>PAL's on-disk archive-file pipeline cache</b>: mentioned only.</li>
+        <li><b>Kernel memory management</b> (TTM placement and eviction, page-table updates, mmap fault path) and the
+          GPU scheduler's internals: entry functions only.</li>
+        <li><b>GFX9 (Vega)</b>: support was removed from these sources, so there is nothing to trace.</li>
+        <li><b>Barrier-driven decompression blits (RPM)</b> and <b>image layout handling</b>: not stepped through.</li>
+      </ul>
+
+      <h2 id="method">How this site was built and checked</h2>
+      <ol>
+        <li>Read the code and wrote the call chains (<code class="nv">PLAN.md</code>).</li>
+        <li><code class="nv">tools/spec.py</code> describes each step by <em>anchor text</em>, not line number.
+          <code class="nv">tools/build.py</code> finds the anchor in the source, cuts the excerpt (≤ 30 lines), checks
+          that the listed symbols appear inside it, and builds a SHA-pinned permalink.</li>
+        <li><code class="nv">tools/verify.py</code> extracts every <code>&lt;code&gt;</code> identifier and every reference
+          from the pages and the generated data, and checks each against the checkouts. It also checks internal links
+          and anchors.</li>
+        <li>A headless Chromium run clicks through the diagram, every stepper, search, the PM4 widget and dark mode.</li>
+      </ol>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

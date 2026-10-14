@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory allocation · AMDVLK Driver Atlas</title>
+<meta name="description" content="vkAllocateMemory traced through XGL, PAL's IGpuMemory, libdrm and the amdgpu GEM ioctls: heaps, VA vs. backing, residency, mapping.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="memory">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>2 · Memory allocation</h1>
+      <p class="lede"><code>vkAllocateMemory</code> runs through every software layer: XGL picks a PAL heap, PAL reserves
+        a GPU virtual address, creates a buffer object in the kernel and maps it at that address, and XGL marks the
+        memory resident for every future submission.</p>
+
+      <div class="prose">
+      <h2 id="three-ops">Virtual address vs. physical backing: three separate operations</h2>
+      <p>On amdgpu, a usable allocation is the result of three independent steps, and PAL performs them separately in
+        <a data-ref="pal_allocorpin">Amdgpu::GpuMemory::AllocateOrPinMemory</a>:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>What</th><th>PAL call</th><th>libdrm</th><th>Kernel</th></tr></thead>
+        <tbody>
+          <tr><td>A</td><td><b>Reserve a GPU VA range</b></td><td><code>AssignVirtualAddress</code></td>
+            <td><a data-ref="drm_va_range_alloc">amdgpu_va_range_alloc</a></td><td><b>none.</b> The VA allocator lives in
+            user space (<code>dev-&gt;va_mgr</code>).</td></tr>
+          <tr><td>B</td><td><b>Create physical backing</b> (a BO in VRAM or GTT)</td><td><code>AllocBuffer</code></td>
+            <td><a data-ref="drm_bo_alloc">amdgpu_bo_alloc</a></td><td><code>DRM_AMDGPU_GEM_CREATE</code> →
+            <a data-ref="k_gem_create">amdgpu_gem_create_ioctl</a></td></tr>
+          <tr><td>C</td><td><b>Map B at A</b> in the process's GPU page tables</td><td><code>MapVirtualAddress</code></td>
+            <td><a data-ref="drm_va_op_raw">amdgpu_bo_va_op_raw</a></td><td><code>DRM_AMDGPU_GEM_VA</code> →
+            <a data-ref="k_gem_va">amdgpu_gem_va_ioctl</a> → <code>amdgpu_vm_bo_map</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Keeping them separate is what makes <b>virtual (sparse/PRT) allocations</b> cheap. For memory created with
+        <code>flags.virtualAlloc</code>, PAL does step A and then only reserves the range as PRT
+        (<a data-ref="pal_reserve_prt">Device::ReservePrtVaRange</a>), with no backing. Sparse binding later maps real
+        BOs into pieces of that range. A <code>VkBuffer</code> or <code>VkImage</code> bound to ordinary memory gets
+        no VA of its own. Its address is the memory's VA plus the bind offset (<a data-ref="xgl_buffer_bind_va">Buffer bind</a>).</p>
+      </div>
+
+      <h2 id="trace">Step-through: vkAllocateMemory → kernel</h2>
+      <div data-flow="memory"></div>
+
+      <div class="prose">
+      <h2 id="heaps">How heaps and memory types are derived</h2>
+      <p>PAL describes memory as four <b>heaps</b>. The kernel has two <b>domains</b>. Vulkan exposes <b>memory heaps</b>
+        and <b>memory types</b>. The table connects them, using PAL's default heap flags
+        (<a data-ref="pal_heap_props">Device::InitMemoryHeapProperties</a>), XGL's conversion
+        (<a data-ref="xgl_memtypes">PhysicalDevice memory-type setup</a>) and PAL's amdgpu translation
+        (<a data-ref="pal_heap_domain">heapToDomain / heapToFlags</a>):</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>PAL heap</th><th>PAL heap flags (default)</th><th>Vulkan memory type flags</th><th>Vulkan heap</th><th>Kernel domain + create flags</th></tr></thead>
+        <tbody>
+          <tr><td><code>GpuHeapInvisible</code></td><td>cpuUncached</td><td>DEVICE_LOCAL</td><td>VRAM (DEVICE_LOCAL)</td>
+            <td><code>AMDGPU_GEM_DOMAIN_VRAM</code> + <code>AMDGPU_GEM_CREATE_NO_CPU_ACCESS</code></td></tr>
+          <tr><td><code>GpuHeapLocal</code></td><td>cpuVisible, cpuGpuCoherent, cpuUncached, cpuWriteCombined</td>
+            <td>DEVICE_LOCAL | HOST_VISIBLE | HOST_COHERENT</td><td>CPU-visible VRAM (DEVICE_LOCAL)</td>
+            <td><code>AMDGPU_GEM_DOMAIN_VRAM</code> + <code>AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED</code> | <code>AMDGPU_GEM_CREATE_CPU_GTT_USWC</code></td></tr>
+          <tr><td><code>GpuHeapGartUswc</code></td><td>cpuVisible, cpuGpuCoherent, cpuUncached, cpuWriteCombined</td>
+            <td>HOST_VISIBLE | HOST_COHERENT</td><td>system memory</td>
+            <td><code>AMDGPU_GEM_DOMAIN_GTT</code> + <code>AMDGPU_GEM_CREATE_CPU_GTT_USWC</code></td></tr>
+          <tr><td><code>GpuHeapGartCacheable</code></td><td>cpuVisible, cpuGpuCoherent</td>
+            <td>HOST_VISIBLE | HOST_COHERENT | HOST_CACHED</td><td><em>shares the GartUswc heap</em></td>
+            <td><code>AMDGPU_GEM_DOMAIN_GTT</code>, no extra flag (CPU-cached)</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li><b>Order matters.</b> XGL creates heaps and types in the fixed priority order Invisible, GartUswc, Local,
+          GartCacheable, so memory type indices follow that order on a typical discrete GPU.</li>
+        <li><b>Heap flags.</b> <a data-ref="xgl_heapflags">PalGpuHeapToVkMemoryHeapFlags</a> marks Local and Invisible
+          as <code>VK_MEMORY_HEAP_DEVICE_LOCAL_BIT</code>.</li>
+        <li><b>Resizable BAR.</b> When PAL reports an Invisible heap of size 0 (all VRAM CPU-visible), XGL routes the
+          Invisible memory type to <code>GpuHeapLocal</code>, and PAL's amdgpu layer treats Invisible like Local.</li>
+        <li><b>“Local” vs. “Invisible” is only a hint to the kernel.</b> Both are VRAM. The
+          <code>CPU_ACCESS_REQUIRED</code>/<code>NO_CPU_ACCESS</code> flags steer placement inside or outside the
+          CPU-visible BAR window, and the PAL comment notes the kernel may change this at runtime.</li>
+        <li>Device-coherent types for <code>VK_AMD_device_coherent_memory</code> are added as extra types when the
+          GPU supports GL2-uncached access (<code>supportGl2Uncached</code>).</li>
+      </ul>
+
+      <h2 id="residency">Residency, memory references and the BO list</h2>
+      <p>On amdgpu, a BO that the GPU will touch must either appear in the submission's <b>BO list</b> or be
+        <b>VM-always-valid</b>. The kernel uses the list to validate (and, if needed, move back) every BO before running
+        the job. Vulkan has no residency API, so XGL takes the simplest correct route:</p>
+      <ol>
+        <li><a data-ref="xgl_addmemref">Device::AddMemReference</a> is called for <b>every</b> allocation. It calls
+          <code>IDevice::AddGpuMemoryReferences</code> with <code>pQueue = nullptr</code>, meaning "device-global".</li>
+        <li><a data-ref="pal_dev_addrefs">Amdgpu::Device::AddGpuMemoryReferences</a> adds the memory to every queue's
+          <code>m_globalRefMap</code>. Memory created <code>VM_ALWAYS_VALID</code> is
+          <a data-ref="pal_queue_skip_always_valid">skipped</a>, because the kernel keeps it valid in the process VM.</li>
+        <li>At submit time <a data-ref="pal_update_reslist">Queue::UpdateResourceList</a> turns the map into the BO list
+          passed with the CS ioctl (see <a href="submit.html#bo-list">Topic 5</a>).</li>
+      </ol>
+      <p>PAL requests <a data-ref="pal_vm_always_valid">AMDGPU_GEM_CREATE_VM_ALWAYS_VALID</a> when the kernel supports it
+        and the memory is private to the process (not shareable, not exported, not flippable, not peer-writable). Those
+        BOs share the VM root's reservation object (<a data-ref="k_gem_create_always_valid">kernel side</a>), so they never need
+        to appear in the BO list.</p>
+
+      <h2 id="mapping">Mapping host-visible memory</h2>
+      <p><code>vkMapMemory</code> → <code>Memory::Map</code> → <code>IGpuMemory::Map</code>. PAL refuses virtual memory and
+        anything not CPU-visible (<code>ErrorNotMappable</code>), which is why Invisible-heap memory types lack
+        HOST_VISIBLE. For a mappable BO, libdrm's <a data-ref="drm_bo_cpu_map">amdgpu_bo_cpu_map</a> asks the kernel
+        (<code>DRM_AMDGPU_GEM_MMAP</code>) for the BO's fake mmap offset and then calls <code>mmap</code> on the DRM file
+        descriptor. CPU accesses to VRAM pages go through the PCIe BAR; GTT pages are ordinary system pages, either
+        write-combined (USWC) or cached. How the kernel services the resulting page faults (TTM) is
+        <span class="not-traced">not traced</span>.</p>
+      <p>Mappings are reference-counted inside libdrm per BO. XGL can keep a mapping alive for the object's lifetime
+        with the <code>skipUnMapMemory</code> setting.</p>
+
+      <h2 id="not-traced">Not traced on this page</h2>
+      <ul>
+        <li>TTM placement, eviction and the VRAM → GTT fallback inside <code>amdgpu_bo_create</code>.</li>
+        <li>Page-table writing in <code>amdgpu_gem_va_update_vm</code> / <code>amdgpu_vm_bo_update</code>.</li>
+        <li>Imported/exported memory (<code>OpenExternalMemory</code>, dma-buf) and pinned host memory
+          (<code>CreateGpuPinnedMemory</code> → <code>PinMemory</code>) are only mentioned, not stepped through.</li>
+      </ul>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

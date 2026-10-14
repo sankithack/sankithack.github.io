@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture &amp; loader entry · AMDVLK Driver Atlas</title>
+<meta name="description" content="How XGL, PAL and LLPC relate; how the Vulkan loader enters the AMDVLK ICD; dispatch tables and handle wrapping.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="architecture">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>1 · Architecture &amp; loader entry</h1>
+      <p class="lede">Three AMD libraries make up the driver, and each has one job. <b>XGL</b> speaks Vulkan. <b>PAL</b>
+        speaks GPU and OS. <b>LLPC</b> turns SPIR-V pipelines into machine code. This page shows how they connect and how
+        a Vulkan call enters them.</p>
+
+      <div class="prose">
+      <h2 id="roles">Who does what</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Component</th><th>Repo / dir</th><th>Owns</th><th>Doesn't know about</th></tr></thead>
+        <tbody>
+          <tr><td><b>XGL</b></td><td><code class="nv">xgl/icd/api</code></td><td>Vulkan semantics: entry points, memory types,
+            render passes, descriptor sets, barriers in Vulkan terms, pipeline caches.</td><td>PM4, registers, ioctls.</td></tr>
+          <tr><td><b>PAL</b></td><td><code class="nv">pal/src/core</code></td><td>Hardware and OS: GPU memory, command
+            buffers as PM4, queues, fences. Per-generation HWLs in <code class="nv">hw/gfxip/gfx9</code> and
+            <code class="nv">hw/gfxip/gfx12</code>. OS backend in <code class="nv">os/amdgpu</code>.</td><td>Vulkan. PAL is
+            shared with other AMD drivers.</td></tr>
+          <tr><td><b>LLPC / LGC</b></td><td><code class="nv">llpc/llpc</code>, <code class="nv">llpc/lgc</code></td><td>SPIR-V →
+            LLVM IR → AMDGPU ELF with PAL metadata. Uses AMD's LLVM fork for codegen.</td><td>GPU memory or submission.
+            It returns bytes; XGL hands them to PAL.</td></tr>
+        </tbody>
+      </table></div>
+      <p>The dependency arrows only point one way. XGL calls PAL interfaces (<code>Pal::IDevice</code>,
+        <code>Pal::IGpuMemory</code>, <code>Pal::ICmdBuffer</code>, <code>Pal::IQueue</code>) and the LLPC interface
+        (<code>Llpc::ICompiler</code>). PAL calls libdrm. The two libraries never call each other: the only thing that
+        moves from LLPC to PAL is the ELF blob, and XGL carries it.</p>
+      </div>
+
+      <h2 id="trace">Step-through: from loader to PAL</h2>
+      <div data-flow="arch"></div>
+
+      <div class="prose">
+      <h2 id="loader">Loader entry and dispatch tables</h2>
+      <p>The Khronos loader reads <a data-ref="xgl_icd_json">amd-icd.json</a>, loads the library, and calls
+        <a data-ref="xgl_negotiate">vk_icdNegotiateLoaderICDInterfaceVersion</a>. XGL accepts interface versions 3 through 6.
+        From then on, every function pointer the loader hands the application comes from
+        <a data-ref="xgl_icd_gipa">vk_icdGetInstanceProcAddr</a>.</p>
+      <p>XGL keeps three kinds of <code>DispatchTable</code>. The <b>global</b> table, <code>g_GlobalDispatchTable</code>,
+        answers before an instance exists. Each <b>instance</b> has a table filtered by the enabled API version and
+        instance extensions, and each <b>device</b> has one filtered by device extensions. Every table is filled by the
+        same <a data-ref="xgl_dispatch_init">DispatchTable::Init</a>, which pairs each name with the internal
+        <code>vk::entry::</code> implementation.</p>
+
+      <h2 id="handles">Handles are pointers; the loader owns the first word</h2>
+      <p>For <b>dispatchable</b> handles (<code>VkInstance</code>, <code>VkPhysicalDevice</code>, <code>VkDevice</code>,
+        <code>VkQueue</code>, <code>VkCommandBuffer</code>), the loader writes its own dispatch pointer into the first
+        pointer-sized word of the object. XGL's <a data-ref="xgl_dispatchable">Dispatchable&lt;C&gt;</a> template reserves
+        that word as <code>VK_LOADER_DATA</code> (seeded with <code>ICD_LOADER_MAGIC</code>) and stores the real C++
+        object right after it. <code>ObjectFromHandle</code> converts a handle into a pointer to that object.</p>
+      <p><b>Non-dispatchable</b> handles (<code>VkDeviceMemory</code>, <code>VkBuffer</code>, <code>VkPipeline</code>…)
+        need no loader word. <a data-ref="xgl_nondispatchable">NonDispatchable&lt;&gt;</a> just casts the 64-bit handle
+        to a pointer.</p>
+
+      <h2 id="wrapping">XGL objects wrap PAL objects</h2>
+      <p>Almost every XGL object holds one PAL object per GPU in the device group, and PAL never allocates CPU memory
+        for API objects itself. XGL first asks PAL how big its object is (e.g. <code>GetGpuMemorySize</code>,
+        <code>GetFenceSize</code>, <code>GetCmdAllocatorSize</code>), then usually makes <em>one</em> allocation (semaphores are an exception and allocate the two separately) through the
+        application's <code>VkAllocationCallbacks</code> holding <code>[XGL object][PAL object × N GPUs]</code>, and
+        finally calls PAL's <code>Create*</code> with a placement address inside it.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Vulkan handle</th><th>XGL class</th><th>PAL interface it owns</th></tr></thead>
+        <tbody>
+          <tr><td><code>VkInstance</code></td><td><code>Instance</code></td><td><code>Pal::IPlatform</code> (<a data-ref="xgl_create_platform">Pal::CreatePlatform</a>)</td></tr>
+          <tr><td><code>VkPhysicalDevice</code> / <code>VkDevice</code></td><td><code>PhysicalDevice</code> / <code>Device</code></td><td><code>Pal::IDevice</code> (<a data-ref="xgl_paldevice">Device::PalDevice</a>)</td></tr>
+          <tr><td><code>VkDeviceMemory</code></td><td><code>Memory</code></td><td><code>Pal::IGpuMemory</code></td></tr>
+          <tr><td><code>VkCommandPool</code> / <code>VkCommandBuffer</code></td><td><code>CmdPool</code> / <code>CmdBuffer</code></td><td><code>Pal::ICmdAllocator</code> / <code>Pal::ICmdBuffer</code></td></tr>
+          <tr><td><code>VkQueue</code></td><td><code>Queue</code></td><td><code>Pal::IQueue</code></td></tr>
+          <tr><td><code>VkPipeline</code></td><td><code>GraphicsPipeline</code> / <code>ComputePipeline</code></td><td><code>Pal::IPipeline</code></td></tr>
+          <tr><td><code>VkFence</code> / <code>VkSemaphore</code></td><td><code>Fence</code> / <code>Semaphore</code></td><td><code>Pal::IFence</code> / <code>Pal::IQueueSemaphore</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="hwl">PAL picks a hardware layer and an OS layer</h2>
+      <p>Inside PAL, the generic <code>Pal::Device</code> creates a <code>GfxDevice</code> for the detected GFX IP
+        (<a data-ref="pal_hwl_select">device.cpp</a>). On Linux, the OS-specific object is an <code>Amdgpu::Device</code>
+        that talks to libdrm through a table of <code>dlsym</code>'d function pointers:</p>
+      <div data-panel="drm-loader"></div>
+
+      <h2 id="llpc">Where LLPC is invoked</h2>
+      <p>Each <code>PhysicalDevice</code> has a <code>PipelineCompiler</code>. During initialization it converts PAL's
+        <code>GfxIpLevel</code> into a <code>Vkgc::GfxIpVersion</code> and creates the <code>Llpc::ICompiler</code>
+        (<a data-ref="xgl_llpc_create">compiler_solution_llpc.cpp</a>). After that, LLPC is called from exactly two
+        places: <code>BuildShaderModule</code> (shader module creation) and
+        <code>BuildGraphicsPipeline</code>/<code>BuildComputePipeline</code> (pipeline creation, on a cache miss). See
+        <a href="shaders.html">Topic 3</a>.</p>
+
+      <h2 id="gfx">Which GPU generations?</h2>
+      <p>The pinned PAL enumerates only GFX10.1 and newer for current clients:</p>
+      <div data-panel="gfxip-enum"></div>
+      <div data-panel="llpc-gfx10-only"></div>
+      <p>GFX9 (Vega) support was removed from these final AMDVLK sources. The AMDVLK README says
+        <em>“For Pre-GFX10 GPUs, please use v-2023.Q3.3 or older release.”</em> Everything on this site therefore
+        describes GFX10, GFX11 and GFX12.</p>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

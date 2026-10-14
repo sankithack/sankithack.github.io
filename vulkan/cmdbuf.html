@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command buffers &amp; PM4 · AMDVLK Driver Atlas</title>
+<meta name="description" content="vkBeginCommandBuffer and vkCmdDraw through XGL into PAL's ICmdBuffer, chunk allocation, and the PM4 packets PAL's hardware layers build, with an annotated DRAW_INDEX_AUTO.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="cmdbuf">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>4 · Command buffers &amp; PM4</h1>
+      <p class="lede">Recording a Vulkan command buffer means PAL writing PM4 packets into chunks of GPU-visible memory.
+        Nothing reaches the kernel until submission. This page follows <code>vkCmdDraw</code> down to the three DWORDs it
+        produces and takes them apart bit by bit.</p>
+
+      <div class="prose">
+      <h2 id="chunks">Pools, allocators and chunks</h2>
+      <p>Each <code>VkCommandPool</code> owns a PAL <code>ICmdAllocator</code>
+        (<a data-ref="xgl_cmdpool_alloc">vk_cmd_pool.cpp</a>). The allocator manages separate pools for several kinds
+        of data. All are GPU memory carved into uniform <b>chunks</b>:</p>
+      <ul>
+        <li><code>CommandDataAlloc</code> holds the PM4 command streams themselves.</li>
+        <li><code>EmbeddedDataAlloc</code> / <code>LargeEmbeddedDataAlloc</code> hold "embedded data": tables and
+          constants that PAL writes at record time for commands to reference (the large variant is for allocations
+          over 32 KB).</li>
+        <li><code>GpuScratchMemAlloc</code> is GPU-only scratch for PAL's internal use.</li>
+      </ul>
+      <p>A <code>CmdStream</code> asks for space with <code>ReserveCommands</code> and gives back what it didn't use
+        with <code>CommitCommands</code>. When a chunk fills, <a data-ref="pal_getnextchunk">CmdStream::GetNextChunk</a>
+        takes one of the stream's retained chunks or calls
+        <a data-ref="pal_getnewchunk">CmdAllocator::GetNewChunk</a>. The allocator pops its <em>free list</em> (known
+        idle), then scans its <em>reuse list</em> for chunks whose GPU work has finished (<code>IsIdleOnGpu</code>), and
+        only then creates a new <code>CmdStreamAllocation</code>, split into <code>numChunks</code> chunks. Successive
+        chunks of one stream are <a data-ref="pal_chain">chained</a> with chaining packets at each chunk's tail, so at submit time only the stream's <b>first</b> chunk is handed to the kernel
+        as an IB (see <a href="submit.html#ibs">Topic 5</a>).</p>
+
+      <h2 id="hot-path">The draw hot path</h2>
+      <p>XGL does little at draw time. <code>CmdBuffer::Draw</code> flushes any changed Vulkan dynamic state into PAL
+        (<code>ValidateGraphicsStates</code>) and calls <code>ICmdBuffer::CmdDraw</code>. That call is an inline jump
+        through <code>m_funcTable.pfnCmdDraw</code>, which the HWL fills with a template instantiation specialized for
+        the GPU and the command buffer's options. The HWL's <code>CmdDraw</code>:</p>
+      <ol>
+        <li><b>Validates</b> (<code>ValidateDraw</code>): writes dirty state as <code>SET_SH_REG</code> /
+          <code>SET_CONTEXT_REG</code> packets. This covers the bound pipeline's registers, user-data SGPRs (descriptor
+          table addresses, push constants), viewport/scissor, and draw-time values such as
+          <a data-ref="pal_num_instances">NUM_INSTANCES</a> and the
+          <a data-ref="pal_vertex_offset">vertex offset</a>. The full register sequence is
+          <span class="not-traced">not traced</span> line by line.</li>
+        <li><b>Builds the draw packet</b> into reserved space: <code>DRAW_INDEX_AUTO</code> for non-indexed draws,
+          <code>IT_DRAW_INDEX_2</code> for indexed, <code>IT_DRAW_INDIRECT</code>/<code>IT_DRAW_INDEX_INDIRECT</code> or
+          <code>IT_EXECUTE_INDIRECT__EXECINDIRECT</code> variants for indirect draws.</li>
+        <li><b>Commits</b> the space.</li>
+      </ol>
+      <div data-panel="gfx9-set-sh-seq"></div>
+      </div>
+
+      <h2 id="trace">Step-through: vkBeginCommandBuffer → vkCmdDraw → PM4</h2>
+      <div data-flow="cmdbuf"></div>
+
+      <h2 id="pm4">Anatomy of a real packet: DRAW_INDEX_AUTO</h2>
+      <div class="prose">
+      <p>This is the packet <a data-ref="pal_build_dia">CmdUtil::BuildDrawIndexAuto</a> writes for <code>vkCmdDraw</code>.
+        The field layouts come from PAL's generated chip headers (<code>PM4_ME_TYPE_3_HEADER</code>,
+        <code>PM4_PFP_DRAW_INDEX_AUTO</code>, <code>VGT_DRAW_INITIATOR</code>). Change the inputs to see the DWORDs
+        change, and click a field to see what it means.</p>
+      </div>
+      <div class="pm4" id="pm4-widget"></div>
+      <div class="two-col">
+        <div data-panel="pm4-header-struct"></div>
+        <div data-panel="pm4-draw-index-auto-struct"></div>
+      </div>
+      <div class="two-col">
+        <div data-panel="vgt-draw-initiator"></div>
+        <div data-panel="di-src-sel"></div>
+      </div>
+      <div class="two-col">
+        <div data-panel="pm4-opcodes"></div>
+        <div data-panel="kernel-packet3"></div>
+      </div>
+      <div class="prose">
+      <p>Where the other fields come from: the instance count and first vertex/instance are <em>not</em> in this packet.
+        PAL wrote them during validation as an <code>IT_NUM_INSTANCES</code> packet and as user-data SGPRs that the
+        compiled vertex shader reads. That is why <code>DRAW_INDEX_AUTO</code> needs only a vertex count.</p>
+
+      <h2 id="dispatch">Compute: DISPATCH_DIRECT</h2>
+      <p><code>vkCmdDispatch</code> follows the same shape: <code>CmdBuffer::Dispatch</code> →
+        <code>ICmdBuffer::CmdDispatch</code> → HWL <code>CmdDispatch</code> →
+        <a data-ref="pal_build_dispatch">CmdUtil::BuildDispatchDirect</a>. That builds a 5-DWORD packet (header,
+        <code>dim_x</code>, <code>dim_y</code>, <code>dim_z</code>, <code>dispatch_initiator</code>) with
+        <code>shaderType = ShaderCompute</code>. On a compute-only queue the same builder writes into a
+        <code>ComputeCmdBuffer</code> stream that runs on the MEC.</p>
+
+      <h2 id="barriers">Barriers: ACQUIRE_MEM and RELEASE_MEM</h2>
+      <p>On GFX10+ XGL expresses <code>vkCmdPipelineBarrier</code> in PAL's acquire/release model
+        (<code>useReleaseAcquire</code>). PAL's <code>BarrierMgr</code> turns the source stages into <b>release events</b>
+        (e.g. a bottom-of-pipe <code>RELEASE_MEM</code> event, optionally with cache write-back) and the destination
+        stages into an <b>acquire point</b> (how early in the pipe the CP must wait). Cache invalidations go into an
+        <code>ACQUIRE_MEM</code>. Image layout transitions may add decompression or clear blits through PAL's internal
+        RPM (<code class="nv">hw/gfxip/rpm</code>), which is <span class="not-traced">not traced</span> here. One generation
+        difference is visible in the code: on GFX11 the color/depth (RB) caches can no longer be flushed by an
+        <code>ACQUIRE_MEM</code> (<a data-ref="pal_gfx11_acqmem_assert">assert</a>).</p>
+
+      <h2 id="gfx12">GFX12 differences</h2>
+      <p>GFX12 has its own HWL (<code class="nv">hw/gfxip/gfx12</code>) with its own <code>UniversalCmdBuffer</code>,
+        <code>CmdUtil</code> and packet headers. The draw packet is built the same way, but register writes are
+        organized around <em>pair</em> packets:</p>
+      <div data-panel="gfx12-draw"></div>
+      <div data-panel="gfx12-sh-pairs"></div>
+      <div data-panel="gfx11-pairs"></div>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

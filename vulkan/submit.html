@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submission &amp; sync · AMDVLK Driver Atlas</title>
+<meta name="description" content="vkQueueSubmit through XGL, PAL IQueue::Submit and its amdgpu backend, libdrm amdgpu_cs_submit_raw2 and DRM_IOCTL_AMDGPU_CS; IBs, BO lists, rings, fences, semaphores and syncobjs.">
+<script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body data-page="submit">
+<a class="skip" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <main id="main" class="content">
+      <h1>5 · Submission &amp; synchronization</h1>
+      <p class="lede">Submission turns recorded command chunks into one CS ioctl. The ioctl carries IB descriptors, a BO
+        list and syncobj wait/signal lists. The kernel validates it, queues a job, and eventually writes an
+        <code>INDIRECT_BUFFER</code> packet into a hardware ring. Fences and semaphores are DRM syncobjs throughout.</p>
+
+      <div class="prose">
+      <h2 id="overview">The path in one paragraph</h2>
+      <p><code>vkQueueSubmit</code> → <code>Queue::Submit</code> (XGL) queues the semaphore waits, collects each command
+        buffer's <code>Pal::ICmdBuffer</code>, and calls <code>IQueue::Submit</code>. PAL's core
+        <code>Queue::SubmitInternal</code> associates fences and calls <code>OsSubmit</code>. The amdgpu backend builds
+        the BO list from residency references, turns each command stream into an IB, packs IB + syncobj + BO-list
+        chunks, and calls libdrm <code>amdgpu_cs_submit_raw2</code>, which issues <code>DRM_IOCTL_AMDGPU_CS</code>. In the
+        kernel, <code>amdgpu_cs_ioctl</code> parses and validates and pushes a job to the DRM GPU scheduler. When its
+        dependencies resolve, <code>amdgpu_job_run</code> → <code>amdgpu_ib_schedule</code> writes the IB pointers and a
+        fence into the ring.</p>
+      </div>
+
+      <h2 id="trace">Step-through: vkQueueSubmit → ring, then fences &amp; semaphores</h2>
+      <div data-flow="submit"></div>
+
+      <div class="prose">
+      <h2 id="ibs">IBs and rings</h2>
+      <p>An <b>IB</b> is just <code>{va_start, ib_bytes, ip_type, ring, flags}</code>
+        (<a data-ref="uapi_chunk_ib">drm_amdgpu_cs_chunk_ib</a>): a pointer to PM4 that PAL already wrote into GPU
+        memory. PAL submits one IB per command stream: the stream's first chunk, with the remaining chunks reached by
+        chaining. The IP type selects the ring family:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Vulkan queue family</th><th>PAL queue/engine</th><th><code>ip_type</code></th><th>Hardware</th></tr></thead>
+        <tbody>
+          <tr><td>GRAPHICS | COMPUTE | TRANSFER | SPARSE</td><td><code>QueueTypeUniversal</code> / <code>EngineTypeUniversal</code></td><td><code>AMDGPU_HW_IP_GFX</code></td><td>GFX ring (CP PFP/ME)</td></tr>
+          <tr><td>COMPUTE | TRANSFER | SPARSE</td><td><code>QueueTypeCompute</code> / <code>EngineTypeCompute</code></td><td><code>AMDGPU_HW_IP_COMPUTE</code></td><td>compute rings (MEC / ACE)</td></tr>
+          <tr><td>TRANSFER | SPARSE</td><td><code>QueueTypeDma</code> / <code>EngineTypeDma</code></td><td><code>AMDGPU_HW_IP_DMA</code></td><td>SDMA ring (SDMA packets, not PM4)</td></tr>
+        </tbody>
+      </table></div>
+      <div data-panel="xgl-queue-families"></div>
+      <p>Each PAL queue owns a kernel <b>context</b> (<code>amdgpu_cs_ctx_create2</code>, via
+        <a data-ref="pal_ctx_create">CreateCommandSubmissionContextRaw</a>). The CS ioctl names that context, and the
+        kernel returns a per-context sequence number that identifies the submission.</p>
+
+      <h2 id="bo-list">BO lists</h2>
+      <p>Every BO the GPU may access must be in the submission's BO list, unless it was created
+        <code>VM_ALWAYS_VALID</code>. PAL builds the list in <a data-ref="pal_update_reslist">UpdateResourceList</a>
+        from the device-global references XGL registered at allocation time (<a href="memory.html#residency">Topic 2</a>)
+        and reuses the previous list when nothing changed. On current kernels the list goes inline in the CS ioctl as
+        an <code>AMDGPU_CHUNK_ID_BO_HANDLES</code> chunk. On the legacy path PAL first creates a kernel list object
+        (<code>DRM_AMDGPU_BO_LIST</code>, via <a data-ref="drm_bo_list_create_raw">amdgpu_bo_list_create_raw</a>) and passes
+        its handle instead. In the kernel, <a data-ref="k_parser_bos">amdgpu_cs_parser_bos</a> locks and validates
+        every listed BO before the job may run.</p>
+
+      <h2 id="sync">Fences, semaphores, timelines → syncobjs</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Vulkan</th><th>XGL → PAL</th><th>amdgpu backend</th><th>GPU-side wait / signal</th><th>Host-side wait / signal</th></tr></thead>
+        <tbody>
+          <tr><td><code>VkFence</code></td><td><code>Fence</code> → <code>Pal::IFence</code></td>
+            <td><code>SyncobjFence</code> (one syncobj); legacy <code>TimestampFence</code> on old kernels</td>
+            <td>signal: after the CS, the queue's <code>m_lastSignaledSyncObject</code> fence is
+              <a data-ref="pal_convey">transferred</a> into the fence's syncobj</td>
+            <td><code>vkWaitForFences</code> → <code>WaitForSyncobjFences</code> → <code>amdgpu_cs_syncobj_wait</code></td></tr>
+          <tr><td>binary <code>VkSemaphore</code></td><td><code>Semaphore</code> → <code>Pal::IQueueSemaphore</code></td>
+            <td><code>QueueSemaphore</code> (one syncobj)</td>
+            <td>wait: <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> chunk at point 0; signal: transfer from the last-submit syncobj</td>
+            <td>— (binary semaphores have no host operations)</td></tr>
+          <tr><td>timeline <code>VkSemaphore</code></td><td>same, with <code>flags.timeline</code></td>
+            <td>same syncobj used as a timeline</td>
+            <td>wait: <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> at the requested point; signal: transfer into the requested point</td>
+            <td><code>vkWaitSemaphores</code> / <code>vkSignalSemaphore</code> → <a data-ref="pal_wait_sem_value">WaitSemaphoreValue</a> /
+              <a data-ref="pal_signal_sem_value">SignalSemaphoreValue</a> → <code>amdgpu_cs_syncobj_timeline_wait</code> /
+              <code>amdgpu_cs_syncobj_timeline_signal</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>The design rests on one trick: <b>every CS ioctl signals the queue's private syncobj</b>
+        (<code>m_lastSignaledSyncObject</code>, appended to the signal chunk). Anything that must signal when that
+        submission finishes, whether a <code>VkFence</code> or a Vulkan signal semaphore, gets a <em>copy</em> of that
+        fence through <a data-ref="pal_convey">ConveySyncObjectState</a>. That function uses
+        <code>amdgpu_cs_syncobj_transfer</code>, or a sync-file export/import as a fallback. Waits are never done on
+        the CPU: they become kernel scheduler dependencies, so a submission blocked on a semaphore costs no CPU time.</p>
+      <p>Ioctl-level detail for the syncobj chunks is in the kernel's <code>amdgpu_cs_p2_syncobj_in</code>,
+        <code>amdgpu_cs_p2_syncobj_timeline_wait</code>, <code>amdgpu_cs_p2_syncobj_out</code> and
+        <code>amdgpu_cs_p2_syncobj_timeline_signal</code> (<a data-ref="k_p2_syncobj_in">amdgpu_cs.c</a>).</p>
+
+      <h2 id="kernel">The kernel side</h2>
+      <div data-panel="ioctl-table"></div>
+      <p><a data-ref="k_cs_ioctl">amdgpu_cs_ioctl</a> runs a fixed sequence: <code>amdgpu_cs_parser_init</code> →
+        <code>amdgpu_cs_pass1</code> (copy and parse chunks) → <code>amdgpu_cs_pass2</code> (IBs, syncobj dependencies) →
+        <code>amdgpu_cs_parser_bos</code> (lock and validate BOs) → <code>amdgpu_cs_patch_jobs</code> →
+        <code>amdgpu_cs_vm_handling</code> (page tables up to date) → <code>amdgpu_cs_sync_rings</code> →
+        <code>amdgpu_cs_submit</code>, which calls <code>drm_sched_entity_push_job</code>. The DRM scheduler later calls
+        <code>amdgpu_job_run</code>, which calls <code>amdgpu_ib_schedule</code>. For each IB, the ring's
+        <code>emit_ib</code> (e.g. <a data-ref="k_gfx11_emit_ib">gfx_v11_0_ring_emit_ib_gfx</a>) writes an
+        <code>INDIRECT_BUFFER</code> packet with the IB address and the process's VMID. The CP then executes PAL's PM4
+        using the process's page tables.</p>
+      <p class="callout note">The kernel checkout is newer (2026) than the AMDVLK sources (2025-04). Newer uAPI (e.g.
+        <code>AMDGPU_USERQ</code> user-mode queues, visible in the ioctl table) is never issued by PAL's amdgpu backend in these sources.</p>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="assets/data/flows.js"></script>
+<script src="assets/data/search-index.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>
