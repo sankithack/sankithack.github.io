@@ -1,0 +1,4239 @@
+[
+  {
+    "id": "italian",
+    "name": "Italian Game",
+    "eco": "C50–C54",
+    "side": "white",
+    "styles": [
+      "positional",
+      "aggressive"
+    ],
+    "difficulty": "beginner",
+    "mnemonic": "Bishop to c4 stares at f7 — the weakest square in Black's camp.",
+    "summary": "Fast development, a bishop aimed at f7 and a slow, flexible build-up with c3 and d3 or a sharp d4 break.",
+    "purpose": "Develop kingside pieces quickly, castle early, and aim the light-squared bishop at f7, which only the black king defends. White then chooses between a slow positional squeeze (c3 + d3) and an open fight (c3 + d4).",
+    "mainLine": [
+      {
+        "san": "e4",
+        "note": "Grabs the centre and opens lines for the queen and the f1-bishop.",
+        "arrows": [
+          "f1c4",
+          "d1h5"
+        ],
+        "squares": [
+          "d5",
+          "f5"
+        ]
+      },
+      {
+        "san": "e5",
+        "note": "Black claims an equal share of the centre."
+      },
+      {
+        "san": "Nf3",
+        "note": "Develops with a threat: the e5-pawn is attacked.",
+        "arrows": [
+          "!f3e5"
+        ]
+      },
+      {
+        "san": "Nc6",
+        "note": "Defends e5 while developing — the most natural reply."
+      },
+      {
+        "san": "Bc4",
+        "note": "The Italian bishop. It eyes f7 and controls d5.",
+        "arrows": [
+          "!c4f7",
+          "c4d5"
+        ],
+        "squares": [
+          "f7"
+        ]
+      },
+      {
+        "san": "Bc5",
+        "note": "Black mirrors the idea: the bishop eyes f2.",
+        "arrows": [
+          "!c5f2"
+        ]
+      },
+      {
+        "san": "c3",
+        "note": "Prepares d4 to build a big centre and gives the bishop a retreat on c2/b3.",
+        "arrows": [
+          "d2d4"
+        ]
+      },
+      {
+        "san": "Nf6",
+        "note": "Counterattacks e4 — Black develops with tempo.",
+        "arrows": [
+          "!f6e4"
+        ]
+      },
+      {
+        "san": "d3",
+        "note": "The modern Giuoco Pianissimo: solid, keeps tension and prepares Nbd2–f1–g3."
+      },
+      {
+        "san": "d6",
+        "note": "Black also chooses solidity, opening the c8-bishop."
+      },
+      {
+        "san": "O-O",
+        "note": "King safety first; the f1-rook may later support f2–f4 or Re1."
+      },
+      {
+        "san": "O-O",
+        "note": "Both kings are safe. Now the middlegame manoeuvring starts.",
+        "arrows": [
+          "b1d2",
+          "d2f1",
+          "f1g3"
+        ]
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Play c3 and d4 at the right moment for a broad centre.",
+        "Re-route the b1-knight via d2–f1–g3 towards f5.",
+        "Use a4 to stop ...b5 harassing the bishop.",
+        "Pin the f6-knight with Bg5 when it is safe."
+      ],
+      "black": [
+        "Challenge the bishop with ...Na5 or ...Be6.",
+        "Break with ...d5 when White is slow.",
+        "Keep the c5-bishop active; retreat to b6/a7 rather than trading it cheaply."
+      ]
+    },
+    "plans": [
+      "White: c3, d3, Re1, Nbd2–f1–g3, then d4 or a kingside push.",
+      "Black: ...a6, ...Ba7, ...Be6 to trade off White's best bishop, and ...d5 when ready."
+    ],
+    "mistakes": [
+      "Moving the same piece repeatedly instead of developing.",
+      "Playing an early Ng5 without support — it often just loses time after ...h6.",
+      "Black allowing Bxf7+ tricks by leaving f7 defended only by the king."
+    ],
+    "traps": [
+      {
+        "name": "Blackburne Shilling Gambit",
+        "side": "black",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nd4",
+          "Nxe5",
+          "Qg5",
+          "Nxf7",
+          "Qxg2",
+          "Rf1",
+          "Qxe4+",
+          "Be2",
+          "Nf3#"
+        ],
+        "explanation": "3...Nd4 looks like a blunder that drops e5. Greedy 4.Nxe5? meets 4...Qg5!, hitting the knight and g2. If White grabs more with 5.Nxf7, Black crashes through on g2 and finishes with a smothered-style Nf3#. Refutation: simply 4.Nxd4 or castle."
+      },
+      {
+        "name": "Fried Liver Attack",
+        "side": "white",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nf6",
+          "Ng5",
+          "d5",
+          "exd5",
+          "Nxd5",
+          "Nxf7",
+          "Kxf7",
+          "Qf3+",
+          "Ke6",
+          "Nc3"
+        ],
+        "explanation": "In the Two Knights, 5...Nxd5? lets White sacrifice on f7 and drag Black's king into the centre where the queen, knight and bishop all join the attack. Black should play 5...Na5! instead."
+      },
+      {
+        "name": "Légal's Mate",
+        "side": "white",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "d6",
+          "Bc4",
+          "Bg4",
+          "Nc3",
+          "g6",
+          "Nxe5",
+          "Bxd1",
+          "Bxf7+",
+          "Ke7",
+          "Nd5#"
+        ],
+        "explanation": "Black pins the knight to the queen, but a pin to a queen is not absolute. White breaks it with Nxe5!, and if Black grabs the queen, three minor pieces deliver mate."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Giuoco Pianissimo",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Bc5",
+          "c3",
+          "Nf6",
+          "d3",
+          "d6",
+          "O-O",
+          "O-O",
+          "Re1",
+          "a6",
+          "a4"
+        ],
+        "idea": "Slow and strategic. Pieces are re-routed before any pawn break; the a4 move stops ...b5 from chasing the bishop.",
+        "level": "beginner"
+      },
+      {
+        "name": "Giuoco Piano, main line (c3 + d4)",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Bc5",
+          "c3",
+          "Nf6",
+          "d4",
+          "exd4",
+          "cxd4",
+          "Bb4+",
+          "Bd2",
+          "Bxd2+",
+          "Nbxd2",
+          "d5"
+        ],
+        "idea": "White builds a classical centre at once. Black must hit back with ...d5 before the e4–e5 push cramps him.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Evans Gambit",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Bc5",
+          "b4",
+          "Bxb4",
+          "c3",
+          "Ba5",
+          "d4",
+          "exd4",
+          "O-O"
+        ],
+        "idea": "A pawn sacrifice to gain time for c3 and d4. White gets a huge centre and quick development — Kasparov's favourite surprise weapon.",
+        "level": "advanced"
+      },
+      {
+        "name": "Two Knights: 4.Ng5 Na5",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nf6",
+          "Ng5",
+          "d5",
+          "exd5",
+          "Na5",
+          "Bb5+",
+          "c6",
+          "dxc6",
+          "bxc6",
+          "Be2",
+          "h6",
+          "Nf3",
+          "e4",
+          "Ne5"
+        ],
+        "idea": "The correct way for Black to meet Ng5: give a pawn but chase White's pieces with tempo and take the initiative.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Two Knights: Traxler Counterattack",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nf6",
+          "Ng5",
+          "Bc5",
+          "Nxf7",
+          "Bxf2+",
+          "Kxf2",
+          "Nxe4+"
+        ],
+        "idea": "Black ignores the threat to f7 and counterattacks f2. Wild, tactical and full of traps for both sides.",
+        "level": "advanced"
+      },
+      {
+        "name": "Two Knights: 4.d4 (Modern Attack)",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nf6",
+          "d4",
+          "exd4",
+          "O-O",
+          "Nxe4",
+          "Re1",
+          "d5",
+          "Bxd5",
+          "Qxd5",
+          "Nc3"
+        ],
+        "idea": "White opens the centre immediately and uses the pin on the e-file. Black must return material accurately.",
+        "level": "advanced"
+      },
+      {
+        "name": "Hungarian Defence",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Be7",
+          "d4",
+          "d6",
+          "d5",
+          "Nb8"
+        ],
+        "idea": "Black avoids all tactics with a modest ...Be7. Solid but passive; White gains space.",
+        "level": "beginner"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Two Knights Defence",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nf6"
+        ],
+        "why": "Counterattacks e4 at once. Black accepts sharp play but gets active pieces and avoids the slow squeeze."
+      },
+      {
+        "name": "Giuoco Piano symmetry (3...Bc5)",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Bc5"
+        ],
+        "why": "Mirrors White's development; the bishop on c5 pressures f2 and fights for d4."
+      },
+      {
+        "name": "Early ...d5 break in the Pianissimo",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Nf6",
+          "d3",
+          "Be7",
+          "O-O",
+          "O-O",
+          "Re1",
+          "d5"
+        ],
+        "why": "If White plays slowly with d3, Black frees his game with ...d5, equalising in the centre."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "Why 5.d3 before d4",
+        "text": "Modern Italians delay d4. With d3 White keeps e4 protected forever, so Black's ...Nxe4 tricks vanish, and the d4 break comes only when it gains time or wins space. Playing d4 too early just releases tension and frees Black's pieces."
+      },
+      {
+        "title": "The Nbd2–f1–g3 knight tour",
+        "text": "White's b1-knight has no good square on c3 (it blocks the c-pawn), so it travels d2–f1–g3 where it eyes f5 and h5 and defends the king. Black often answers with ...Ba7 and ...Be6 to trade White's strongest bishop.",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bc4",
+          "Bc5",
+          "c3",
+          "Nf6",
+          "d3",
+          "d6",
+          "O-O",
+          "O-O",
+          "Re1",
+          "a6",
+          "Nbd2",
+          "Ba7",
+          "Nf1"
+        ]
+      },
+      {
+        "title": "Timing ...d5 for Black",
+        "text": "The freeing ...d5 equalises only when e4 is under enough pressure. Count attackers: if White can answer exd5 Nxd5 with d4 or Ng3–e4 and gain time on the knight, the break was premature."
+      },
+      {
+        "title": "Evans Gambit: giving the pawn back",
+        "text": "A modern defence is to return the pawn with ...d6 and ...Bb6 (or Lasker's ...d6 and ...Bg4), reaching a position where White's centre is no longer overwhelming. Holding on to material with ...exd4 and ...dxc3 invites a ferocious attack."
+      }
+    ]
+  },
+  {
+    "id": "ruy-lopez",
+    "name": "Ruy López",
+    "eco": "C60–C99",
+    "side": "white",
+    "styles": [
+      "positional"
+    ],
+    "difficulty": "intermediate",
+    "mnemonic": "Attack the defender: Bb5 pressures the knight that guards e5.",
+    "summary": "The 'Spanish torture': long-term pressure on e5 and the queenside through a bishop on b5.",
+    "purpose": "Rather than hit f7, White attacks the c6-knight — the piece defending e5. The pressure is indirect and lasts deep into the middlegame, while White prepares d4 with c3.",
+    "mainLine": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "Nf3",
+        "arrows": [
+          "!f3e5"
+        ]
+      },
+      {
+        "san": "Nc6"
+      },
+      {
+        "san": "Bb5",
+        "note": "Attacks the knight that defends e5. The threat is not immediate (Bxc6 and Nxe5 can be met by ...Qd4), but the pressure lasts.",
+        "arrows": [
+          "b5c6",
+          "!f3e5"
+        ],
+        "squares": [
+          "c6",
+          "e5"
+        ]
+      },
+      {
+        "san": "a6",
+        "note": "The Morphy Defence: ask the bishop what it wants right away."
+      },
+      {
+        "san": "Ba4",
+        "note": "Keeps the pin-like pressure on c6 instead of exchanging.",
+        "arrows": [
+          "a4e8"
+        ]
+      },
+      {
+        "san": "Nf6",
+        "note": "Counterattacks e4.",
+        "arrows": [
+          "!f6e4"
+        ]
+      },
+      {
+        "san": "O-O",
+        "note": "White does not defend e4 directly: if ...Nxe4, Re1 regains it (the Open Ruy)."
+      },
+      {
+        "san": "Be7",
+        "note": "The Closed Ruy: Black prepares to castle."
+      },
+      {
+        "san": "Re1",
+        "note": "Now e4 is protected and Bxc6 + Nxe5 becomes a real threat.",
+        "arrows": [
+          "!a4c6",
+          "!f3e5"
+        ]
+      },
+      {
+        "san": "b5",
+        "note": "Black finally kicks the bishop and gains queenside space."
+      },
+      {
+        "san": "Bb3",
+        "note": "The bishop now aims at f7 from a safe square.",
+        "arrows": [
+          "b3f7"
+        ]
+      },
+      {
+        "san": "d6",
+        "note": "Solidly supports e5 and opens the c8-bishop."
+      },
+      {
+        "san": "c3",
+        "note": "Prepares d4 and keeps a retreat on c2 for the bishop.",
+        "arrows": [
+          "d2d4"
+        ]
+      },
+      {
+        "san": "O-O",
+        "note": "Both sides castled; next White plays h3 and d4, with a classic manoeuvring battle."
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Play h3 then d4 for a big centre without allowing ...Bg4.",
+        "Knight tour Nbd2–f1–g3 towards f5.",
+        "Queenside lever a4 against Black's b5-pawn.",
+        "If the centre closes after d5, attack on the side your pawns point to (kingside)."
+      ],
+      "black": [
+        "Keep e5 firmly protected (...d6, ...Re8, ...Bf8).",
+        "Use queenside space: ...Na5, ...c5, ...Nc6.",
+        "In the Marshall, sacrifice a pawn with ...d5 for a kingside attack."
+      ]
+    },
+    "plans": [
+      "White: h3, d4, Nbd2–f1–g3, then a kingside push or a4 on the queenside.",
+      "Black: ...Na5 and ...c5 to gain queenside space, or ...Nb8–d7 (Breyer) to re-route the knight."
+    ],
+    "mistakes": [
+      "Thinking Bxc6 + Nxe5 wins a pawn early: ...Qd4 regains it.",
+      "Playing d4 without h3 and allowing ...Bg4 pressure on d4.",
+      "Black playing ...b5 and ...Bb7 too early, losing control of e5."
+    ],
+    "traps": [
+      {
+        "name": "Noah's Ark Trap",
+        "side": "black",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "d6",
+          "d4",
+          "b5",
+          "Bb3",
+          "Nxd4",
+          "Nxd4",
+          "exd4",
+          "Qxd4",
+          "c5",
+          "Qd5",
+          "Be6",
+          "Qc6+",
+          "Bd7",
+          "Qd5",
+          "c4"
+        ],
+        "explanation": "White's queen grabs back the pawn on d4, but ...c5 and ...c4 build a cage around the b3-bishop. The bishop is trapped and lost — a lesson in counting retreat squares."
+      },
+      {
+        "name": "Early Bxc6 'pawn win' that fails",
+        "side": "black",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Bxc6",
+          "dxc6",
+          "Nxe5",
+          "Qd4",
+          "Nf3",
+          "Qxe4+"
+        ],
+        "explanation": "The Exchange Variation does not win e5 at once: ...Qd4 forks e5 and e4, and Black regains the pawn with a nice position."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Closed: Breyer",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Be7",
+          "Re1",
+          "b5",
+          "Bb3",
+          "d6",
+          "c3",
+          "O-O",
+          "h3",
+          "Nb8",
+          "d4",
+          "Nbd7"
+        ],
+        "idea": "Black re-routes the c6-knight to d7 to support e5 and free the c-pawn. Deep, flexible and one of the most respected defences.",
+        "level": "advanced"
+      },
+      {
+        "name": "Closed: Chigorin",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Be7",
+          "Re1",
+          "b5",
+          "Bb3",
+          "d6",
+          "c3",
+          "O-O",
+          "h3",
+          "Na5",
+          "Bc2",
+          "c5",
+          "d4",
+          "Qc7"
+        ],
+        "idea": "Black chases the bishop with ...Na5, grabs queenside space with ...c5, and holds e5 with the queen.",
+        "level": "advanced"
+      },
+      {
+        "name": "Closed: Zaitsev",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Be7",
+          "Re1",
+          "b5",
+          "Bb3",
+          "d6",
+          "c3",
+          "O-O",
+          "h3",
+          "Bb7",
+          "d4",
+          "Re8"
+        ],
+        "idea": "Black piles pressure on e4 with ...Bb7 and ...Re8 — sharp, the favourite of Karpov.",
+        "level": "advanced"
+      },
+      {
+        "name": "Marshall Attack",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Be7",
+          "Re1",
+          "b5",
+          "Bb3",
+          "O-O",
+          "c3",
+          "d5",
+          "exd5",
+          "Nxd5",
+          "Nxe5",
+          "Nxe5",
+          "Rxe5",
+          "c6"
+        ],
+        "idea": "Black sacrifices the e-pawn for a fast kingside attack with ...Bd6, ...Qh4 and ...Bg4. Many white players avoid it with 8.a4 or 8.h3.",
+        "level": "advanced"
+      },
+      {
+        "name": "Berlin Defence",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "Nf6",
+          "O-O",
+          "Nxe4",
+          "d4",
+          "Nd6",
+          "Bxc6",
+          "dxc6",
+          "dxe5",
+          "Nf5",
+          "Qxd8+",
+          "Kxd8"
+        ],
+        "idea": "The 'Berlin Wall': queens come off early. Black has the bishop pair and a solid fortress; White has a kingside pawn majority.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Open Variation",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Nxe4",
+          "d4",
+          "b5",
+          "Bb3",
+          "d5",
+          "dxe5",
+          "Be6"
+        ],
+        "idea": "Black takes the e4-pawn and returns it for free development. Very active piece play.",
+        "level": "advanced"
+      },
+      {
+        "name": "Exchange Variation",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Bxc6",
+          "dxc6",
+          "O-O",
+          "f6",
+          "d4",
+          "exd4",
+          "Nxd4"
+        ],
+        "idea": "White damages Black's pawns and aims for an endgame where the 4-vs-3 kingside majority makes a passed pawn. Black has the bishop pair.",
+        "level": "beginner"
+      },
+      {
+        "name": "Schliemann Gambit",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "f5",
+          "Nc3",
+          "fxe4",
+          "Nxe4",
+          "d5"
+        ],
+        "idea": "A King's Gambit with colours reversed. Black hits e4 immediately for open lines — risky but dangerous.",
+        "level": "advanced"
+      },
+      {
+        "name": "Modern Steinitz",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "d6",
+          "c3",
+          "Bd7",
+          "d4"
+        ],
+        "idea": "Black supports e5 with ...d6 before committing the knight; solid and full of traps (see Noah's Ark).",
+        "level": "intermediate"
+      },
+      {
+        "name": "Classical (Cordel)",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "Bc5",
+          "c3",
+          "Nf6",
+          "O-O",
+          "O-O",
+          "d4",
+          "Bb6"
+        ],
+        "idea": "Black develops the bishop actively to c5, accepting that White gains time with c3–d4.",
+        "level": "intermediate"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Berlin Defence",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "Nf6"
+        ],
+        "why": "Takes the sting out of the opening; the resulting endgame is famously hard to crack (Kramnik beat Kasparov with it in 2000)."
+      },
+      {
+        "name": "Marshall Attack",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Be7",
+          "Re1",
+          "b5",
+          "Bb3",
+          "O-O",
+          "c3",
+          "d5"
+        ],
+        "why": "Turns the slow Spanish into a race where Black attacks first. Excellent if you like initiative more than pawns."
+      },
+      {
+        "name": "Open Ruy (5...Nxe4)",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Nxe4"
+        ],
+        "why": "Black gets free, active pieces instead of a long cramped defence."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "Anti-Marshall: 8.a4 and 8.h3",
+        "text": "To avoid the Marshall Attack, White plays a4 before c3, hitting b5 and keeping Black busy on the queenside. With 8.h3 White prevents ...Bg4 and meets ...d5 with exd5 without allowing the full gambit setup.",
+        "moves": [
+          "e4",
+          "e5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "a6",
+          "Ba4",
+          "Nf6",
+          "O-O",
+          "Be7",
+          "Re1",
+          "b5",
+          "Bb3",
+          "O-O",
+          "a4"
+        ]
+      },
+      {
+        "title": "Closing the centre with d5",
+        "text": "After d4, White decides between keeping tension and closing with d5. Closing gains space and pushes Black's c6-knight away, but tells Black where to play: ...c6 or ...f5. A rule of thumb: close the centre when your pawns point at the side where you have more pieces."
+      },
+      {
+        "title": "The Berlin endgame",
+        "text": "After the queen trade, White's 4-vs-3 kingside majority can create a passed pawn, while Black's doubled c-pawns are healthy enough and the bishop pair is a long-term trump. Black's king on e8/c7 is perfectly safe without queens."
+      }
+    ]
+  },
+  {
+    "id": "sicilian",
+    "name": "Sicilian Defence",
+    "eco": "B20–B99",
+    "side": "black",
+    "styles": [
+      "aggressive"
+    ],
+    "difficulty": "advanced",
+    "mnemonic": "Unbalance to win: a flank pawn trades for a centre pawn.",
+    "summary": "Black answers 1.e4 asymmetrically, trading the c-pawn for White's d-pawn to get a central majority and a half-open c-file.",
+    "purpose": "Create an unbalanced fight. After ...cxd4, Black has two central pawns (d and e) against one and the half-open c-file for queenside counterplay, while White gets a lead in development and attacking chances.",
+    "mainLine": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "c5",
+        "note": "Controls d4 from the side without allowing a symmetrical position.",
+        "arrows": [
+          "c5d4"
+        ],
+        "squares": [
+          "d4"
+        ]
+      },
+      {
+        "san": "Nf3",
+        "note": "Prepares d4."
+      },
+      {
+        "san": "d6",
+        "note": "Covers e5 and opens the c8-bishop."
+      },
+      {
+        "san": "d4",
+        "note": "White opens the centre to use his development lead."
+      },
+      {
+        "san": "cxd4",
+        "note": "The key Sicilian trade: a wing pawn for a centre pawn."
+      },
+      {
+        "san": "Nxd4",
+        "note": "White's knight is centralised but can become a target.",
+        "squares": [
+          "d4"
+        ]
+      },
+      {
+        "san": "Nf6",
+        "note": "Develops with tempo on e4.",
+        "arrows": [
+          "!f6e4"
+        ]
+      },
+      {
+        "san": "Nc3",
+        "note": "Defends e4."
+      },
+      {
+        "san": "a6",
+        "note": "The Najdorf: a useful waiting move that stops Nb5 and Bb5 and prepares ...e5 or ...b5.",
+        "squares": [
+          "b5"
+        ]
+      },
+      {
+        "san": "Be3",
+        "note": "The English Attack: White plans f3, Qd2, O-O-O and g4.",
+        "arrows": [
+          "f2f3",
+          "g2g4"
+        ]
+      },
+      {
+        "san": "e5",
+        "note": "Gains time by hitting the knight, accepting a hole on d5.",
+        "arrows": [
+          "!e5d4"
+        ],
+        "squares": [
+          "d5"
+        ]
+      },
+      {
+        "san": "Nb3",
+        "note": "Retreats while keeping an eye on d4 and a5."
+      },
+      {
+        "san": "Be6",
+        "note": "Fights for the d5 square — the strategic heart of the Najdorf.",
+        "arrows": [
+          "e6d5"
+        ],
+        "squares": [
+          "d5"
+        ]
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Use the development lead: f3/g4 pawn storms or f4 with e5.",
+        "Occupy the d5 hole with a knight.",
+        "Castle long and attack the black king."
+      ],
+      "black": [
+        "Counterattack on the c-file and with ...b5–b4.",
+        "Exchange on d5 or control it with ...Be6 and ...Nbd7–b6.",
+        "Strike with ...d5 when it equalises the centre."
+      ]
+    },
+    "plans": [
+      "Opposite-side castling races: whoever opens the enemy king first wins.",
+      "Black's ...Rc8, ...Qc7 and ...Nc4 sacrifice on c3 are typical themes."
+    ],
+    "mistakes": [
+      "Black playing ...e5 without controlling d5 — a white knight there dominates.",
+      "White attacking too slowly; the Sicilian punishes hesitation.",
+      "Taking on b2 with the queen without calculating (Poisoned Pawn lines are sharp)."
+    ],
+    "traps": [
+      {
+        "name": "Siberian Trap (Smith–Morra)",
+        "side": "black",
+        "moves": [
+          "e4",
+          "c5",
+          "d4",
+          "cxd4",
+          "c3",
+          "dxc3",
+          "Nxc3",
+          "Nc6",
+          "Nf3",
+          "e6",
+          "Bc4",
+          "Qc7",
+          "O-O",
+          "Nf6",
+          "Qe2",
+          "Ng4",
+          "h3",
+          "Nd4",
+          "Nxd4",
+          "Qh2#"
+        ],
+        "explanation": "White's natural h3?? (kicking the knight) is a blunder: ...Nd4! deflects the queen from defending h2, and ...Qh2# follows because the g4-knight supports the queen."
+      },
+      {
+        "name": "Nd5 sacrifice against a careless ...e5",
+        "side": "white",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "e5",
+          "Bb5+",
+          "Bd7",
+          "Bxd7+",
+          "Qxd7",
+          "Nf5"
+        ],
+        "explanation": "An early ...e5 without ...a6 lets White trade light-squared bishops and plant pieces on f5 and d5. Black's d6-pawn and d5 square become chronic weaknesses."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Najdorf: English Attack",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "a6",
+          "Be3",
+          "e5",
+          "Nb3",
+          "Be6",
+          "f3",
+          "Be7",
+          "Qd2",
+          "O-O",
+          "O-O-O"
+        ],
+        "idea": "Opposite-side castling. White storms with g4–g5; Black counters with ...b5–b4.",
+        "level": "advanced"
+      },
+      {
+        "name": "Najdorf: Poisoned Pawn",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "a6",
+          "Bg5",
+          "e6",
+          "f4",
+          "Qb6",
+          "Qd2",
+          "Qxb2",
+          "Rb1",
+          "Qa3"
+        ],
+        "idea": "Black's queen grabs b2 and survives on a3. Huge theory; White gets a big lead in development for the pawn.",
+        "level": "advanced"
+      },
+      {
+        "name": "Dragon: Yugoslav Attack",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "g6",
+          "Be3",
+          "Bg7",
+          "f3",
+          "O-O",
+          "Qd2",
+          "Nc6",
+          "Bc4",
+          "Bd7",
+          "O-O-O"
+        ],
+        "idea": "The g7-bishop breathes fire along the long diagonal. White plays Bh6 to trade it, then h4–h5 to open the h-file.",
+        "level": "advanced"
+      },
+      {
+        "name": "Scheveningen (Keres Attack)",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "e6",
+          "g4"
+        ],
+        "idea": "Black builds a small centre with ...d6 and ...e6. White's g4–g5 immediately chases the f6-knight.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Sveshnikov",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "Nc6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "e5",
+          "Ndb5",
+          "d6",
+          "Bg5",
+          "a6",
+          "Na3",
+          "b5",
+          "Bxf6",
+          "gxf6",
+          "Nd5",
+          "f5"
+        ],
+        "idea": "Black accepts a d5 hole and broken pawns for the bishop pair and dynamic central pawns (...f5).",
+        "level": "advanced"
+      },
+      {
+        "name": "Classical: Richter–Rauzer",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "Nc6",
+          "Bg5",
+          "e6",
+          "Qd2"
+        ],
+        "idea": "White pins the f6-knight and castles long; Black plays ...a6 and ...Bd7 with a solid centre.",
+        "level": "advanced"
+      },
+      {
+        "name": "Taimanov",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "e6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nc6",
+          "Nc3",
+          "Qc7",
+          "Be3",
+          "a6"
+        ],
+        "idea": "Flexible: the queen on c7 controls e5 and the c-file; Black keeps options for the f8-bishop.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Kan (Paulsen)",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "e6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "a6",
+          "Bd3"
+        ],
+        "idea": "Black delays piece development to keep maximum flexibility; often leads to a Hedgehog structure.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Accelerated Dragon vs Maróczy Bind",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "Nc6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "g6",
+          "c4",
+          "Bg7",
+          "Be3",
+          "Nf6",
+          "Nc3"
+        ],
+        "idea": "White's c4 + e4 'bind' clamps d5 and restricts Black's breaks; Black needs patience.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Kalashnikov",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "Nc6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "e5",
+          "Nb5",
+          "d6"
+        ],
+        "idea": "A cousin of the Sveshnikov: ...e5 at once, with a d5 hole but free development.",
+        "level": "advanced"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Alapin (2.c3)",
+        "moves": [
+          "e4",
+          "c5",
+          "c3",
+          "Nf6",
+          "e5",
+          "Nd5",
+          "d4",
+          "cxd4",
+          "Nf3",
+          "Nc6",
+          "cxd4",
+          "d6",
+          "Bc4"
+        ],
+        "why": "Prepares d4 so White can recapture with a pawn and keep a full centre. Avoids the big theory of the Open Sicilian."
+      },
+      {
+        "name": "Smith–Morra Gambit",
+        "moves": [
+          "e4",
+          "c5",
+          "d4",
+          "cxd4",
+          "c3",
+          "dxc3",
+          "Nxc3",
+          "Nc6",
+          "Nf3",
+          "d6",
+          "Bc4",
+          "e6",
+          "O-O",
+          "Nf6",
+          "Qe2"
+        ],
+        "why": "A pawn for fast development and open c- and d-files. Very effective at club level."
+      },
+      {
+        "name": "Rossolimo (3.Bb5)",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "Nc6",
+          "Bb5",
+          "g6",
+          "O-O",
+          "Bg7",
+          "Re1"
+        ],
+        "why": "Strategic and low-risk: White may give the bishop for the knight to damage Black's pawns."
+      },
+      {
+        "name": "Moscow (3.Bb5+)",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "Bb5+",
+          "Bd7",
+          "Bxd7+",
+          "Qxd7",
+          "c4"
+        ],
+        "why": "Trades off Black's good bishop and sets up a Maróczy-style bind."
+      },
+      {
+        "name": "Grand Prix Attack",
+        "moves": [
+          "e4",
+          "c5",
+          "Nc3",
+          "Nc6",
+          "f4",
+          "g6",
+          "Nf3",
+          "Bg7",
+          "Bc4"
+        ],
+        "why": "A direct kingside attack plan with f4–f5 and Qe1–h4."
+      },
+      {
+        "name": "Closed Sicilian",
+        "moves": [
+          "e4",
+          "c5",
+          "Nc3",
+          "Nc6",
+          "g3",
+          "g6",
+          "Bg2",
+          "Bg7",
+          "d3",
+          "d6"
+        ],
+        "why": "Keeps the centre closed and prepares a slow kingside expansion with f4."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "The ...Rxc3 exchange sacrifice",
+        "text": "A signature Sicilian idea: Black gives a rook for the c3-knight to shatter White's queenside pawns and remove the defender of e4. The compensation — central pawns and an exposed white king after O-O-O — is often worth more than the exchange."
+      },
+      {
+        "title": "Opposite-side castling: count the tempi",
+        "text": "When kings sit on opposite wings, material matters less than speed. Count how many moves each side needs to open a file against the king. Pawn moves that open lines (g4–g5, ...b5–b4) are worth more than piece moves."
+      },
+      {
+        "title": "Nd5 and Nf5 sacrifices",
+        "text": "Against ...e6 structures, White often sacrifices a knight on d5 or f5. If ...exd5 opens the e-file against a king still on e8, the attack crashes through. Black should castle before allowing these ideas."
+      },
+      {
+        "title": "Najdorf Poisoned Pawn",
+        "text": "After 6.Bg5 e6 7.f4 Qb6 8.Qd2 Qxb2 the queen survives on a3, but White gets a huge lead in development. Only enter it with home preparation.",
+        "moves": [
+          "e4",
+          "c5",
+          "Nf3",
+          "d6",
+          "d4",
+          "cxd4",
+          "Nxd4",
+          "Nf6",
+          "Nc3",
+          "a6",
+          "Bg5",
+          "e6",
+          "f4",
+          "Qb6",
+          "Qd2",
+          "Qxb2",
+          "Rb1",
+          "Qa3"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "french",
+    "name": "French Defence",
+    "eco": "C00–C19",
+    "side": "black",
+    "styles": [
+      "solid"
+    ],
+    "difficulty": "intermediate",
+    "mnemonic": "Chain and lever: attack the base of the pawn chain.",
+    "summary": "Black builds a rock-solid e6–d5 chain, concedes space, and strikes back at White's centre with ...c5 and ...f6.",
+    "purpose": "Black gives White space in exchange for a solid structure. When White pushes e5, Black attacks the base of the chain (d4) with ...c5 and the head with ...f6.",
+    "mainLine": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "e6",
+        "note": "Prepares ...d5 with a pawn ready to recapture.",
+        "arrows": [
+          "d7d5"
+        ]
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "d5",
+        "note": "Black challenges e4 at once.",
+        "arrows": [
+          "!d5e4"
+        ]
+      },
+      {
+        "san": "Nc3",
+        "note": "Defends e4 with a piece."
+      },
+      {
+        "san": "Nf6",
+        "note": "The Classical: more pressure on e4.",
+        "arrows": [
+          "!f6e4"
+        ]
+      },
+      {
+        "san": "Bg5",
+        "note": "Pins the knight, keeping control of e4.",
+        "arrows": [
+          "g5d8"
+        ]
+      },
+      {
+        "san": "Be7",
+        "note": "Breaks the pin calmly."
+      },
+      {
+        "san": "e5",
+        "note": "White gains space and kicks the knight. Now the chain d4–e5 is fixed.",
+        "squares": [
+          "d4",
+          "e5"
+        ]
+      },
+      {
+        "san": "Nfd7",
+        "note": "The knight retreats, ready to support ...c5 and ...f6."
+      },
+      {
+        "san": "Bxe7",
+        "note": "White trades the bishop that would be 'bad' behind his own pawns."
+      },
+      {
+        "san": "Qxe7"
+      },
+      {
+        "san": "f4",
+        "note": "Supports e5 so it can't be undermined by ...f6 easily.",
+        "squares": [
+          "e5"
+        ]
+      },
+      {
+        "san": "O-O",
+        "note": "Black is ready for ...c5, hitting the base of White's chain.",
+        "arrows": [
+          "c7c5",
+          "f7f6"
+        ],
+        "squares": [
+          "d4"
+        ]
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Use the extra space to attack the kingside (f4–f5, Qg4).",
+        "Defend d4 with c3 and Nf3.",
+        "Keep the e5-pawn as a wedge cramping Black."
+      ],
+      "black": [
+        "Attack the base with ...c5 and the head with ...f6.",
+        "Activate or trade the light-squared 'problem' bishop (...b6 and ...Ba6).",
+        "Pressure d4 with ...Nc6 and ...Qb6."
+      ]
+    },
+    "plans": [
+      "Black: ...c5, ...Nc6, ...Qb6 against d4, then ...f6 to open the f-file.",
+      "White: Nf3, Bd3, Qd2/Qe2, O-O-O and a kingside attack."
+    ],
+    "mistakes": [
+      "Black leaving the c8-bishop buried for the whole game.",
+      "Black taking on d4 too early and releasing the tension in White's favour.",
+      "White over-extending with f4 and g4 without development."
+    ],
+    "traps": [
+      {
+        "name": "Queen lost to Bb5+",
+        "side": "white",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "e5",
+          "c5",
+          "c3",
+          "Nc6",
+          "Nf3",
+          "Qb6",
+          "Bd3",
+          "cxd4",
+          "cxd4",
+          "Nxd4",
+          "Nxd4",
+          "Qxd4",
+          "Bb5+",
+          "Bd7",
+          "Qxd4"
+        ],
+        "explanation": "In the Advance, the d4-pawn looks loose, but grabbing it twice walks into a discovered attack: Bb5+ blocks the check with tempo and the d1-queen takes the black queen on d4."
+      },
+      {
+        "name": "Winawer: Qxg7 raid",
+        "side": "white",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "Bb4",
+          "e5",
+          "c5",
+          "a3",
+          "Bxc3+",
+          "bxc3",
+          "Ne7",
+          "Qg4",
+          "O-O",
+          "Bd3"
+        ],
+        "explanation": "When the dark-squared bishop leaves, g7 is weak. White's Qg4 and Bd3 aim straight at the castled king — Black must defend precisely."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Winawer",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "Bb4",
+          "e5",
+          "c5",
+          "a3",
+          "Bxc3+",
+          "bxc3",
+          "Ne7",
+          "Qg4"
+        ],
+        "idea": "Black gives the bishop for the knight to double White's pawns. Very sharp: Black's kingside is weak, White's queenside structure is ugly.",
+        "level": "advanced"
+      },
+      {
+        "name": "Classical: Steinitz",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "Nf6",
+          "e5",
+          "Nfd7",
+          "f4",
+          "c5",
+          "Nf3",
+          "Nc6",
+          "Be3"
+        ],
+        "idea": "White supports e5 with f4 and Nf3; Black piles on d4.",
+        "level": "intermediate"
+      },
+      {
+        "name": "MacCutcheon",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "Nf6",
+          "Bg5",
+          "Bb4",
+          "e5",
+          "h6",
+          "Bd2",
+          "Bxc3",
+          "bxc3",
+          "Ne4",
+          "Qg4"
+        ],
+        "idea": "Black counter-pins the c3-knight. Leads to wild positions with kings in danger on both sides.",
+        "level": "advanced"
+      },
+      {
+        "name": "Burn",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "Nf6",
+          "Bg5",
+          "dxe4",
+          "Nxe4",
+          "Be7",
+          "Bxf6",
+          "Bxf6",
+          "Nf3",
+          "O-O"
+        ],
+        "idea": "Black releases the centre to get the bishop pair and solid play.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Rubinstein",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "dxe4",
+          "Nxe4",
+          "Nd7",
+          "Nf3",
+          "Ngf6"
+        ],
+        "idea": "Black gives up the centre at once for easy development; solid but slightly passive.",
+        "level": "beginner"
+      },
+      {
+        "name": "Advance",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "e5",
+          "c5",
+          "c3",
+          "Nc6",
+          "Nf3",
+          "Qb6",
+          "a3",
+          "c4",
+          "Nbd2",
+          "Na5"
+        ],
+        "idea": "White grabs space immediately. Black pressures d4 and the light squares; ...c4 then ...Na5–b3 is a typical plan.",
+        "level": "beginner"
+      },
+      {
+        "name": "Tarrasch: Open (3...c5)",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nd2",
+          "c5",
+          "exd5",
+          "exd5",
+          "Ngf3",
+          "Nc6",
+          "Bb5",
+          "Bd6",
+          "dxc5",
+          "Bxc5",
+          "O-O"
+        ],
+        "idea": "Black accepts an isolated d-pawn for active pieces.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Tarrasch: Closed (3...Nf6)",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nd2",
+          "Nf6",
+          "e5",
+          "Nfd7",
+          "Bd3",
+          "c5",
+          "c3",
+          "Nc6",
+          "Ne2",
+          "cxd4",
+          "cxd4",
+          "f6"
+        ],
+        "idea": "Typical chain-versus-lever play: Black hits the head of the chain with ...f6.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Exchange",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "exd5",
+          "exd5",
+          "Bd3",
+          "Nc6",
+          "c3",
+          "Bd6"
+        ],
+        "idea": "Symmetrical and quiet. Black's c8-bishop is free, so Black has no problems.",
+        "level": "beginner"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Advance Variation (3.e5)",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "e5"
+        ],
+        "why": "Grabs space and cramps Black's pieces; the c8-bishop stays locked."
+      },
+      {
+        "name": "Tarrasch (3.Nd2)",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nd2"
+        ],
+        "why": "Avoids the Winawer pin and keeps c3 free for a pawn to support d4."
+      },
+      {
+        "name": "King's Indian Attack",
+        "moves": [
+          "e4",
+          "e6",
+          "d3",
+          "d5",
+          "Nd2",
+          "Nf6",
+          "Ngf3",
+          "c5",
+          "g3",
+          "Nc6",
+          "Bg2",
+          "Be7",
+          "O-O",
+          "O-O",
+          "e5",
+          "Nd7",
+          "Re1",
+          "b5"
+        ],
+        "why": "A system setup that sidesteps theory; White attacks the kingside with h4, Nf1–h2–g4."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "Winawer main line: Qxg7 Rg8 Qxh7",
+        "text": "White grabs two kingside pawns; Black opens the c-file and hits c3 and d4. Black's king often stays in the centre or goes queenside. It's an all-in race.",
+        "moves": [
+          "e4",
+          "e6",
+          "d4",
+          "d5",
+          "Nc3",
+          "Bb4",
+          "e5",
+          "c5",
+          "a3",
+          "Bxc3+",
+          "bxc3",
+          "Ne7",
+          "Qg4",
+          "Qc7",
+          "Qxg7",
+          "Rg8",
+          "Qxh7",
+          "cxd4"
+        ]
+      },
+      {
+        "title": "Solving the bad bishop",
+        "text": "Plans for the c8-bishop: ...b6 and ...Ba6 to trade it for White's good bishop; ...Bd7–e8–h5 in closed lines; or opening the position with ...f6 so the bishop can breathe on the kingside."
+      },
+      {
+        "title": "When to play ...f6",
+        "text": "...f6 hits the head of the chain but weakens e6 and the king. Play it when the d4-pawn is already under pressure (so White can't hold e5 with d4 support) and when your pieces can occupy the e5 square after exf6."
+      }
+    ]
+  },
+  {
+    "id": "caro-kann",
+    "name": "Caro-Kann Defence",
+    "eco": "B10–B19",
+    "side": "black",
+    "styles": [
+      "solid"
+    ],
+    "difficulty": "beginner",
+    "mnemonic": "French without the bad bishop: ...c6, ...d5, then free the bishop before ...e6.",
+    "summary": "A super-solid answer to 1.e4. Black supports ...d5 with the c-pawn so the light-squared bishop can develop outside the pawn chain.",
+    "purpose": "Contest the centre with ...d5 while keeping a healthy structure. Unlike the French, Black develops the c8-bishop before playing ...e6, so no piece gets locked in.",
+    "mainLine": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "c6",
+        "note": "Prepares ...d5 with pawn support.",
+        "arrows": [
+          "d7d5"
+        ]
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "d5"
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "dxe4",
+        "note": "Black releases the tension to free his pieces."
+      },
+      {
+        "san": "Nxe4"
+      },
+      {
+        "san": "Bf5",
+        "note": "The Classical: the bishop comes out with tempo before ...e6.",
+        "arrows": [
+          "!f5e4"
+        ]
+      },
+      {
+        "san": "Ng3",
+        "note": "Hits the bishop.",
+        "arrows": [
+          "!g3f5"
+        ]
+      },
+      {
+        "san": "Bg6"
+      },
+      {
+        "san": "h4",
+        "note": "Threatens h5 to trap the bishop.",
+        "arrows": [
+          "!h4h5"
+        ]
+      },
+      {
+        "san": "h6",
+        "note": "Gives the bishop a retreat on h7."
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "Nd7",
+        "note": "Prepares ...Ngf6 without allowing Ne5."
+      },
+      {
+        "san": "h5",
+        "note": "White gains kingside space; the bishop goes to h7.",
+        "arrows": [
+          "g6h7"
+        ]
+      },
+      {
+        "san": "Bh7",
+        "note": "Black is solid; White often castles long and plays for space."
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Gain space with h4–h5 or e5 in the Advance.",
+        "Exploit the e5 square with a knight.",
+        "Castle queenside and attack."
+      ],
+      "black": [
+        "Develop the light bishop early, then ...e6, ...Ngf6, ...Be7.",
+        "Break with ...c5 to challenge d4.",
+        "Head for an endgame where the better structure tells."
+      ]
+    },
+    "plans": [
+      "Black: ...e6, ...Ngf6, ...Qc7, ...O-O-O or ...c5.",
+      "White: Bd3 trade of light bishops, Bf4/Bd2, Qe2 and O-O-O."
+    ],
+    "mistakes": [
+      "Black playing ...Nd7 and ...Ngf6 carelessly — the famous Nd6# smothered mate.",
+      "Black playing ...e6 before ...Bf5, locking the bishop.",
+      "White over-pressing with h4–h5 without development."
+    ],
+    "traps": [
+      {
+        "name": "Smothered mate on d6",
+        "side": "white",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "Nc3",
+          "dxe4",
+          "Nxe4",
+          "Nd7",
+          "Qe2",
+          "Ngf6",
+          "Nd6#"
+        ],
+        "explanation": "Qe2 lines up against e7. After the natural ...Ngf6??, Nd6 is mate: the e7-pawn is pinned to the king and cannot capture."
+      },
+      {
+        "name": "Two Knights: ...Bh5 punished",
+        "side": "white",
+        "moves": [
+          "e4",
+          "c6",
+          "Nc3",
+          "d5",
+          "Nf3",
+          "Bg4",
+          "h3",
+          "Bh5",
+          "exd5",
+          "cxd5",
+          "Bb5+",
+          "Nc6",
+          "g4",
+          "Bg6",
+          "Ne5",
+          "Rc8",
+          "d4"
+        ],
+        "explanation": "Keeping the bishop invites g4 and Ne5 with a deadly pin on c6. Black should trade with ...Bxf3."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Advance: Short system",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "e5",
+          "Bf5",
+          "Nf3",
+          "e6",
+          "Be2",
+          "c5",
+          "Be3"
+        ],
+        "idea": "Calm development; White keeps the space and hopes to exploit the d6 square later.",
+        "level": "beginner"
+      },
+      {
+        "name": "Advance: Tal (h4)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "e5",
+          "Bf5",
+          "h4",
+          "h5",
+          "c4",
+          "e6",
+          "Nc3"
+        ],
+        "idea": "White uses the h-pawn to bother the bishop and then hits d5 with c4.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Panov–Botvinnik Attack",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "exd5",
+          "cxd5",
+          "c4",
+          "Nf6",
+          "Nc3",
+          "e6",
+          "Nf3",
+          "Be7",
+          "cxd5",
+          "Nxd5",
+          "Bd3",
+          "Nc6",
+          "O-O",
+          "O-O"
+        ],
+        "idea": "Leads to isolated queen's pawn positions: White attacks, Black blockades d5.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Exchange",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "exd5",
+          "cxd5",
+          "Bd3",
+          "Nc6",
+          "c3",
+          "Nf6",
+          "Bf4",
+          "Bg4",
+          "Qb3",
+          "Qd7",
+          "Nd2",
+          "e6"
+        ],
+        "idea": "A reversed Queen's Gambit Exchange; quiet, with chances of a minority attack for Black.",
+        "level": "beginner"
+      },
+      {
+        "name": "Karpov (4...Nd7)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "Nc3",
+          "dxe4",
+          "Nxe4",
+          "Nd7",
+          "Ng5",
+          "Ngf6",
+          "Bd3",
+          "e6",
+          "N1f3",
+          "Bd6",
+          "Qe2",
+          "h6",
+          "Ne4",
+          "Nxe4",
+          "Qxe4"
+        ],
+        "idea": "Black prepares ...Ngf6 without allowing doubled pawns. The tricky Ng5 shows why care is needed around e6.",
+        "level": "advanced"
+      },
+      {
+        "name": "Bronstein–Larsen (4...Nf6 5.Nxf6+ gxf6)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "Nc3",
+          "dxe4",
+          "Nxe4",
+          "Nf6",
+          "Nxf6+",
+          "gxf6",
+          "c3",
+          "Bf5",
+          "Nf3"
+        ],
+        "idea": "Black accepts doubled f-pawns for the open g-file and active play.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Two Knights",
+        "moves": [
+          "e4",
+          "c6",
+          "Nc3",
+          "d5",
+          "Nf3",
+          "Bg4",
+          "h3",
+          "Bxf3",
+          "Qxf3",
+          "e6"
+        ],
+        "idea": "White gets the bishop pair; Black gets a sound structure and easy development.",
+        "level": "beginner"
+      },
+      {
+        "name": "Fantasy (3.f3)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "f3",
+          "e6",
+          "Nc3",
+          "Bb4",
+          "Bf4",
+          "Ne7"
+        ],
+        "idea": "White keeps a big centre at the cost of a slightly loose kingside.",
+        "level": "intermediate"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Advance (3.e5)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "e5"
+        ],
+        "why": "Gains space and makes Black's ...c5 cost an extra tempo (the c-pawn moves twice)."
+      },
+      {
+        "name": "Panov–Botvinnik (4.c4)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "exd5",
+          "cxd5",
+          "c4"
+        ],
+        "why": "Transforms the game into dynamic IQP positions — not the quiet game Caro-Kann players want."
+      },
+      {
+        "name": "Fantasy (3.f3)",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "f3"
+        ],
+        "why": "Supports e4 and tries to keep a pawn centre. Off the beaten path."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "Advance: ...c5 in one move or two",
+        "text": "In the Advance, Black plays ...c6 and later ...c5 — losing a tempo compared to the French. The compensation is the free c8-bishop. Against setups with Be3, Black often delays ...c5 and plays ...Ne7, ...Nd7 first."
+      },
+      {
+        "title": "Classical: trading on d3 and castling long",
+        "text": "After Bd3 Bxd3 Qxd3, White castles long and uses the h5-pawn to cramp Black's kingside; Black often castles long too and aims for ...c5 or a well-timed ...Ng4.",
+        "moves": [
+          "e4",
+          "c6",
+          "d4",
+          "d5",
+          "Nc3",
+          "dxe4",
+          "Nxe4",
+          "Bf5",
+          "Ng3",
+          "Bg6",
+          "h4",
+          "h6",
+          "Nf3",
+          "Nd7",
+          "h5",
+          "Bh7",
+          "Bd3",
+          "Bxd3",
+          "Qxd3",
+          "e6",
+          "Bd2",
+          "Ngf6",
+          "O-O-O",
+          "Be7",
+          "Kb1"
+        ]
+      },
+      {
+        "title": "Why Caro-Kann players like endgames",
+        "text": "Black's pawn structure is usually healthier: no isolated pawns, no bad bishop. As pieces come off, White's space advantage matters less and Black's structure matters more."
+      }
+    ]
+  },
+  {
+    "id": "queens-gambit",
+    "name": "Queen's Gambit",
+    "eco": "D06–D69",
+    "side": "white",
+    "styles": [
+      "positional",
+      "solid"
+    ],
+    "difficulty": "beginner",
+    "mnemonic": "Trade a wing pawn for the centre: c4 attacks d5.",
+    "summary": "White offers the c-pawn to lure Black's d-pawn away from the centre. Not a real gambit — the pawn is usually regained.",
+    "purpose": "Undermine Black's central d5-pawn with c4. If Black takes, White builds a big centre with e4; if Black declines, White gets lasting pressure on the queenside and the c-file.",
+    "mainLine": [
+      {
+        "san": "d4",
+        "note": "Takes the centre; the queen protects d4.",
+        "squares": [
+          "e5",
+          "c5"
+        ]
+      },
+      {
+        "san": "d5"
+      },
+      {
+        "san": "c4",
+        "note": "The gambit: attack d5 from the side.",
+        "arrows": [
+          "!c4d5"
+        ]
+      },
+      {
+        "san": "e6",
+        "note": "The Queen's Gambit Declined: ...e6 keeps a pawn on d5.",
+        "arrows": [
+          "e6d5"
+        ]
+      },
+      {
+        "san": "Nc3",
+        "note": "Adds pressure on d5.",
+        "arrows": [
+          "!c3d5"
+        ]
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Bg5",
+        "note": "Pins the knight that defends d5.",
+        "arrows": [
+          "g5d8"
+        ]
+      },
+      {
+        "san": "Be7"
+      },
+      {
+        "san": "e3",
+        "note": "Solid; opens the f1-bishop."
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "Nbd7",
+        "note": "Supports ...c5 or ...e5 later."
+      },
+      {
+        "san": "Rc1",
+        "note": "The rook goes to the c-file before it opens.",
+        "arrows": [
+          "c1c7"
+        ]
+      },
+      {
+        "san": "c6",
+        "note": "Solid; prepares the Capablanca freeing manoeuvre ...dxc4 and ...Nd5."
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Minority attack: b4–b5 against Black's queenside (Exchange lines).",
+        "Central break with e4 when prepared.",
+        "Rook on the c-file, pressure on c6/c7."
+      ],
+      "black": [
+        "Free the position with ...dxc4 and ...e5 or ...c5.",
+        "Solve the c8-bishop problem (...b6 and ...Bb7, or ...dxc4 then ...e5).",
+        "Trade pieces with ...Ne4 (Lasker) to ease the cramp."
+      ]
+    },
+    "plans": [
+      "White: Bd3, O-O, Qc2, and either e4 or the minority attack.",
+      "Black: ...dxc4, ...Nd5 trade, ...e5 to free the bishop."
+    ],
+    "mistakes": [
+      "Black trying to keep the c4-pawn with ...b5 — White wins it back with interest.",
+      "White playing Nxd5?? in the Elephant Trap.",
+      "Black leaving the c8-bishop out of play for too long."
+    ],
+    "traps": [
+      {
+        "name": "Elephant Trap",
+        "side": "black",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Nf6",
+          "Bg5",
+          "Nbd7",
+          "cxd5",
+          "exd5",
+          "Nxd5",
+          "Nxd5",
+          "Bxd8",
+          "Bb4+",
+          "Qd2",
+          "Bxd2+",
+          "Kxd2",
+          "Kxd8"
+        ],
+        "explanation": "White thinks the d7-knight is pinned, but after Bxd8 Black has Bb4+! regaining the queen. Black ends up a piece ahead."
+      },
+      {
+        "name": "Holding on to the c4-pawn",
+        "side": "white",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "dxc4",
+          "e3",
+          "b5",
+          "a4",
+          "c6",
+          "axb5",
+          "cxb5",
+          "Qf3"
+        ],
+        "explanation": "Black defends c4 with ...b5 and ...c6, but after axb5 cxb5 the long diagonal opens: Qf3 forks the a8-rook. Better to give the pawn back."
+      },
+      {
+        "name": "Lasker Trap (Albin Countergambit)",
+        "side": "black",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e5",
+          "dxe5",
+          "d4",
+          "e3",
+          "Bb4+",
+          "Bd2",
+          "dxe3",
+          "Bxb4",
+          "exf2+",
+          "Ke2",
+          "fxg1=N+"
+        ],
+        "explanation": "A rare under-promotion: White's greedy Bxb4 allows ...exf2+ and ...fxg1=N+! — a knight promotion with check, and Black wins material."
+      }
+    ],
+    "variations": [
+      {
+        "name": "QGD: Orthodox (Capablanca freeing)",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Nf6",
+          "Bg5",
+          "Be7",
+          "e3",
+          "O-O",
+          "Nf3",
+          "Nbd7",
+          "Rc1",
+          "c6",
+          "Bd3",
+          "dxc4",
+          "Bxc4",
+          "Nd5"
+        ],
+        "idea": "Black exchanges pieces with ...Nd5 to ease the cramp, then frees with ...e5.",
+        "level": "intermediate"
+      },
+      {
+        "name": "QGD: Tartakower",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Nf6",
+          "Bg5",
+          "Be7",
+          "e3",
+          "O-O",
+          "Nf3",
+          "h6",
+          "Bh4",
+          "b6"
+        ],
+        "idea": "Black solves the bishop problem by fianchettoing it on b7.",
+        "level": "intermediate"
+      },
+      {
+        "name": "QGD: Lasker",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Nf6",
+          "Bg5",
+          "Be7",
+          "e3",
+          "O-O",
+          "Nf3",
+          "h6",
+          "Bh4",
+          "Ne4",
+          "Bxe7",
+          "Qxe7"
+        ],
+        "idea": "Trade two pairs of minor pieces to reach a solid, roomy position.",
+        "level": "intermediate"
+      },
+      {
+        "name": "QGD: Exchange (minority attack)",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Nf6",
+          "cxd5",
+          "exd5",
+          "Bg5",
+          "Be7",
+          "e3",
+          "c6",
+          "Bd3",
+          "Nbd7",
+          "Qc2",
+          "O-O",
+          "Nf3",
+          "Re8",
+          "O-O",
+          "Nf8",
+          "Rab1"
+        ],
+        "idea": "White pushes b4–b5 to create a weak black c-pawn — the textbook minority attack.",
+        "level": "advanced"
+      },
+      {
+        "name": "Queen's Gambit Accepted",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "dxc4",
+          "Nf3",
+          "Nf6",
+          "e3",
+          "e6",
+          "Bxc4",
+          "c5",
+          "O-O",
+          "a6"
+        ],
+        "idea": "Black takes, then gives the pawn back for free development and ...c5 against White's centre.",
+        "level": "beginner"
+      },
+      {
+        "name": "Slav",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "c6",
+          "Nf3",
+          "Nf6",
+          "Nc3",
+          "dxc4",
+          "a4",
+          "Bf5",
+          "e3",
+          "e6",
+          "Bxc4",
+          "Bb4",
+          "O-O",
+          "O-O"
+        ],
+        "idea": "Supports d5 with ...c6, keeping the c8-diagonal open for the bishop.",
+        "level": "beginner"
+      },
+      {
+        "name": "Semi-Slav: Meran",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "c6",
+          "Nf3",
+          "Nf6",
+          "Nc3",
+          "e6",
+          "e3",
+          "Nbd7",
+          "Bd3",
+          "dxc4",
+          "Bxc4",
+          "b5",
+          "Bd3",
+          "Bb7"
+        ],
+        "idea": "Black gains queenside space with tempo and fianchettoes the bishop. Rich and dynamic.",
+        "level": "advanced"
+      },
+      {
+        "name": "Tarrasch Defence",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "c5",
+          "cxd5",
+          "exd5",
+          "Nf3",
+          "Nc6",
+          "g3",
+          "Nf6",
+          "Bg2",
+          "Be7",
+          "O-O",
+          "O-O"
+        ],
+        "idea": "Black accepts an isolated d-pawn for free piece play.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Ragozin",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Nf6",
+          "Nf3",
+          "Bb4",
+          "cxd5",
+          "exd5",
+          "Bg5",
+          "Nbd7"
+        ],
+        "idea": "A Nimzo-Indian flavoured QGD: the bishop pins c3 and Black plays actively.",
+        "level": "advanced"
+      },
+      {
+        "name": "Albin Countergambit",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e5",
+          "dxe5",
+          "d4",
+          "Nf3",
+          "Nc6",
+          "g3",
+          "Be6",
+          "Nbd2",
+          "Qd7"
+        ],
+        "idea": "Black sacrifices a pawn; the d4-wedge cramps White. Black often castles long and attacks.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Chigorin Defence",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "Nc6",
+          "Nc3",
+          "dxc4",
+          "Nf3",
+          "Nf6",
+          "e4",
+          "Bg4"
+        ],
+        "idea": "Pieces over pawns: Black fights for the centre with minor pieces.",
+        "level": "advanced"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Queen's Gambit Declined",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e6"
+        ],
+        "why": "Keeps the d5-pawn firmly; very solid — the classic world-championship defence."
+      },
+      {
+        "name": "Slav (2...c6)",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "c6"
+        ],
+        "why": "Holds d5 without blocking the c8-bishop."
+      },
+      {
+        "name": "QGA (2...dxc4)",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "dxc4"
+        ],
+        "why": "Gives up the centre temporarily to hit back with ...c5 and ...e6; very direct."
+      },
+      {
+        "name": "Albin Countergambit",
+        "moves": [
+          "d4",
+          "d5",
+          "c4",
+          "e5"
+        ],
+        "why": "For players who want initiative instead of slow defence."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "The Carlsbad structure",
+        "text": "After cxd5 exd5, Black has a pawn on d5 and c6, White on d4 and e3. White's main plan is the minority attack (b4–b5 to leave Black with a weak c-pawn); Black's counter is a kingside attack with ...Ne4, ...f5 or a piece build-up against White's king."
+      },
+      {
+        "title": "Minority attack timing",
+        "text": "Push b4–b5 only when b5 is supported (a4 or Rb1) and Black can't answer with ...a5 to fix the pawns. The goal is bxc6 bxc6, leaving a backward c6-pawn on a half-open file."
+      },
+      {
+        "title": "Playing with the isolated queen's pawn",
+        "text": "In the Tarrasch and QGA, one side gets an IQP. The IQP side wants active pieces, a kingside attack and the d4–d5 break; the other side wants to trade pieces and blockade d5 (or d4) with a knight."
+      }
+    ]
+  },
+  {
+    "id": "kings-indian",
+    "name": "King's Indian Defence",
+    "eco": "E60–E99",
+    "side": "black",
+    "styles": [
+      "aggressive"
+    ],
+    "difficulty": "advanced",
+    "mnemonic": "Let White build, then blow it up: ...e5 and ...f5.",
+    "summary": "A hypermodern defence: Black lets White take the centre, fianchettoes the bishop, then strikes with ...e5 and a kingside pawn storm.",
+    "purpose": "Black invites White to occupy the centre with pawns, then attacks it. When the centre locks, each side storms on the wing their pawns point to — Black on the kingside, White on the queenside.",
+    "mainLine": [
+      {
+        "san": "d4"
+      },
+      {
+        "san": "Nf6",
+        "note": "Controls e4 without committing a pawn."
+      },
+      {
+        "san": "c4"
+      },
+      {
+        "san": "g6",
+        "note": "Prepares the fianchetto.",
+        "arrows": [
+          "f8g7"
+        ]
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "Bg7",
+        "note": "The bishop on the long diagonal will pressure d4 and later the queenside.",
+        "arrows": [
+          "g7a1"
+        ]
+      },
+      {
+        "san": "e4",
+        "note": "White takes the full centre — exactly what Black allowed.",
+        "squares": [
+          "c4",
+          "d4",
+          "e4"
+        ]
+      },
+      {
+        "san": "d6"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Be2"
+      },
+      {
+        "san": "e5",
+        "note": "The key strike against d4.",
+        "arrows": [
+          "!e5d4"
+        ]
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Nc6",
+        "note": "More pressure on d4, forcing White to decide."
+      },
+      {
+        "san": "d5",
+        "note": "White closes the centre and gains space.",
+        "squares": [
+          "d5",
+          "e5"
+        ]
+      },
+      {
+        "san": "Ne7",
+        "note": "The knight heads for the kingside to support ...f5.",
+        "arrows": [
+          "f7f5"
+        ]
+      },
+      {
+        "san": "Ne1",
+        "note": "The Mar del Plata: White prepares f3 and c5 on the queenside.",
+        "arrows": [
+          "c4c5"
+        ]
+      },
+      {
+        "san": "Nd7",
+        "note": "Clears the f-pawn's path."
+      },
+      {
+        "san": "Nd3"
+      },
+      {
+        "san": "f5",
+        "note": "The race begins: Black storms the kingside, White breaks with c5.",
+        "arrows": [
+          "f5f4",
+          "g6g5",
+          "~c4c5"
+        ]
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Queenside break c5 to open the c-file.",
+        "Keep e4 solid with f3 and avoid opening the kingside.",
+        "Use the space advantage to manoeuvre."
+      ],
+      "black": [
+        "Kingside storm with ...f5–f4, ...g5–g4.",
+        "Pressure the centre with ...e5 or ...c5.",
+        "Use the g7-bishop on the long diagonal after the centre opens."
+      ]
+    },
+    "plans": [
+      "Black: ...f5, ...Nf6, ...f4, ...g5–g4 and a mating attack.",
+      "White: f3, c5, Nb5, cxd6 and invasion on c7."
+    ],
+    "mistakes": [
+      "Black playing passively and letting White gain space everywhere.",
+      "White trying to win the e5-pawn with dxe5 dxe5 Qxd8 and Nxe5 — a tactic regains it.",
+      "Opening the position while behind in development."
+    ],
+    "traps": [
+      {
+        "name": "The e5 pawn that bites back",
+        "side": "black",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "e5",
+          "dxe5",
+          "dxe5",
+          "Qxd8",
+          "Rxd8",
+          "Nxe5",
+          "Nxe4",
+          "Nxe4",
+          "Bxe5"
+        ],
+        "explanation": "The pawn on e5 looks loose after the queen trade, but Nxe5 runs into ...Nxe4! and ...Bxe5 — Black wins back the material and gets active pieces."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Classical: Mar del Plata",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "e5",
+          "O-O",
+          "Nc6",
+          "d5",
+          "Ne7",
+          "Ne1",
+          "Nd7",
+          "Nd3",
+          "f5",
+          "Bd2",
+          "Nf6",
+          "f3",
+          "f4"
+        ],
+        "idea": "The famous pawn race: Black's ...g5–g4 against White's c5.",
+        "level": "advanced"
+      },
+      {
+        "name": "Classical: Bayonet (9.b4)",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "e5",
+          "O-O",
+          "Nc6",
+          "d5",
+          "Ne7",
+          "b4",
+          "Nh5",
+          "Re1"
+        ],
+        "idea": "White starts the queenside attack before Black's f-pawn gets going.",
+        "level": "advanced"
+      },
+      {
+        "name": "Classical: Petrosian",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "e5",
+          "d5",
+          "a5",
+          "Bg5",
+          "h6",
+          "Bh4",
+          "Na6"
+        ],
+        "idea": "White closes the centre at once and pins the f6-knight to slow down ...f5.",
+        "level": "advanced"
+      },
+      {
+        "name": "Classical: Gligorić",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "e5",
+          "Be3",
+          "Ng4",
+          "Bg5",
+          "f6",
+          "Bh4"
+        ],
+        "idea": "White keeps tension in the centre; Black chases the bishop with ...Ng4.",
+        "level": "advanced"
+      },
+      {
+        "name": "Sämisch",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "f3",
+          "O-O",
+          "Be3",
+          "e5",
+          "d5",
+          "Nh5",
+          "Qd2",
+          "f5"
+        ],
+        "idea": "White's f3 rock-solidly supports e4 and prepares g4/O-O-O. Black fights with ...f5 or ...c6 and ...b5.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Four Pawns Attack",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "f4",
+          "O-O",
+          "Nf3",
+          "c5",
+          "d5",
+          "e6",
+          "Be2",
+          "exd5",
+          "cxd5",
+          "Re8"
+        ],
+        "idea": "White grabs maximum space; Black must undermine it quickly or be crushed by e5.",
+        "level": "advanced"
+      },
+      {
+        "name": "Fianchetto",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nf3",
+          "Bg7",
+          "g3",
+          "O-O",
+          "Bg2",
+          "d6",
+          "O-O",
+          "Nbd7",
+          "Nc3",
+          "e5",
+          "e4",
+          "c6",
+          "h3"
+        ],
+        "idea": "A safe, positional setup; White's g2-bishop neutralises Black's attack.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Averbakh",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Be2",
+          "O-O",
+          "Bg5",
+          "c5",
+          "d5",
+          "h6",
+          "Be3",
+          "e6"
+        ],
+        "idea": "Bg5 stops ...e5 and ...Nc6 tricks; Black counters with ...c5.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Makogonov",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "h3",
+          "O-O",
+          "Be3",
+          "e5",
+          "d5",
+          "Na6"
+        ],
+        "idea": "h3 prevents ...Ng4 and prepares g4 to stop ...f5.",
+        "level": "intermediate"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Sämisch (5.f3)",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "f3"
+        ],
+        "why": "Rock-solid e4 support kills ...f5 ideas and prepares a direct kingside attack with g4 and h4."
+      },
+      {
+        "name": "Fianchetto (g3)",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nf3",
+          "Bg7",
+          "g3"
+        ],
+        "why": "Protects the white king against Black's typical pawn storm."
+      },
+      {
+        "name": "Four Pawns (5.f4)",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "f4"
+        ],
+        "why": "Punishes passivity by grabbing maximum space."
+      },
+      {
+        "name": "Bayonet (9.b4)",
+        "moves": [
+          "d4",
+          "Nf6",
+          "c4",
+          "g6",
+          "Nc3",
+          "Bg7",
+          "e4",
+          "d6",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "e5",
+          "O-O",
+          "Nc6",
+          "d5",
+          "Ne7",
+          "b4"
+        ],
+        "why": "Wins the race by starting the queenside attack a tempo earlier."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "The Mar del Plata race",
+        "text": "After d5 and ...f5, Black storms with ...f4, ...g5, ...g4 and often sacrifices to open the white king; White breaks with c5 and cxd6 to invade on c7. Whoever is first wins. Defending moves like Kh1 or Rf2 can cost the race."
+      },
+      {
+        "title": "Typical sacrifices",
+        "text": "Black's ...Nf4 (inviting gxf4), ...Bxh3 and ...g4 pawn sacrifices are standard ways to open lines. Before playing them, check that the g7-bishop and the queen can join the attack in two moves."
+      },
+      {
+        "title": "The exchange line 7.dxe5",
+        "text": "White can avoid the race with an early dxe5 dxe5 Qxd8 Rxd8. The resulting endgame is roughly equal; Black's d4 hole and the d-file matter more than the e5 square."
+      }
+    ]
+  },
+  {
+    "id": "london",
+    "name": "London System",
+    "eco": "D02 / A46",
+    "side": "white",
+    "styles": [
+      "solid"
+    ],
+    "difficulty": "beginner",
+    "mnemonic": "Same setup every game: d4, Bf4, e3, Nf3, c3, Nbd2, Bd3.",
+    "summary": "A system rather than a line: White builds the same solid pyramid against almost anything and develops the dark bishop before e3.",
+    "purpose": "Avoid theory with a reliable structure. The bishop goes to f4 before e3 so it stays outside the pawn chain; c3 and e3 make a granite triangle around d4.",
+    "mainLine": [
+      {
+        "san": "d4"
+      },
+      {
+        "san": "d5"
+      },
+      {
+        "san": "Bf4",
+        "note": "The London bishop: developed before e3 so it isn't locked in.",
+        "arrows": [
+          "f4b8"
+        ],
+        "squares": [
+          "e5"
+        ]
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "e3",
+        "note": "Opens the f1-bishop and supports d4."
+      },
+      {
+        "san": "e6"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "c5",
+        "note": "Black's best try: pressure on d4.",
+        "arrows": [
+          "!c5d4"
+        ]
+      },
+      {
+        "san": "c3",
+        "note": "The pyramid: c3, d4, e3.",
+        "squares": [
+          "c3",
+          "d4",
+          "e3"
+        ]
+      },
+      {
+        "san": "Nc6"
+      },
+      {
+        "san": "Nbd2",
+        "note": "Keeps the option of Ne5 and supports e4."
+      },
+      {
+        "san": "Bd6",
+        "note": "Black offers to trade White's best bishop.",
+        "arrows": [
+          "d6f4"
+        ]
+      },
+      {
+        "san": "Bg3",
+        "note": "Keeps the bishop; if ...Bxg3, hxg3 opens the h-file for White's rook.",
+        "arrows": [
+          "h1h7"
+        ]
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Bd3",
+        "note": "Aims at h7. White's typical plan: Ne5, f4 and a kingside attack.",
+        "arrows": [
+          "d3h7",
+          "f3e5"
+        ],
+        "squares": [
+          "e5",
+          "h7"
+        ]
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Ne5 supported by f4 (a 'Stonewall' attack).",
+        "Qe2 and e4 to open the centre when well developed.",
+        "Bxh7+ sacrifices if Black castles carelessly."
+      ],
+      "black": [
+        "...c5 and ...Qb6 to hit b2 and d4.",
+        "Trade the f4-bishop with ...Bd6 or ...Nh5.",
+        "A King's Indian setup that makes the bishop bite on granite."
+      ]
+    },
+    "plans": [
+      "White: Ne5, f4, Qf3/Rf3, then Rh3 or g4.",
+      "Black: ...cxd4 at the right moment, ...Qb6, ...Nd7 to challenge e5."
+    ],
+    "mistakes": [
+      "White playing automatic moves against ...Qb6 and losing b2.",
+      "Black allowing Ne5 + f4 without challenging it.",
+      "White playing e3 before Bf4 — then it's just a passive Colle."
+    ],
+    "traps": [
+      {
+        "name": "Queen grab on b2 punished",
+        "side": "white",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "c5",
+          "e3",
+          "Qb6",
+          "Nc3",
+          "Qxb2",
+          "Nb5"
+        ],
+        "explanation": "Black grabs b2, but Nb5! threatens Nc7+ forking king and rook, and Rb1 can hunt the queen. Greedy queens get lost."
+      },
+      {
+        "name": "The Ne5 + f4 kingside attack",
+        "side": "white",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "Nf6",
+          "e3",
+          "e6",
+          "Nd2",
+          "Bd6",
+          "Bg3",
+          "O-O",
+          "Bd3",
+          "c5",
+          "c3",
+          "Nc6",
+          "Ngf3",
+          "b6",
+          "Ne5",
+          "Bb7",
+          "f4",
+          "Ne7",
+          "Qf3",
+          "Nf5",
+          "Bxf5",
+          "exf5",
+          "O-O-O"
+        ],
+        "explanation": "If Black plays slowly, White builds the classic attack: knight on e5, pawn on f4, queen on f3, and after the trade on f5 castles long and pushes g4 to open the g-file. Black's antidote is an early ...cxd4 and ...Nd7 to challenge the e5-knight."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Main line vs ...d5/...c5",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "Nf6",
+          "e3",
+          "e6",
+          "Nf3",
+          "c5",
+          "c3",
+          "Nc6",
+          "Nbd2",
+          "Bd6",
+          "Bg3",
+          "O-O",
+          "Bd3",
+          "b6",
+          "Ne5",
+          "Bb7",
+          "f4"
+        ],
+        "idea": "The Stonewall-style attack: knight on e5 supported by f4, rook lift via f3.",
+        "level": "beginner"
+      },
+      {
+        "name": "Accelerated London (vs ...Qb6)",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "c5",
+          "e3",
+          "Nc6",
+          "c3",
+          "Qb6",
+          "Qb3",
+          "c4",
+          "Qc2"
+        ],
+        "idea": "White meets the b2 attack by offering a queen trade; ...c4 grabs space but releases d4 pressure.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Jobava London",
+        "moves": [
+          "d4",
+          "d5",
+          "Nc3",
+          "Nf6",
+          "Bf4",
+          "c5",
+          "e3",
+          "Nc6",
+          "Nb5"
+        ],
+        "idea": "An aggressive version with Nc3: the knight jumps to b5 targeting c7.",
+        "level": "advanced"
+      },
+      {
+        "name": "vs King's Indian setup",
+        "moves": [
+          "d4",
+          "Nf6",
+          "Bf4",
+          "g6",
+          "e3",
+          "Bg7",
+          "Nf3",
+          "O-O",
+          "Be2",
+          "d6",
+          "h3",
+          "c5",
+          "c3"
+        ],
+        "idea": "h3 gives the bishop a home on h2 and stops ...Nh5/...Ng4.",
+        "level": "beginner"
+      },
+      {
+        "name": "vs ...Bf5 (symmetry)",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "Nf6",
+          "e3",
+          "Bf5",
+          "c4",
+          "e6",
+          "Nc3",
+          "Bb4",
+          "Qb3"
+        ],
+        "idea": "When Black copies, c4 and Qb3 hit the weakened b7 and d5.",
+        "level": "intermediate"
+      },
+      {
+        "name": "vs Dutch",
+        "moves": [
+          "d4",
+          "f5",
+          "Bf4",
+          "Nf6",
+          "e3",
+          "e6",
+          "Nf3",
+          "Be7",
+          "h3",
+          "O-O",
+          "Bd3"
+        ],
+        "idea": "The same setup — the d3-bishop eyes Black's weakened e4 and h7.",
+        "level": "intermediate"
+      }
+    ],
+    "counters": [
+      {
+        "name": "...c5 and ...Qb6",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "c5",
+          "e3",
+          "Nc6",
+          "c3",
+          "Qb6"
+        ],
+        "why": "Hits b2 and d4 when the bishop has left c1 — the London's weak spot."
+      },
+      {
+        "name": "...Bd6 to trade the bishop",
+        "moves": [
+          "d4",
+          "d5",
+          "Bf4",
+          "Nf6",
+          "e3",
+          "e6",
+          "Nf3",
+          "Bd6",
+          "Bxd6",
+          "Qxd6"
+        ],
+        "why": "Removes White's best piece; Black's remaining bishop is not worse."
+      },
+      {
+        "name": "King's Indian setup",
+        "moves": [
+          "d4",
+          "Nf6",
+          "Bf4",
+          "g6",
+          "e3",
+          "Bg7",
+          "Nf3",
+          "d6",
+          "h3",
+          "O-O",
+          "Be2",
+          "Nbd7",
+          "O-O",
+          "Qe8"
+        ],
+        "why": "Prepares ...e5; the f4-bishop then hits a wall of pawns."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "Meeting ...c5 and ...Qb6",
+        "text": "The only real test of the London. White chooses between Qb3 (offering the queen trade; ...c4 then gains space but releases the tension) and Nc3/Nbd2 setups that gambit b2. Know which one you play in advance."
+      },
+      {
+        "title": "Why Bg3 instead of Bxd6",
+        "text": "Retreating to g3 keeps the bishop: if ...Bxg3, hxg3 gives White a half-open h-file, perfect for a kingside attack with Rh1 behind it."
+      },
+      {
+        "title": "Avoiding ...Nh5",
+        "text": "Against King's Indian setups, h3 gives the bishop a retreat on h2 so ...Nh5 doesn't trade it, and stops ...Ng4 hitting e3."
+      }
+    ]
+  },
+  {
+    "id": "english",
+    "name": "English Opening",
+    "eco": "A10–A39",
+    "side": "white",
+    "styles": [
+      "positional"
+    ],
+    "difficulty": "intermediate",
+    "mnemonic": "A Sicilian in reverse — with an extra tempo.",
+    "summary": "1.c4 controls d5 from the flank. White often fianchettoes on g2 and plays on the light squares and the queenside.",
+    "purpose": "Control the centre from the side, keep options flexible, and transpose into structures that suit White. The g2-bishop and c4-pawn combine to pressure d5 and b7.",
+    "mainLine": [
+      {
+        "san": "c4",
+        "note": "Controls d5 from the flank.",
+        "arrows": [
+          "c4d5"
+        ],
+        "squares": [
+          "d5"
+        ]
+      },
+      {
+        "san": "e5",
+        "note": "The Reversed Sicilian: Black takes the centre."
+      },
+      {
+        "san": "Nc3",
+        "note": "More control of d5.",
+        "arrows": [
+          "c3d5"
+        ]
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "g3",
+        "note": "Prepares the fianchetto — the bishop will rake the long diagonal.",
+        "arrows": [
+          "f1g2"
+        ]
+      },
+      {
+        "san": "d5",
+        "note": "Black occupies the centre as in an Open Sicilian with colours reversed."
+      },
+      {
+        "san": "cxd5"
+      },
+      {
+        "san": "Nxd5"
+      },
+      {
+        "san": "Bg2",
+        "note": "The bishop hits the d5-knight and, behind it, b7.",
+        "arrows": [
+          "!g2d5",
+          "g2b7"
+        ]
+      },
+      {
+        "san": "Nb6",
+        "note": "Retreats safely and eyes c4/d5."
+      },
+      {
+        "san": "Nf3",
+        "note": "Attacks e5.",
+        "arrows": [
+          "!f3e5"
+        ]
+      },
+      {
+        "san": "Nc6"
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Be7",
+        "note": "Black has the centre; White plans a3, b4–b5 and pressure on the long diagonal.",
+        "arrows": [
+          "b2b4",
+          "b4b5"
+        ]
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Queenside expansion with a3, b4, b5.",
+        "Long-diagonal pressure from Bg2.",
+        "Rook to the half-open c-file."
+      ],
+      "black": [
+        "Keep a strong centre with ...e5 and ...d5.",
+        "Kingside play with ...f5 or ...h5–h4.",
+        "Use the d4 square with a knight."
+      ]
+    },
+    "plans": [
+      "White: a3, b4, Rb1, d3, Be3 and play on the c-file.",
+      "Black: ...Be6, ...f5, ...Qd7 and a kingside pawn push."
+    ],
+    "mistakes": [
+      "White playing too slowly and letting Black take the whole centre for free.",
+      "Black ignoring the g2-bishop — b7 and c6 become targets.",
+      "Falling for the Nd4/Nf3 smothered-style trap."
+    ],
+    "traps": [
+      {
+        "name": "Nxe5 that walks into mate",
+        "side": "black",
+        "moves": [
+          "c4",
+          "e5",
+          "Nc3",
+          "Nf6",
+          "Nf3",
+          "Nc6",
+          "g3",
+          "Nd4",
+          "Nxe5",
+          "Qe7",
+          "Nd3",
+          "Nf3#"
+        ],
+        "explanation": "After greedy Nxe5, ...Qe7 pins the e2-pawn to the king. Retreating Nd3?? allows ...Nf3# — the e2-pawn cannot capture because it is pinned."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Reversed Sicilian / Four Knights",
+        "moves": [
+          "c4",
+          "e5",
+          "Nc3",
+          "Nf6",
+          "Nf3",
+          "Nc6",
+          "g3",
+          "d5",
+          "cxd5",
+          "Nxd5",
+          "Bg2",
+          "Nb6",
+          "O-O",
+          "Be7"
+        ],
+        "idea": "A Dragon Sicilian with an extra tempo for White.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Bremen (Kramnik–Shirov)",
+        "moves": [
+          "c4",
+          "e5",
+          "Nc3",
+          "Nf6",
+          "g3",
+          "Bb4",
+          "Bg2",
+          "O-O",
+          "e4"
+        ],
+        "idea": "Black pins the knight to fight for e4/d5 dark squares.",
+        "level": "advanced"
+      },
+      {
+        "name": "Symmetrical",
+        "moves": [
+          "c4",
+          "c5",
+          "Nc3",
+          "Nc6",
+          "g3",
+          "g6",
+          "Bg2",
+          "Bg7",
+          "Nf3",
+          "Nf6",
+          "O-O",
+          "O-O"
+        ],
+        "idea": "Mirror play: the side that breaks first with d4/d5 or b4/b5 seizes the initiative.",
+        "level": "beginner"
+      },
+      {
+        "name": "Botvinnik System",
+        "moves": [
+          "c4",
+          "c5",
+          "Nc3",
+          "Nc6",
+          "g3",
+          "g6",
+          "Bg2",
+          "Bg7",
+          "e4",
+          "e6",
+          "Nge2",
+          "Nge7",
+          "O-O",
+          "O-O",
+          "d3",
+          "d6"
+        ],
+        "idea": "White clamps d5 with c4 + e4 and plays slowly for f4 or a queenside break.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Hedgehog",
+        "moves": [
+          "c4",
+          "c5",
+          "Nf3",
+          "Nf6",
+          "Nc3",
+          "e6",
+          "g3",
+          "b6",
+          "Bg2",
+          "Bb7",
+          "O-O",
+          "Be7",
+          "d4",
+          "cxd4",
+          "Qxd4",
+          "d6"
+        ],
+        "idea": "Black sets up small pawns on the 6th rank, coiled for ...b5 or ...d5.",
+        "level": "advanced"
+      },
+      {
+        "name": "Mikėnas–Carls (Anglo-Indian)",
+        "moves": [
+          "c4",
+          "Nf6",
+          "Nc3",
+          "e6",
+          "e4",
+          "d5",
+          "e5",
+          "d4",
+          "exf6",
+          "dxc3",
+          "bxc3",
+          "Qxf6",
+          "d4"
+        ],
+        "idea": "A sharp attempt to take the centre at once.",
+        "level": "advanced"
+      },
+      {
+        "name": "Agincourt (Catalan-like)",
+        "moves": [
+          "c4",
+          "e6",
+          "Nf3",
+          "d5",
+          "g3",
+          "Nf6",
+          "Bg2",
+          "Be7",
+          "O-O",
+          "O-O",
+          "b3",
+          "c5",
+          "Bb2",
+          "Nc6",
+          "e3"
+        ],
+        "idea": "Double fianchetto pressure on the long diagonals.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Anglo-Slav",
+        "moves": [
+          "c4",
+          "c6",
+          "Nf3",
+          "d5",
+          "e3",
+          "Nf6",
+          "Nc3",
+          "e6",
+          "b3",
+          "Nbd7",
+          "Bb2",
+          "Bd6"
+        ],
+        "idea": "Black builds a Slav triangle; White stays flexible with b3 and Bb2.",
+        "level": "beginner"
+      }
+    ],
+    "counters": [
+      {
+        "name": "Reversed Sicilian (1...e5)",
+        "moves": [
+          "c4",
+          "e5"
+        ],
+        "why": "Takes the centre directly and gives Black easy development."
+      },
+      {
+        "name": "Symmetrical (1...c5)",
+        "moves": [
+          "c4",
+          "c5"
+        ],
+        "why": "Copies White and fights for d4 — very solid."
+      },
+      {
+        "name": "King's Indian setup",
+        "moves": [
+          "c4",
+          "Nf6",
+          "Nc3",
+          "g6",
+          "e4",
+          "d6",
+          "d4",
+          "Bg7"
+        ],
+        "why": "Lets White transpose into a KID where Black's counterplay is known."
+      },
+      {
+        "name": "Slav setup (1...c6)",
+        "moves": [
+          "c4",
+          "c6",
+          "Nf3",
+          "d5"
+        ],
+        "why": "Sound structure with the c8-bishop free."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "The extra tempo",
+        "text": "Reversed Sicilian lines give White an Open Sicilian a move up. That's why Black often avoids copying aggressive Sicilian set-ups and chooses solid systems instead (e.g. ...Bb4 lines)."
+      },
+      {
+        "title": "Botvinnik structure and the f4 break",
+        "text": "With pawns on c4, d3 and e4, White clamps d5 and later prepares f4 for a kingside expansion. Black's counter is ...f5 or ...b5 to undermine c4."
+      },
+      {
+        "title": "Transpositions",
+        "text": "The English often turns into a Queen's Gambit, King's Indian, Catalan or Sicilian reversed. Choose your move order so that you reach structures you know, and avoid the ones you don't."
+      }
+    ]
+  },
+  {
+    "id": "scandinavian",
+    "name": "Scandinavian Defence",
+    "eco": "B01",
+    "side": "black",
+    "styles": [
+      "solid",
+      "aggressive"
+    ],
+    "difficulty": "beginner",
+    "mnemonic": "Hit e4 immediately, then hide the queen on a5 or d6.",
+    "summary": "Black challenges e4 on move one. After exd5 Qxd5 the queen comes out early but can find a safe home on a5, d6 or d8.",
+    "purpose": "Force the game into Black's territory from the very first move. Black gets an easy plan (...Nf6, ...Bf5, ...c6, ...e6) and a solid Caro-Kann-like structure.",
+    "mainLine": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "d5",
+        "note": "Hits e4 straight away.",
+        "arrows": [
+          "!d5e4"
+        ]
+      },
+      {
+        "san": "exd5"
+      },
+      {
+        "san": "Qxd5",
+        "note": "The queen recaptures early — White will gain a tempo with Nc3.",
+        "squares": [
+          "d5"
+        ]
+      },
+      {
+        "san": "Nc3",
+        "note": "Develops with tempo on the queen.",
+        "arrows": [
+          "!c3d5"
+        ]
+      },
+      {
+        "san": "Qa5",
+        "note": "The main line: the queen pins the c3-knight and stays active.",
+        "arrows": [
+          "a5e1"
+        ]
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "c6",
+        "note": "Gives the queen a retreat on c7 and controls b5/d5.",
+        "squares": [
+          "b5",
+          "d5"
+        ]
+      },
+      {
+        "san": "Bc4"
+      },
+      {
+        "san": "Bf5",
+        "note": "The light bishop develops outside the chain before ...e6."
+      },
+      {
+        "san": "Bd2",
+        "note": "Unpins and sets up Nd5 tricks against the a5-queen.",
+        "arrows": [
+          "!c3d5",
+          "d2a5"
+        ]
+      },
+      {
+        "san": "e6",
+        "note": "Black has a sound, Caro-Kann-like position."
+      }
+    ],
+    "ideas": {
+      "white": [
+        "Gain time against the queen with Nc3, Bd2, Nd5.",
+        "Use the d4 space and kingside attack with Ne5, g4.",
+        "Exploit the light squares with Bc4, Qe2, O-O-O."
+      ],
+      "black": [
+        "Develop quickly and solidly: ...Nf6, ...Bf5, ...c6, ...e6, ...Nbd7.",
+        "Keep the queen safe on a5/c7.",
+        "Equalise with ...Bb4 or ...Bd6 and ...O-O."
+      ]
+    },
+    "plans": [
+      "Black: complete development and use the half-open d-file.",
+      "White: Ne5, g4 to chase the f5-bishop, and O-O-O."
+    ],
+    "mistakes": [
+      "Black moving the queen a third and fourth time.",
+      "Black developing the bishop to g4 too early and getting it trapped with h3/g4/Ne5.",
+      "Black overlooking Nd5 tricks after Bd2."
+    ],
+    "traps": [
+      {
+        "name": "Bishop hunt with h3 and g4",
+        "side": "white",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Qxd5",
+          "Nc3",
+          "Qa5",
+          "d4",
+          "Nf6",
+          "Nf3",
+          "Bg4",
+          "h3",
+          "Bh5",
+          "g4",
+          "Bg6",
+          "Ne5"
+        ],
+        "explanation": "With ...Bg4 too early, the bishop is chased to g6 and Ne5 threatens h4–h5 to trap it. Black must know the ...c6 and ...e6 escape squares."
+      },
+      {
+        "name": "Nd5 discovered attack on the a5-queen",
+        "side": "white",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Qxd5",
+          "Nc3",
+          "Qa5",
+          "d4",
+          "Nf6",
+          "Nf3",
+          "Bf5",
+          "Bc4",
+          "e6",
+          "Bd2",
+          "c6",
+          "Nd5",
+          "Qd8",
+          "Nxf6+",
+          "gxf6"
+        ],
+        "explanation": "Nd5 uncovers the d2-bishop against the a5-queen. If ...cxd5, Bxa5 wins the queen, so Black must retreat and accept broken pawns."
+      }
+    ],
+    "variations": [
+      {
+        "name": "Main line 3...Qa5",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Qxd5",
+          "Nc3",
+          "Qa5",
+          "d4",
+          "Nf6",
+          "Nf3",
+          "c6",
+          "Bc4",
+          "Bf5",
+          "Bd2",
+          "e6"
+        ],
+        "idea": "Solid development; the queen pins c3 and later retreats to c7.",
+        "level": "beginner"
+      },
+      {
+        "name": "Modern 3...Qd6",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Qxd5",
+          "Nc3",
+          "Qd6",
+          "d4",
+          "Nf6",
+          "Nf3",
+          "a6",
+          "g3"
+        ],
+        "idea": "The queen on d6 controls e5 and b4; ...a6 stops Nb5.",
+        "level": "intermediate"
+      },
+      {
+        "name": "3...Qd8 retreat",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Qxd5",
+          "Nc3",
+          "Qd8",
+          "d4",
+          "Nf6",
+          "Nf3",
+          "Bg4",
+          "h3",
+          "Bxf3",
+          "Qxf3",
+          "c6"
+        ],
+        "idea": "Ultra-solid: the queen goes home and Black plays like a Caro-Kann.",
+        "level": "beginner"
+      },
+      {
+        "name": "Modern 2...Nf6",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Nf6",
+          "d4",
+          "Nxd5",
+          "Nf3",
+          "g6",
+          "c4",
+          "Nb6"
+        ],
+        "idea": "Black recaptures with the knight instead, accepting a space disadvantage for a fianchetto.",
+        "level": "intermediate"
+      },
+      {
+        "name": "Portuguese Gambit",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Nf6",
+          "d4",
+          "Bg4",
+          "f3",
+          "Bf5",
+          "c4",
+          "e6"
+        ],
+        "idea": "Black gambits the pawn for rapid development and pressure.",
+        "level": "advanced"
+      },
+      {
+        "name": "Icelandic Gambit",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Nf6",
+          "c4",
+          "e6",
+          "dxe6",
+          "Bxe6"
+        ],
+        "idea": "A pawn for open lines and a lead in development.",
+        "level": "advanced"
+      }
+    ],
+    "counters": [
+      {
+        "name": "3.Nc3 with Bd2 tricks",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Qxd5",
+          "Nc3",
+          "Qa5",
+          "d4",
+          "Nf6",
+          "Nf3",
+          "c6",
+          "Bc4",
+          "Bf5",
+          "Bd2"
+        ],
+        "why": "Gains tempi against the queen and sets up Nd5 discoveries."
+      },
+      {
+        "name": "3.d4 vs 2...Nf6",
+        "moves": [
+          "e4",
+          "d5",
+          "exd5",
+          "Nf6",
+          "d4",
+          "Nxd5",
+          "c4",
+          "Nb6",
+          "Nf3"
+        ],
+        "why": "Uses the extra central space and kicks the knight with c4."
+      },
+      {
+        "name": "Sidestep with 2.Nc3",
+        "moves": [
+          "e4",
+          "d5",
+          "Nc3",
+          "dxe4",
+          "Nxe4"
+        ],
+        "why": "Steers into Caro-Kann-like waters without letting Black's queen gain time on d5."
+      }
+    ],
+    "advanced": [
+      {
+        "title": "Choosing the queen's square",
+        "text": "a5 pins c3 and keeps the queen active but invites Nd5 tricks; d6 controls e5 and b4 but can be hit by Nb5 or Bf4; d8 is the safest but slowest. Pick according to your style."
+      },
+      {
+        "title": "Facing Ne5 and g4",
+        "text": "White often chases the f5-bishop with Ne5 and g4. Prepare a retreat on g6 or e4 and answer with ...Nbd7 to trade the e5-knight."
+      },
+      {
+        "title": "The endgame structure",
+        "text": "With pawns on c6 and e6 vs White's d4, the endgame is comfortable for Black: no weaknesses, and the d4-pawn can become a target."
+      }
+    ]
+  }
+]

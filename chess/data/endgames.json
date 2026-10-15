@@ -1,0 +1,340 @@
+[
+  {
+    "id": "kq-vs-k",
+    "group": "Fundamental checkmates",
+    "name": "King + Queen vs King",
+    "mnemonic": "Box the king with the queen a knight's move away, then bring your own king.",
+    "summary": "The queen shrinks the enemy king's box; your king walks up to support the final mate. Watch out for stalemate.",
+    "points": [
+      "Place the queen a knight's jump from the enemy king — it removes most of its squares without giving check.",
+      "Once the king is on the edge, stop moving the queen and bring your king up.",
+      "Before every queen move ask: does Black still have a legal move? Stalemate throws away the win."
+    ],
+    "lines": [
+      { "title": "Mating from the edge", "fen": "8/6k1/4Q3/8/4K3/8/8/8 w - - 0 1", "mate": true,
+        "moves": [
+          { "san": "Kf5", "note": "The queen already confines Black to the corner area. Now the king walks up.", "squares": ["f8", "g8", "h8", "h7", "g7"] },
+          { "san": "Kh7" },
+          { "san": "Kf6", "note": "The kings are close; Black has only h8 left." },
+          { "san": "Kh8" },
+          { "san": "Qe7", "note": "Not Qg6?? — that's stalemate. Qe7 leaves Black the g8 square.", "arrows": ["e7g7"] },
+          { "san": "Kg8" },
+          { "san": "Qg7#", "note": "Protected by the king: checkmate." }
+        ] }
+    ]
+  },
+  {
+    "id": "kr-vs-k",
+    "group": "Fundamental checkmates",
+    "name": "King + Rook vs King",
+    "mnemonic": "Cut, approach, opposition, check.",
+    "summary": "The rook cuts the king off along a rank or file; your king takes the opposition, and the rook checks along the edge.",
+    "points": [
+      "Use the rook to make a fence the enemy king can't cross.",
+      "Bring your king in front of the enemy king (opposition) — then a rook check on the edge is mate.",
+      "If the enemy king isn't in opposition, make a waiting rook move along the fence."
+    ],
+    "lines": [
+      { "title": "The final steps", "fen": "6k1/R7/8/4K3/8/8/8/8 w - - 0 1", "mate": true,
+        "moves": [
+          { "san": "Kf6", "note": "The a7-rook fences Black on the 8th rank. Now the king approaches.", "squares": ["a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"] },
+          { "san": "Kh8" },
+          { "san": "Kg6", "note": "Black must step back into opposition." },
+          { "san": "Kg8" },
+          { "san": "Ra8#", "note": "Kings in opposition, rook checks along the edge: mate." }
+        ] }
+    ]
+  },
+  {
+    "id": "two-bishops",
+    "group": "Fundamental checkmates",
+    "name": "Two bishops vs King",
+    "mnemonic": "Side by side, the bishops make a wall the king can't cross diagonally.",
+    "summary": "Two bishops next to each other control a diagonal 'wall'. Drive the king into a corner and mate there.",
+    "points": [
+      "Bishops work best side by side, controlling adjacent diagonals.",
+      "The mate happens in a corner (any corner), with your king a knight's move or opposition away.",
+      "Use waiting moves with a bishop to give the move back to Black when needed — without stalemating."
+    ],
+    "lines": [
+      { "title": "Mate in the corner", "fen": "6k1/8/6K1/8/4BB2/8/8/8 w - - 0 1", "mate": true,
+        "moves": [
+          { "san": "Bd6", "note": "Takes f8 from the king.", "arrows": ["d6f8"] },
+          { "san": "Kh8" },
+          { "san": "Bf5", "note": "A waiting move — not Bd5?? which would be stalemate." },
+          { "san": "Kg8" },
+          { "san": "Be6+", "note": "Check from the light bishop; f8 is still covered.", "arrows": ["e6g8"] },
+          { "san": "Kh8" },
+          { "san": "Be5#", "note": "The dark bishop checks along the long diagonal; g8 is covered. Mate." }
+        ] }
+    ]
+  },
+  {
+    "id": "king-activation",
+    "group": "Key principles",
+    "name": "King activation",
+    "mnemonic": "In the endgame the king is a fighting piece — centralise it.",
+    "summary": "With queens off, mating danger is low. The king should march to the centre where it attacks pawns and escorts passed pawns.",
+    "points": [
+      "Every tempo spent bringing the king forward is usually worth it.",
+      "A centralised king can switch to either wing in few moves.",
+      "The side whose king arrives first usually wins king-and-pawn endings."
+    ],
+    "lines": [
+      { "title": "Both kings race to the centre", "fen": "6k1/pp3ppp/8/8/8/8/PP3PPP/6K1 w - - 0 1",
+        "moves": [
+          { "san": "Kf1", "note": "Head for the centre immediately.", "arrows": ["f1e2", "e2d3"] },
+          { "san": "Kf8" },
+          { "san": "Ke2" },
+          { "san": "Ke7" },
+          { "san": "Kd3" },
+          { "san": "Kd6" },
+          { "san": "Kd4", "note": "White's king is on the most central square first, ready for c4/b4 or e4–f4 depending on where Black weakens.", "squares": ["d4"] }
+        ] }
+    ]
+  },
+  {
+    "id": "opposition",
+    "group": "Key principles",
+    "name": "Opposition",
+    "mnemonic": "Kings face to face, one square apart: the side NOT to move holds the opposition.",
+    "summary": "When the kings stand opposite each other with one square between them, the side that must move has to give way.",
+    "points": [
+      "Direct opposition: kings on the same file or rank with one square between them.",
+      "The attacker uses opposition to push past the defender; the defender uses it to block.",
+      "With king + pawn vs king, the defender draws by taking the opposition in front of the pawn."
+    ],
+    "lines": [
+      { "title": "Black to move loses", "fen": "8/4k3/8/4K3/4P3/8/8/8 b - - 0 1", "expect": "loss",
+        "moves": [
+          { "san": "Kd7", "note": "Kings were in opposition with Black to move — Black must give way.", "squares": ["e6"] },
+          { "san": "Kf6", "note": "White's king outflanks to the side and advances." },
+          { "san": "Ke8" },
+          { "san": "e5", "note": "The king is in front of the pawn — the pawn can now advance safely." },
+          { "san": "Kf8" },
+          { "san": "e6" },
+          { "san": "Ke8" },
+          { "san": "e7", "note": "The f6-king controls f7 and e7, so the pawn is safe." },
+          { "san": "Kd7" },
+          { "san": "Kf7" },
+          { "san": "Kd6" },
+          { "san": "e8=Q" }
+        ] },
+      { "title": "White to move: Black holds", "fen": "8/4k3/8/4K3/4P3/8/8/8 w - - 0 1", "expect": "draw",
+        "moves": [
+          { "san": "Kd5", "note": "With White to move, Black can always answer by taking the opposition." },
+          { "san": "Kd7", "note": "Opposition!" },
+          { "san": "e5" },
+          { "san": "Ke7" },
+          { "san": "e6" },
+          { "san": "Ke8", "note": "Back to the queening square — the only drawing move." },
+          { "san": "Kd6" },
+          { "san": "Kd8", "note": "Opposition again." },
+          { "san": "e7+" },
+          { "san": "Ke8" },
+          { "san": "Ke6", "note": "Stalemate: Black has no legal move. Draw." }
+        ] }
+    ]
+  },
+  {
+    "id": "triangulation",
+    "group": "Key principles",
+    "name": "Triangulation",
+    "mnemonic": "Three moves to Black's two: walk a triangle to pass the move.",
+    "summary": "When a position would be winning if it were the opponent's move, your king walks a small triangle to lose a tempo while the opponent's king can only shuttle back and forth.",
+    "points": [
+      "Spot the key position: one where the opponent, to move, must give way.",
+      "Your king has a triangle of squares near it; the enemy king has only two good squares.",
+      "Walk the triangle (three moves) while they shuttle (two moves) — the same position returns with them to move."
+    ],
+    "lines": [
+      { "title": "Kd4–d3–c3–d4", "fen": "8/8/1k1p4/3P4/2PK4/8/8/8 w - - 0 1", "expect": "win",
+        "moves": [
+          { "san": "Kd3", "note": "With White to move, nothing works directly. White starts the triangle d3–c3–d4.", "arrows": ["d4d3", "d3c3", "c3d4"], "squares": ["d4", "d3", "c3"] },
+          { "san": "Kc5", "note": "Black must keep c5/b6 in reach to stop Kc4–b5." },
+          { "san": "Kc3" },
+          { "san": "Kb6" },
+          { "san": "Kd4", "note": "The starting position — but now it's Black to move. White has 'passed' the move.", "squares": ["d4", "b6"] },
+          { "san": "Kc7", "note": "Black has to give ground; c5 can no longer be held." },
+          { "san": "Ke4", "note": "The white king heads for the d6-pawn via f5 and e6." },
+          { "san": "Kd7" },
+          { "san": "Kf5" },
+          { "san": "Ke7" },
+          { "san": "Kg6", "note": "Outflanking: Black can't guard both e6 and the f7/f6 entry squares." },
+          { "san": "Kd8" },
+          { "san": "Kf6" },
+          { "san": "Kd7" },
+          { "san": "Kf7" },
+          { "san": "Kd8" },
+          { "san": "Ke6" },
+          { "san": "Kc7" },
+          { "san": "Ke7" },
+          { "san": "Kb6" },
+          { "san": "Kxd6", "note": "The d6-pawn falls and White's d-pawn will promote." }
+        ] }
+    ]
+  },
+  {
+    "id": "passed-pawns",
+    "group": "Key principles",
+    "name": "Passed pawns",
+    "mnemonic": "Passed pawns must be pushed — and an outside passer drags the king away.",
+    "summary": "A passed pawn has no enemy pawns in front of it or on adjacent files. An outside passed pawn deflects the enemy king so your king can feast on the other side.",
+    "points": [
+      "A passed pawn far from the other pawns (outside) is the strongest kind.",
+      "Push it to lure the enemy king away; then your king wins the pawns it abandoned.",
+      "Blockade enemy passed pawns with a piece directly in front of them."
+    ],
+    "lines": [
+      { "title": "The outside passer decides", "fen": "8/8/4k3/6p1/P3K1P1/8/8/8 w - - 0 1", "expect": "win",
+        "moves": [
+          { "san": "a5", "note": "The a-pawn runs; Black's king must chase it.", "arrows": ["a5a8"] },
+          { "san": "Kd6" },
+          { "san": "Kf5", "note": "While Black chases, White's king attacks g5." },
+          { "san": "Kc6" },
+          { "san": "Kxg5" },
+          { "san": "Kb5" },
+          { "san": "Kf6" },
+          { "san": "Kxa5" },
+          { "san": "g5", "note": "Black's king is far away on a5: the g-pawn queens." },
+          { "san": "Kb6" },
+          { "san": "g6" },
+          { "san": "Kc7" },
+          { "san": "g7" },
+          { "san": "Kd7" },
+          { "san": "g8=Q" }
+        ] }
+    ]
+  },
+  {
+    "id": "rule-of-the-square",
+    "group": "Key principles",
+    "name": "Rule of the square",
+    "mnemonic": "Draw the square from the pawn to the queening rank — if the king can step in, it catches the pawn.",
+    "summary": "To know if a king can catch a passed pawn, imagine a square with the pawn's path as one side. If the king can enter it on its move, it catches the pawn.",
+    "points": [
+      "Side of the square = distance from the pawn to its promotion square.",
+      "If it's the pawn's move, draw the square from the square it will move to.",
+      "A pawn on its starting rank can jump two squares — count from the square in front."
+    ],
+    "lines": [
+      { "title": "The king steps into the square", "fen": "8/8/8/5k2/P7/8/8/7K b - - 0 1", "expect": "draw",
+        "moves": [
+          { "san": "Ke5", "note": "The square of the a4-pawn is a4–e4–e8–a8. The king steps into it — the pawn is caught.", "squares": ["a4", "e4", "e8", "a8", "e5"] },
+          { "san": "a5" },
+          { "san": "Kd6" },
+          { "san": "a6" },
+          { "san": "Kc7" },
+          { "san": "a7" },
+          { "san": "Kb7" },
+          { "san": "a8=Q+" },
+          { "san": "Kxa8" }
+        ] }
+    ]
+  },
+  {
+    "id": "key-squares",
+    "group": "Essential positions",
+    "name": "King & pawn: key squares",
+    "mnemonic": "Get your king two squares in front of the pawn and it queens.",
+    "summary": "For a pawn not yet on the 5th rank, the key squares are the three squares two ranks in front of it. If the attacking king reaches one, the pawn promotes no matter who moves.",
+    "points": [
+      "Pawn on e4: key squares d6, e6, f6.",
+      "Once the pawn reaches the 5th rank, the squares one rank ahead (d6, e6, f6) are also key.",
+      "Exception: rook pawns are usually drawn if the defending king reaches the corner."
+    ],
+    "lines": [
+      { "title": "King on a key square wins", "fen": "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1", "expect": "win",
+        "moves": [
+          { "san": "Kd6", "note": "White's king is already on a key square (e6). Kd6 keeps control of e7 and d7.", "squares": ["d6", "e6", "f6"] },
+          { "san": "Kf7" },
+          { "san": "Kd7", "note": "Controls e8 and e7; the pawn walks in." },
+          { "san": "Kf8" },
+          { "san": "e6" },
+          { "san": "Kg7" },
+          { "san": "e7" },
+          { "san": "Kf7" },
+          { "san": "e8=Q+" }
+        ] }
+    ]
+  },
+  {
+    "id": "lucena",
+    "group": "Essential positions",
+    "name": "Lucena position",
+    "mnemonic": "Build a bridge: rook to the 4th rank shields your king from checks.",
+    "summary": "The most important winning technique in rook endings: with your king in front of your pawn on the 7th, use the rook as a shield against side and back checks.",
+    "points": [
+      "Conditions: pawn on the 7th, your king in front, enemy king cut off by at least one file.",
+      "First move the rook to the 4th rank (the bridge).",
+      "Step out with the king; when the checks come, block with the rook on the 4th rank."
+    ],
+    "lines": [
+      { "title": "Building the bridge", "fen": "3K4/3P2k1/8/8/8/8/2r5/5R2 w - - 0 1",
+        "moves": [
+          { "san": "Rf4", "note": "The bridge: the rook goes to the 4th rank, still cutting Black's king off on the f-file.", "arrows": ["f4d4"] },
+          { "san": "Rc1", "note": "Black waits." },
+          { "san": "Ke7", "note": "The king steps out from in front of the pawn." },
+          { "san": "Re1+" },
+          { "san": "Kd6" },
+          { "san": "Rd1+" },
+          { "san": "Ke6" },
+          { "san": "Re1+" },
+          { "san": "Kd5" },
+          { "san": "Rd1+" },
+          { "san": "Rd4", "note": "The bridge is complete: the checks are over and the pawn promotes.", "squares": ["d4"] },
+          { "san": "Re1" },
+          { "san": "d8=Q" }
+        ] }
+    ]
+  },
+  {
+    "id": "philidor",
+    "group": "Essential positions",
+    "name": "Philidor position",
+    "mnemonic": "Third rank, then back rank: hold the 6th, and when the pawn arrives, check from behind.",
+    "summary": "The key drawing technique with rook vs rook and pawn: keep your rook on your third rank so the enemy king can't advance, and when the pawn steps forward, give checks from behind.",
+    "points": [
+      "Defending king in front of the pawn; rook on the 6th rank (its third rank).",
+      "If the pawn advances to the 6th, the white king has lost its shelter — drop the rook to the 1st rank and check from behind.",
+      "The attacker can never escape the checks without abandoning the pawn."
+    ],
+    "lines": [
+      { "title": "The third-rank defence", "fen": "4k3/7R/1r6/3KP3/8/8/8/8 w - - 0 1",
+        "moves": [
+          { "san": "e6", "note": "If White waits, Black's rook stays on the 6th and the king can't advance. So White pushes...", "squares": ["b6", "c6", "d6", "e6", "f6"] },
+          { "san": "Rb1", "note": "...and now the rook drops to the back: the white king has no shelter from checks.", "arrows": ["b1d1"] },
+          { "san": "Kd6" },
+          { "san": "Rd1+" },
+          { "san": "Ke5" },
+          { "san": "Re1+" },
+          { "san": "Kd6" },
+          { "san": "Rd1+", "note": "Endless checks — a draw." }
+        ] }
+    ]
+  },
+  {
+    "id": "rook-behind-pawn",
+    "group": "Essential positions",
+    "name": "Rook endings: rook behind the passed pawn",
+    "mnemonic": "Tarrasch's rule: rooks belong behind passed pawns — yours or theirs.",
+    "summary": "A rook behind a passed pawn gains power with every step the pawn takes; a rook in front of it gets more passive.",
+    "points": [
+      "Behind your own passed pawn, the rook supports it all the way.",
+      "Behind the enemy passed pawn, the rook stops it while staying active.",
+      "A rook in front of a pawn is tied down and passive."
+    ],
+    "lines": [
+      { "title": "The pawn marches with rook support", "fen": "8/8/5k2/8/P7/8/r7/R4K2 w - - 0 1",
+        "moves": [
+          { "san": "a5", "note": "Black's rook is in front of the pawn — passive. White's rook behind it supports every step.", "arrows": ["a1a5"] },
+          { "san": "Ke6" },
+          { "san": "a6" },
+          { "san": "Kd7" },
+          { "san": "a7", "note": "Black's rook is now stuck in front, and the black king must stay near b7. White's king is free to walk in." },
+          { "san": "Kc7" },
+          { "san": "Ke1" }
+        ] }
+    ]
+  }
+]
