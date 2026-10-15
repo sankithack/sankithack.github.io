@@ -47,6 +47,7 @@ export function renderDetail(data, id) {
         e.lines.length > 1 ? lineTabs : null, verdict,
         h('p', e.summary),
         h('h3', 'How to play it'),
-        h('ol.steps', e.points.map((p) => h('li', p))))),
+        h('ol.steps', e.points.map((p) => h('li', p))),
+        h('a.btn.btn-primary', { href: `#/practice/endgame/${e.id}` }, icon('target', 16), e.practice?.mode === 'drill' ? 'Practise the line' : 'Play it against the computer'))),
     h('nav.pager', h('a', { href: `#/endgames/${prev.id}` }, '← ' + prev.name), h('a', { href: `#/endgames/${next.id}` }, next.name + ' →')));
 }

@@ -4,11 +4,11 @@ export async function loadData(name) {
   if (!cache[name]) cache[name] = fetch(`data/${name}.json`).then((r) => { if (!r.ok) throw new Error(`Couldn't load data/${name}.json (${r.status})`); return r.json(); });
   return cache[name];
 }
-export const loadAll = () => Promise.all(['openings', 'tactics', 'strategy', 'endgames', 'games'].map(loadData))
-  .then(([openings, tactics, strategy, endgames, games]) => ({ openings, tactics, strategy, endgames, games }));
+export const loadAll = () => Promise.all([...['openings', 'tactics', 'strategy', 'endgames', 'games', 'attack'].map(loadData), loadData('popularity').catch(() => null)])
+  .then(([openings, tactics, strategy, endgames, games, attack, popularity]) => ({ openings, tactics, strategy, endgames, games, attack, popularity }));
 
 const KEY = 'chess-academy-progress-v1';
-const blank = () => ({ seen: {}, solved: {}, cards: {}, best: {}, streak: { day: null, count: 0 } });
+const blank = () => ({ seen: {}, solved: {}, cards: {}, best: {}, drills: {}, streak: { day: null, count: 0 } });
 let state = read();
 function read() {
   try { return { ...blank(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return blank(); }
@@ -40,4 +40,14 @@ export function saveBest(key, score) {
   return score > prev;
 }
 export const best = (key) => state.best[key] ?? 0;
+/** Practice results: drills[id] = { runs, perfect, last } */
+export function recordDrill(id, perfect) {
+  const d = state.drills[id] || { runs: 0, perfect: 0 };
+  state.drills[id] = { runs: d.runs + 1, perfect: d.perfect + (perfect ? 1 : 0), last: Date.now() };
+  touchStreak(); write();
+}
+export const drillState = (id) => state.drills?.[id] || null;
+export const isMastered = (id) => (state.drills?.[id]?.perfect || 0) > 0;
+export function loadOptional(name) { return loadData(name).catch(() => null); }
+
 export function resetProgress() { state = blank(); write(); }

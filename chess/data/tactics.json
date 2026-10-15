@@ -5,12 +5,24 @@
     "mnemonic": "One piece, two targets — they can only save one.",
     "definition": "A single piece attacks two or more enemy pieces at once. Knights are the classic forkers because their attack can't be blocked.",
     "fen": "2rr2k1/pp3ppp/8/3N4/8/8/PP3PPP/4R1K1 w - - 0 1",
-    "solution": ["Ne7+", "Kf8", "Nxc8", "Rxc8"],
+    "solution": [
+      "Ne7+",
+      "Kf8",
+      "Nxc8",
+      "Rxc8"
+    ],
     "goal": "Win material",
     "hint": "Which square does the knight attack with check and also hit a rook?",
     "explanation": "Ne7+ checks the king and attacks the c8-rook at the same time. The e1-rook protects the knight, so after the king steps away White takes the rook — a rook for a knight (winning the exchange).",
-    "arrows": ["d5e7"],
-    "squares": ["c8", "g8"]
+    "arrows": [
+      "d5e7"
+    ],
+    "squares": [
+      "c8",
+      "g8"
+    ],
+    "level": "beginner",
+    "group": "Tactical motifs"
   },
   {
     "id": "pin",
@@ -18,12 +30,23 @@
     "mnemonic": "Frozen in place: moving would expose something bigger.",
     "definition": "A piece cannot move (or moving it would lose more) because a more valuable piece stands behind it on the same line. An absolute pin is against the king.",
     "fen": "r4r1k/ppp2p1p/5qp1/8/8/4BN2/PPP2PPP/R2Q1RK1 w - - 0 1",
-    "solution": ["Bd4", "Qxd4", "Nxd4"],
+    "solution": [
+      "Bd4",
+      "Qxd4",
+      "Nxd4"
+    ],
     "goal": "Win the queen",
     "hint": "Line up a bishop with the queen and the king on the long diagonal.",
     "explanation": "Bd4 pins the f6-queen to the h8-king along the a1–h8 diagonal. The queen can't step off the line, so the best Black can do is give it up for the bishop.",
-    "arrows": ["e3d4"],
-    "squares": ["f6", "h8"]
+    "arrows": [
+      "e3d4"
+    ],
+    "squares": [
+      "f6",
+      "h8"
+    ],
+    "level": "beginner",
+    "group": "Tactical motifs"
   },
   {
     "id": "skewer",
@@ -31,12 +54,23 @@
     "mnemonic": "A pin in reverse: the big piece is in front and must move.",
     "definition": "A line piece attacks a valuable piece, which must move and expose a piece behind it on the same line.",
     "fen": "8/3k3q/1p6/4pp2/8/8/5PPP/R5K1 w - - 0 1",
-    "solution": ["Ra7+", "Kd6", "Rxh7"],
+    "solution": [
+      "Ra7+",
+      "Kd6",
+      "Rxh7"
+    ],
     "goal": "Win the queen",
     "hint": "Check the king along the 7th rank.",
     "explanation": "Ra7+ attacks the king; once it steps off the 7th rank, the rook runs through to h7 and takes the queen standing behind it.",
-    "arrows": ["a1a7"],
-    "squares": ["d7", "h7"]
+    "arrows": [
+      "a1a7"
+    ],
+    "squares": [
+      "d7",
+      "h7"
+    ],
+    "level": "beginner",
+    "group": "Tactical motifs"
   },
   {
     "id": "discovered-attack",
@@ -44,25 +78,66 @@
     "mnemonic": "Move the curtain, reveal the gun.",
     "definition": "Moving one piece uncovers an attack by another piece behind it. Best when the moving piece also makes a threat — then the opponent faces two at once.",
     "fen": "r1b2rk1/pp3ppp/2pqp3/8/8/3B1N2/PPP2PPP/R2R2K1 w - - 0 1",
-    "solution": ["Bxh7+", "Kxh7", "Rxd6"],
+    "solution": [
+      "Bxh7+",
+      "Kxh7",
+      "Rxd6"
+    ],
     "goal": "Win the queen",
     "hint": "The bishop stands between your rook and Black's queen.",
     "explanation": "Bxh7+ gives check, uncovering the d1-rook against the d6-queen. Black must answer the check, and the queen falls.",
-    "arrows": ["d3h7", "!d1d6"],
-    "squares": ["d6"]
+    "arrows": [
+      "d3h7",
+      "!d1d6"
+    ],
+    "squares": [
+      "d6"
+    ],
+    "level": "intermediate",
+    "group": "Tactical motifs"
   },
   {
     "id": "double-check",
     "name": "Double check",
     "mnemonic": "Two checks at once: the king must run.",
     "definition": "A discovered check where the moving piece also gives check. No block or capture can stop both checks, so the king must move — often into mate.",
-    "setup": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nf6", "Qd3", "e5", "dxe5", "Qa5+", "Bd2", "Qxe5", "O-O-O", "Nxe4"],
-    "solution": ["Qd8+", "Kxd8", "Bg5+", "Kc7", "Bd8#"],
+    "setup": [
+      "e4",
+      "c6",
+      "d4",
+      "d5",
+      "Nc3",
+      "dxe4",
+      "Nxe4",
+      "Nf6",
+      "Qd3",
+      "e5",
+      "dxe5",
+      "Qa5+",
+      "Bd2",
+      "Qxe5",
+      "O-O-O",
+      "Nxe4"
+    ],
+    "solution": [
+      "Qd8+",
+      "Kxd8",
+      "Bg5+",
+      "Kc7",
+      "Bd8#"
+    ],
     "goal": "Checkmate",
     "hint": "Sacrifice the queen to drag the king onto the d-file.",
     "explanation": "Réti–Tartakower, Vienna 1910. Qd8+!! forces Kxd8; then Bg5+ is a double check from the bishop and the d1-rook. After Kc7, Bd8# finishes.",
-    "arrows": ["d3d8", "d1d8"],
-    "squares": ["d8"]
+    "arrows": [
+      "d3d8",
+      "d1d8"
+    ],
+    "squares": [
+      "d8"
+    ],
+    "level": "advanced",
+    "group": "Tactical motifs"
   },
   {
     "id": "deflection",
@@ -70,12 +145,24 @@
     "mnemonic": "Pull the guard away from its post.",
     "definition": "Force a defending piece away from the square or piece it protects, usually with a check or capture it must answer.",
     "fen": "3r2k1/5ppp/p7/3q4/8/8/QP3PPP/4R1K1 w - - 0 1",
-    "solution": ["Re8+", "Rxe8", "Qxd5"],
+    "solution": [
+      "Re8+",
+      "Rxe8",
+      "Qxd5"
+    ],
     "goal": "Win the queen",
     "hint": "The d8-rook is the queen's only defender. Give it something else to do.",
     "explanation": "Re8+ forces Rxe8 because there is no escape square. The rook is deflected from the d-file, so White's queen captures the undefended queen on d5.",
-    "arrows": ["e1e8", "a2d5"],
-    "squares": ["d8", "d5"]
+    "arrows": [
+      "e1e8",
+      "a2d5"
+    ],
+    "squares": [
+      "d8",
+      "d5"
+    ],
+    "level": "intermediate",
+    "group": "Tactical motifs"
   },
   {
     "id": "decoy",
@@ -83,12 +170,26 @@
     "mnemonic": "Lure the piece onto a poisoned square.",
     "definition": "A sacrifice that draws an enemy piece (often the king) onto a square where it can be hit by another tactic.",
     "fen": "2r3k1/pp3pp1/3q4/6N1/8/8/PPP2PP1/1K5R w - - 0 1",
-    "solution": ["Rh8+", "Kxh8", "Nxf7+", "Kg8", "Nxd6"],
+    "solution": [
+      "Rh8+",
+      "Kxh8",
+      "Nxf7+",
+      "Kg8",
+      "Nxd6"
+    ],
     "goal": "Win the queen",
     "hint": "Get the king onto h8, where a knight check can also hit d6.",
     "explanation": "Rh8+! decoys the king to h8. Now Nxf7+ forks king and queen, and White comes out a queen for a rook ahead.",
-    "arrows": ["h1h8", "g5f7"],
-    "squares": ["h8", "d6"]
+    "arrows": [
+      "h1h8",
+      "g5f7"
+    ],
+    "squares": [
+      "h8",
+      "d6"
+    ],
+    "level": "intermediate",
+    "group": "Tactical motifs"
   },
   {
     "id": "overloading",
@@ -96,12 +197,24 @@
     "mnemonic": "One defender, two jobs — it can't do both.",
     "definition": "A defending piece has more than one duty. Attack one of its charges and the other collapses.",
     "fen": "2r3k1/p4ppp/1pb5/7n/Q7/8/P4PPP/3R2K1 w - - 0 1",
-    "solution": ["Qxc6", "Rxc6", "Rd8#"],
+    "solution": [
+      "Qxc6",
+      "Rxc6",
+      "Rd8#"
+    ],
     "goal": "Checkmate",
     "hint": "The c8-rook guards both the bishop and the back rank.",
     "explanation": "The c8-rook defends the c6-bishop and the d8 square. Qxc6! forces it to choose: if Rxc6, Rd8 is mate on the undefended back rank.",
-    "arrows": ["a4c6", "!d1d8"],
-    "squares": ["c8", "d8"]
+    "arrows": [
+      "a4c6",
+      "!d1d8"
+    ],
+    "squares": [
+      "c8",
+      "d8"
+    ],
+    "level": "intermediate",
+    "group": "Tactical motifs"
   },
   {
     "id": "interference",
@@ -109,12 +222,24 @@
     "mnemonic": "Block the line between a defender and what it defends.",
     "definition": "Place a piece on the line between an enemy piece and the square it protects, cutting the connection.",
     "fen": "7r/2P5/6k1/8/8/8/1K6/3R4 w - - 0 1",
-    "solution": ["Rd8", "Rxd8", "cxd8=Q"],
+    "solution": [
+      "Rd8",
+      "Rxd8",
+      "cxd8=Q"
+    ],
     "goal": "Promote",
     "hint": "The h8-rook guards c8 along the 8th rank. Get in its way.",
     "explanation": "Rd8! interrupts the h8-rook's control of c8. If Black captures, cxd8=Q promotes with a capture; if not, c8=Q comes next.",
-    "arrows": ["d1d8", "!h8c8"],
-    "squares": ["c8", "d8"]
+    "arrows": [
+      "d1d8",
+      "!h8c8"
+    ],
+    "squares": [
+      "c8",
+      "d8"
+    ],
+    "level": "advanced",
+    "group": "Tactical motifs"
   },
   {
     "id": "zwischenzug",
@@ -122,12 +247,24 @@
     "mnemonic": "Before you recapture, look for a check.",
     "definition": "An 'in-between move': instead of the expected recapture, play a forcing move first (usually a check), then recapture.",
     "fen": "r1b1kb1r/ppp2ppp/2n2n2/4p3/2B1P3/5N2/PPP2PPP/R1Bq1RK1 w - - 0 1",
-    "solution": ["Bxf7+", "Kxf7", "Rxd1"],
+    "solution": [
+      "Bxf7+",
+      "Kxf7",
+      "Rxd1"
+    ],
     "goal": "Win a pawn and the right to castle",
     "hint": "Black's queen isn't going anywhere — it's trapped on d1.",
     "explanation": "Black just took on d1. Rxd1 at once is natural, but Bxf7+ first grabs a pawn with check and drags the king into the open; the queen on d1 is still there to be taken.",
-    "arrows": ["c4f7", "f1d1"],
-    "squares": ["d1", "f7"]
+    "arrows": [
+      "c4f7",
+      "f1d1"
+    ],
+    "squares": [
+      "d1",
+      "f7"
+    ],
+    "level": "advanced",
+    "group": "Tactical motifs"
   },
   {
     "id": "removing-the-defender",
@@ -135,12 +272,24 @@
     "mnemonic": "Kill the guard, take the castle.",
     "definition": "Capture or drive away the piece that defends a key square or piece.",
     "fen": "r2q1rk1/pp3ppp/4pn2/6B1/8/3Q4/PPB2PPP/5RK1 w - - 0 1",
-    "solution": ["Bxf6", "gxf6", "Qxh7#"],
+    "solution": [
+      "Bxf6",
+      "gxf6",
+      "Qxh7#"
+    ],
     "goal": "Checkmate",
     "hint": "Only the f6-knight stops Qxh7 mate.",
     "explanation": "The queen and c2-bishop aim at h7, defended only by the f6-knight. Bxf6 removes it, and whatever Black recaptures with, Qxh7 is mate.",
-    "arrows": ["g5f6", "d3h7"],
-    "squares": ["f6", "h7"]
+    "arrows": [
+      "g5f6",
+      "d3h7"
+    ],
+    "squares": [
+      "f6",
+      "h7"
+    ],
+    "level": "intermediate",
+    "group": "Tactical motifs"
   },
   {
     "id": "x-ray",
@@ -148,12 +297,23 @@
     "mnemonic": "Power passes through pieces on the same line.",
     "definition": "A piece attacks or defends a square through another piece on the same line. When the front piece is exchanged, the one behind takes over.",
     "fen": "r2r2k1/5ppp/8/3Q4/8/8/q4PPP/3R2K1 w - - 0 1",
-    "solution": ["Qxd8+", "Rxd8", "Rxd8#"],
+    "solution": [
+      "Qxd8+",
+      "Rxd8",
+      "Rxd8#"
+    ],
     "goal": "Checkmate",
     "hint": "Your rook on d1 is behind your queen on the d-file.",
     "explanation": "The d1-rook 'sees through' the queen to d8. Qxd8+ Rxd8 removes the defender, and the rook recaptures with back-rank mate.",
-    "arrows": ["d5d8", "d1d8"],
-    "squares": ["d8"]
+    "arrows": [
+      "d5d8",
+      "d1d8"
+    ],
+    "squares": [
+      "d8"
+    ],
+    "level": "advanced",
+    "group": "Tactical motifs"
   },
   {
     "id": "windmill",
@@ -161,12 +321,26 @@
     "mnemonic": "Check, capture, check, capture — the sails keep turning.",
     "definition": "A rook (or other piece) alternates between direct checks and discovered checks, grabbing material on every second move.",
     "fen": "r2r1n1k/ppq2pRp/5B2/8/8/8/PP3PPP/6K1 w - - 0 1",
-    "solution": ["Rxf7+", "Kg8", "Rg7+", "Kh8", "Rxc7+"],
+    "solution": [
+      "Rxf7+",
+      "Kg8",
+      "Rg7+",
+      "Kh8",
+      "Rxc7+"
+    ],
     "goal": "Win the queen",
     "hint": "The f6-bishop gives check every time the rook leaves g7.",
     "explanation": "Each time the rook leaves g7, the bishop gives a discovered check; each time it returns, the rook checks directly. Rxf7+, Rg7+ and Rxc7+ grab a pawn and then the queen.",
-    "arrows": ["g7f7", "!f6h8"],
-    "squares": ["g7", "h8"]
+    "arrows": [
+      "g7f7",
+      "!f6h8"
+    ],
+    "squares": [
+      "g7",
+      "h8"
+    ],
+    "level": "advanced",
+    "group": "Tactical motifs"
   },
   {
     "id": "back-rank-mate",
@@ -174,11 +348,309 @@
     "mnemonic": "No luft, no life: a king walled in by its own pawns.",
     "definition": "A rook or queen mates a king on its first rank whose escape is blocked by its own pawns.",
     "fen": "1r4k1/5ppp/pq6/8/Q7/8/P4PPP/4R1K1 w - - 0 1",
-    "solution": ["Qe8+", "Rxe8", "Rxe8#"],
+    "solution": [
+      "Qe8+",
+      "Rxe8",
+      "Rxe8#"
+    ],
     "goal": "Checkmate",
     "hint": "The b8-rook is the only guard of the back rank.",
     "explanation": "Qe8+! forces the rook to capture, and Rxe8 is mate because f7, g7 and h7 imprison the king. Always consider making 'luft' (h6 or g6) in time.",
-    "arrows": ["a4e8", "e1e8"],
-    "squares": ["e8", "f7", "g7", "h7"]
+    "arrows": [
+      "a4e8",
+      "e1e8"
+    ],
+    "squares": [
+      "e8",
+      "f7",
+      "g7",
+      "h7"
+    ],
+    "level": "beginner",
+    "group": "Tactical motifs"
+  },
+  {
+    "id": "scholars-mate",
+    "name": "Scholar's mate",
+    "group": "Mating patterns",
+    "level": "beginner",
+    "mnemonic": "Queen and bishop gang up on f7 — the square only the king defends.",
+    "definition": "The four-move mate on f7. Every beginner must know it — to deliver it and, more importantly, to stop it with ...Qe7, ...g6 or ...Nf6 at the right moment.",
+    "setup": [
+      "e4",
+      "e5",
+      "Bc4",
+      "Nc6",
+      "Qh5",
+      "Nf6"
+    ],
+    "solution": [
+      "Qxf7#"
+    ],
+    "goal": "Checkmate",
+    "hint": "Two white pieces aim at f7.",
+    "explanation": "Black's 3...Nf6?? attacks the queen but ignores the threat. Qxf7 is mate: the bishop protects the queen and the king has no escape. 3...g6 or 3...Qe7 would have defended.",
+    "arrows": [
+      "h5f7",
+      "c4f7"
+    ],
+    "squares": [
+      "f7"
+    ]
+  },
+  {
+    "id": "smothered-mate",
+    "name": "Smothered mate",
+    "group": "Mating patterns",
+    "level": "intermediate",
+    "mnemonic": "A king buried by its own pieces dies to a lone knight.",
+    "definition": "A knight mates a king that is surrounded by its own pieces. The classic finish is a queen sacrifice on g8 that forces a rook to block the last flight square.",
+    "fen": "5rk1/pp3Npp/8/q2Q4/8/8/5PPP/6K1 w - - 0 1",
+    "solution": [
+      "Nh6+",
+      "Kh8",
+      "Qg8+",
+      "Rxg8",
+      "Nf7#"
+    ],
+    "goal": "Checkmate",
+    "hint": "Start with a double check from the knight and queen.",
+    "explanation": "Nh6+ is a double check (knight and the d5-queen), so the king must go to h8. Qg8+!! forces Rxg8, and Nf7 is mate — the king is smothered by its own rook and pawns.",
+    "arrows": [
+      "f7h6",
+      "d5g8"
+    ],
+    "squares": [
+      "g8",
+      "f7"
+    ]
+  },
+  {
+    "id": "arabian-mate",
+    "name": "Arabian mate",
+    "group": "Mating patterns",
+    "level": "beginner",
+    "mnemonic": "Knight on f6, rook on h7 — the corner becomes a coffin.",
+    "definition": "A rook and knight mate a king in the corner: the rook gives check next to the king and the knight both protects it and covers the escape square.",
+    "fen": "5r1k/pp1q2pp/5N2/8/8/8/PPP5/1K5R w - - 0 1",
+    "solution": [
+      "Rxh7#"
+    ],
+    "goal": "Checkmate",
+    "hint": "The knight on f6 guards h7 and g8.",
+    "explanation": "Rxh7 is mate: the rook is protected by the f6-knight, which also covers g8; g7 is blocked by Black's own pawn.",
+    "arrows": [
+      "h1h7"
+    ],
+    "squares": [
+      "g8",
+      "h7"
+    ]
+  },
+  {
+    "id": "anastasias-mate",
+    "name": "Anastasia's mate",
+    "group": "Mating patterns",
+    "level": "intermediate",
+    "mnemonic": "Knight on e7 walls off g6 and g8; the rook finishes on the h-file.",
+    "definition": "A knight on e7 (or e2) takes the king's flight squares while a rook or queen mates along the edge file. Often prepared with a queen sacrifice on h7.",
+    "fen": "5r1k/ppq1N1pp/8/7Q/8/3R4/5PPP/6K1 w - - 0 1",
+    "solution": [
+      "Qxh7+",
+      "Kxh7",
+      "Rh3#"
+    ],
+    "goal": "Checkmate",
+    "hint": "Sacrifice the queen to open the h-file.",
+    "explanation": "Qxh7+! drags the king to h7; Rh3 is mate because the e7-knight covers g8 and g6 and the g7-pawn blocks the last square.",
+    "arrows": [
+      "h5h7",
+      "d3h3"
+    ],
+    "squares": [
+      "g6",
+      "g8"
+    ]
+  },
+  {
+    "id": "bodens-mate",
+    "name": "Boden's mate",
+    "group": "Mating patterns",
+    "level": "advanced",
+    "mnemonic": "Two bishops on criss-crossing diagonals catch a long-castled king.",
+    "definition": "Two bishops mate a king (usually castled long) along crossing diagonals, while the king's own pieces block its escape.",
+    "fen": "2kr3r/pp1nqppp/2n5/8/5B2/2Q5/PP2BPPP/6K1 w - - 0 1",
+    "solution": [
+      "Qxc6+",
+      "bxc6",
+      "Ba6#"
+    ],
+    "goal": "Checkmate",
+    "hint": "Remove the b7-pawn's protection of the a6–c8 diagonal.",
+    "explanation": "Qxc6+! forces bxc6, opening the a6–c8 diagonal. Ba6 is mate: the f4-bishop covers b8 and c7, and Black's own rook and knight block d8 and d7.",
+    "arrows": [
+      "c3c6",
+      "e2a6",
+      "f4b8"
+    ],
+    "squares": [
+      "b8",
+      "c7",
+      "c8"
+    ]
+  },
+  {
+    "id": "greek-gift",
+    "name": "Greek gift (Bxh7+)",
+    "group": "Mating patterns",
+    "level": "advanced",
+    "mnemonic": "Bishop takes h7, knight to g5, queen to h5.",
+    "definition": "The classic bishop sacrifice on h7 (or h2). It works when White has a pawn on e5 (no ...Nf6 defence), a knight ready for g5 and a queen that can reach h5.",
+    "fen": "r4rk1/pbqn1ppp/1p2p3/3pP3/3P4/2PB1N2/PP3PPP/R1BQ1RK1 w - - 0 1",
+    "solution": [
+      "Bxh7+",
+      "Kxh7",
+      "Ng5+",
+      "Kg8",
+      "Qh5"
+    ],
+    "goal": "Win (mating attack)",
+    "hint": "The h7-pawn is defended only by the king.",
+    "explanation": "Bxh7+ Kxh7 Ng5+ Kg8 Qh5 threatens Qh7 mate, and Black has no knight on f6 to defend (the e5-pawn controls that square). Check the three conditions — e5-pawn, Ng5, Qh5 — before sacrificing. 2...Kg6 is the toughest defence.",
+    "arrows": [
+      "d3h7",
+      "f3g5",
+      "d1h5"
+    ],
+    "squares": [
+      "h7"
+    ]
+  },
+  {
+    "id": "ladder-mate",
+    "name": "Ladder mate (two rooks)",
+    "group": "Mating patterns",
+    "level": "beginner",
+    "mnemonic": "One rook cuts, the other checks — climb the ladder to the edge.",
+    "definition": "Two rooks (or queen and rook) take turns: one guards a rank, the other checks on the next rank, pushing the king to the edge.",
+    "fen": "8/8/8/6k1/R7/1R6/8/2K5 w - - 0 1",
+    "solution": [
+      "Rb5+",
+      "Kg6",
+      "Ra6+",
+      "Kg7",
+      "Rb7+",
+      "Kg8",
+      "Ra8#"
+    ],
+    "goal": "Checkmate",
+    "hint": "Rook a4 already guards the 4th rank.",
+    "explanation": "Each rook check pushes the king one rank up while the other rook guards the rank behind it. Keep the rooks far from the king so it can't attack them.",
+    "arrows": [
+      "b3b5",
+      "a4a6"
+    ],
+    "squares": [
+      "g8"
+    ]
+  },
+  {
+    "id": "discovered-check",
+    "name": "Discovered check",
+    "group": "Tactical motifs",
+    "level": "beginner",
+    "mnemonic": "The piece that moves can grab anything — the check comes from behind.",
+    "definition": "Moving a piece uncovers a check from another piece. Because the opponent must answer the check, the moving piece can capture or attack whatever it likes.",
+    "fen": "q3k2r/p2p1ppp/8/8/4B3/8/5PPP/4R1K1 w - - 0 1",
+    "solution": [
+      "Bxa8+"
+    ],
+    "goal": "Win the queen",
+    "hint": "Your rook on e1 is aimed at the black king.",
+    "explanation": "Bxa8+ takes the queen and uncovers check from the e1-rook. Black must deal with the check and can never recapture.",
+    "arrows": [
+      "e4a8",
+      "e1e8"
+    ],
+    "squares": [
+      "a8",
+      "e8"
+    ]
+  },
+  {
+    "id": "trapped-piece",
+    "name": "Trapped piece",
+    "group": "Tactical motifs",
+    "level": "beginner",
+    "mnemonic": "Before you grab, count the escape squares.",
+    "definition": "A piece with no safe squares can be won by attacking it. Bishops that grab pawns on a2/h2 (or a7/h7) are classic victims.",
+    "fen": "4r1k1/p4ppp/8/8/8/8/bPK2PPP/3R4 w - - 0 1",
+    "solution": [
+      "b3",
+      "Bxb3+",
+      "Kxb3"
+    ],
+    "goal": "Win a piece",
+    "hint": "Shut the bishop in with a pawn.",
+    "explanation": "After b3 the a2-bishop has no squares: b1 and b3 are covered by the king. Black can only give it up for a pawn.",
+    "arrows": [
+      "b2b3"
+    ],
+    "squares": [
+      "a2",
+      "b1",
+      "b3"
+    ]
+  },
+  {
+    "id": "underpromotion",
+    "name": "Underpromotion",
+    "group": "Tactical motifs",
+    "level": "advanced",
+    "mnemonic": "A queen isn't always best — a knight can fork with check.",
+    "definition": "Promoting to a knight (or rook/bishop) when it gives check, forks, or avoids stalemate.",
+    "fen": "8/ppq1P1pp/5k2/8/6n1/8/6PP/R6K w - - 0 1",
+    "solution": [
+      "e8=N+",
+      "Ke6",
+      "Nxc7+"
+    ],
+    "goal": "Win the queen",
+    "hint": "Black threatens ...Qxh2 mate. You need a promotion with check.",
+    "explanation": "e8=Q? allows ...Qxh2 mate. e8=N+! promotes with check and forks the king and the c7-queen — White wins the queen and the threat disappears.",
+    "arrows": [
+      "e7e8",
+      "!c7h2"
+    ],
+    "squares": [
+      "e8",
+      "c7"
+    ]
+  },
+  {
+    "id": "pawn-breakthrough",
+    "name": "Pawn breakthrough",
+    "group": "Tactical motifs",
+    "level": "intermediate",
+    "mnemonic": "Three against three: sacrifice the middle pawn and one gets through.",
+    "definition": "Pawn sacrifices that force a passed pawn through a blockade — decisive when the enemy king is too far away.",
+    "fen": "8/ppp4k/8/PPP5/8/8/8/7K w - - 0 1",
+    "solution": [
+      "b6",
+      "axb6",
+      "c6",
+      "bxc6",
+      "a6"
+    ],
+    "goal": "Promote",
+    "hint": "Push the middle pawn first.",
+    "explanation": "b6! If axb6, c6! bxc6 a6 and the a-pawn queens; if cxb6, a6! bxa6 c6. Black's king is too far away to help.",
+    "arrows": [
+      "b5b6",
+      "a5a8"
+    ],
+    "squares": [
+      "a8"
+    ]
   }
 ]

@@ -16,12 +16,12 @@ export function render(data) {
       h('h1.hero-title', 'Understand every move.'),
       h('p.hero-lede', 'A chess course that explains the reason behind each move. Step through openings and their variations, solve tactics, learn middlegame plans and essential endgames — then fix it all in memory with trainers.'),
       h('div.hero-actions',
-        h('a.btn.btn-primary', { href: '#/openings' }, 'Start with openings'),
-        h('a.btn', { href: '#/train/squares' }, 'Train board coordinates')),
+        h('a.btn.btn-primary', { href: '#/guide' }, 'Follow the 500 → 2000+ roadmap'),
+        h('a.btn', { href: '#/practice' }, 'Practise')),
       h('p.hero-lesson', game.lesson)),
     h('figure.hero-figure', heroBoard, caption));
 
-  const viewer = new LineViewer(heroBoard, { autoplay: true, loop: true, speed: 1500, showSheet: false, label: 'The Opera Game, playing automatically' });
+  const viewer = new LineViewer(heroBoard, { autoplay: true, loop: true, speed: 1500, showSheet: false, keys: false, label: 'The Opera Game, playing automatically' });
   viewer.load({ moves: game.moves, intro: 'Morphy has White. Watch how quickly his pieces join the game.' });
 
   const phase = (roman, href, title, range, desc, meta) =>
@@ -33,12 +33,14 @@ export function render(data) {
   return page('Home', hero,
     h('section.phases', { 'aria-label': 'The three phases of the game' },
       phase('I', '#/openings', 'Openings', 'Moves 1–12', 'Ten openings with annotated main lines, named variations, traps and the best replies.', `${data.openings.length} openings, ${variationCount} variations`),
-      phase('II', '#/tactics', 'Middlegame', 'Moves 12–40', 'Fourteen tactical motifs to solve yourself, and nine strategic ideas that tell you what to aim for.', `${data.tactics.length} tactics, ${data.strategy.length} plans`),
+      phase('II', '#/tactics', 'Middlegame', 'Moves 12–40', 'Tactical motifs and mating patterns to solve yourself, strategic ideas that tell you what to aim for, and how to attack the king.', `${data.tactics.length} tactics, ${data.strategy.length} plans`),
       phase('III', '#/endgames', 'Endgames', 'Moves 40+', 'The checkmates, principles and positions every player needs: opposition, Lucena, Philidor and more.', `${data.endgames.length} lessons`)),
     h('section.home-split',
       h('div.home-train',
         h('h2', 'Make it stick'),
         h('ul.train-links',
+          h('li', h('a', { href: '#/practice/openings' }, h('strong', 'Opening drills'), h('span', 'Play your side of any line from memory.'), h('em', 'Practise'))),
+          h('li', h('a', { href: '#/guide/think' }, h('strong', 'How to think'), h('span', 'Candidate moves and calculating 3+ moves ahead, animated.'), h('em', 'Guide'))),
           h('li', h('a', { href: '#/train/squares' }, h('strong', 'Square trainer'), h('span', 'Find the named square before the clock runs out.'), h('em', `Best ${best('squares')}`))),
           h('li', h('a', { href: '#/train/quiz' }, h('strong', 'Quiz'), h('span', 'Name the opening, spot the tactic.'), h('em', `Best ${Math.max(best('quiz-openings'), best('quiz-tactics'), best('quiz-endgames'))}/10`))),
           h('li', h('a', { href: '#/train/cards' }, h('strong', 'Flashcards'), h('span', 'One-line memory hooks for every concept.'), h('em', `${Object.values(p.cards).filter((v) => v === 'known').length} known`))))),

@@ -7,22 +7,29 @@ import * as tactics from './pages/tactics.js';
 import * as strategy from './pages/strategy.js';
 import * as endgames from './pages/endgames.js';
 import * as train from './pages/train.js';
+import * as practice from './pages/practice.js';
+import * as guide from './pages/guide.js';
 
+// [path, label, icon, shown in the phone tab bar]
 const NAV = [
-  ['', 'Home', 'home'],
-  ['openings', 'Openings', 'book'],
-  ['tactics', 'Tactics', 'bolt'],
-  ['strategy', 'Strategy', 'compass'],
-  ['endgames', 'Endgames', 'flag'],
-  ['train', 'Train', 'target'],
+  ['', 'Home', 'home', true],
+  ['guide', 'Roadmap', 'map', true],
+  ['openings', 'Openings', 'book', true],
+  ['tactics', 'Tactics', 'bolt', false],
+  ['strategy', 'Strategy', 'compass', false],
+  ['endgames', 'Endgames', 'flag', false],
+  ['practice', 'Practice', 'target', true],
+  ['train', 'Trainers', 'eye', false],
 ];
 const ROUTES = {
   '': home.render,
-  openings: (data, id) => (id ? openings.renderDetail(data, id) : openings.render(data)),
+  openings: (data, id, sub) => (id ? openings.renderDetail(data, id, sub) : openings.render(data)),
   tactics: (data, id) => (id ? tactics.renderDetail(data, id) : tactics.render(data)),
   strategy: strategy.render,
   endgames: (data, id) => (id ? endgames.renderDetail(data, id) : endgames.render(data)),
   train: train.render,
+  practice: practice.render,
+  guide: guide.render,
 };
 
 // ---------- theme
@@ -32,16 +39,17 @@ function themeButton() {
   const btn = h('button.theme-toggle', { type: 'button' });
   const paint = () => {
     const dark = currentTheme() === 'dark';
-    btn.replaceChildren(icon(dark ? 'sun' : 'moon'), h('span.nav-label', dark ? 'Light board' : 'Dark board'));
+    btn.replaceChildren(icon(dark ? 'sun' : 'moon'), h('span.nav-label', dark ? 'Light theme' : 'Dark theme'));
     btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
   };
   btn.addEventListener('click', () => {
     const next = currentTheme() === 'dark' ? 'light' : 'dark';
-    const apply = () => { document.documentElement.dataset.theme = next; paint(); };
+    const apply = () => { document.documentElement.dataset.theme = next; document.dispatchEvent(new Event('themechange')); };
     document.startViewTransition ? document.startViewTransition(apply) : apply();
     try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
   });
   paint();
+  document.addEventListener('themechange', paint); // keep every toggle (rail + phone sheet) in sync
   return btn;
 }
 
@@ -50,29 +58,53 @@ function renderRail() {
   rail.append(
     h('a.brand', { href: '#/' }, h('span.brand-mark', { 'aria-hidden': 'true' }), h('span.brand-name', 'Chess', h('br'), 'Strategy Academy')),
     h('nav.nav', { 'aria-label': 'Sections' },
-      NAV.map(([path, label, ic]) => h('a.nav-link', { href: '#/' + path, 'data-path': path }, icon(ic), h('span.nav-label', label)))),
+      NAV.map(([path, label, ic, tab]) => h('a.nav-link' + (tab ? '' : '.nav-secondary'), { href: '#/' + path, 'data-path': path }, icon(ic), h('span.nav-label', label))),
+      h('button.nav-link.nav-more', { type: 'button', 'aria-expanded': 'false', 'aria-controls': 'more-sheet', onclick: () => toggleMore() }, icon('menu'), h('span.nav-label', 'More'))),
     themeButton(),
   );
+  // phone "More" sheet: everything that doesn't fit in the tab bar
+  const sheet = h('div.more-sheet#more-sheet', { hidden: true, role: 'dialog', 'aria-label': 'More sections' },
+    h('div.more-backdrop', { onclick: () => toggleMore(false) }),
+    h('div.more-panel',
+      h('div.more-grip'),
+      h('div.more-grid', NAV.filter((n) => !n[3]).map(([path, label, ic]) => h('a.more-link', { href: '#/' + path, onclick: () => toggleMore(false) }, icon(ic, 24), label)),
+        h('a.more-link', { href: '#/guide/think', onclick: () => toggleMore(false) }, icon('target', 24), 'How to think'),
+        h('a.more-link', { href: '#/guide/attack', onclick: () => toggleMore(false) }, icon('flag', 24), 'Attack'),
+        h('a.more-link', { href: '#/guide/memory', onclick: () => toggleMore(false) }, icon('eye', 24), 'Memory')),
+      themeButton()));
+  document.body.append(sheet);
+}
+function toggleMore(force) {
+  const sheet = $('#more-sheet'), btn = $('.nav-more');
+  const open = force ?? sheet.hidden;
+  sheet.hidden = !open;
+  btn.setAttribute('aria-expanded', String(open));
+  document.body.classList.toggle('sheet-open', open);
 }
 function markNav(section) {
   document.querySelectorAll('.nav-link').forEach((a) => {
-    const on = a.dataset.path === section;
+    const on = a.dataset.path === section || (!a.dataset.path && !section);
     a.classList.toggle('active', on);
     on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
   });
+  // highlight "More" on phones when the current section lives in the sheet
+  const inSheet = NAV.some(([p, , , tab]) => !tab && p === section);
+  document.querySelector('.nav-more')?.classList.toggle('active', inSheet);
 }
 
 // ---------- router
 let data;
 let lastSection = null;
 async function route() {
-  const [section = '', id, sub] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  if (location.hash && !location.hash.startsWith('#/')) return; // in-page anchors aren't routes
+  const [section = '', id, sub, ...rest] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   const view = $('#view');
   const render = ROUTES[section];
   const paint = () => {
+    if (!$('#more-sheet')?.hidden) toggleMore(false);
     clear(view);
     try {
-      const page = render ? render(data, id, sub) : notFound();
+      const page = render ? render(data, id, sub, ...rest) : notFound();
       view.append(page);
       const t = page.dataset?.title;
       document.title = t ? `${t} · Chess Strategy Academy` : 'Chess Strategy Academy';
@@ -97,6 +129,8 @@ async function route() {
 const notFound = () => h('section.page', { 'data-title': 'Not found' }, h('h1', 'No such page'), h('p', 'That address doesn\'t match any lesson.'), h('p', h('a', { href: '#/' }, 'Go to the home page')));
 
 renderRail();
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#more-sheet').hidden) toggleMore(false); });
+$('#skip').addEventListener('click', (e) => { e.preventDefault(); $('#view').focus(); });
 loadAll()
   .then((d) => { data = d; window.addEventListener('hashchange', route); route(); })
   .catch((err) => {

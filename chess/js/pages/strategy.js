@@ -1,6 +1,6 @@
 import { h, icon } from '../lib/dom.js';
 import { markSeen, isSeen } from '../lib/store.js';
-import { page, pageHead, staticBoard } from './common.js';
+import { page, pageHead, staticBoard, levelTag } from './common.js';
 
 export function render(data, id) {
   const s = data.strategy.find((x) => x.id === id) || data.strategy[0];
@@ -18,10 +18,12 @@ export function render(data, id) {
     h('div.study',
       h('div.study-board', boardBox, h('p.legend', h('span.key.key-plan', 'Plan'), h('span.key.key-threat', 'Threat'), h('span.key.key-alt', 'Alternative'), h('span.key.key-sq', 'Key square'))),
       h('article.study-text',
-        h('h2.concept-title', s.name),
+        h('h2.concept-title', s.name), s.level ? levelTag(s.level) : null,
         h('p.mnemonic', s.mnemonic),
         h('p.concept-summary', s.summary),
         h('h3', 'What the position shows'),
         h('ul.points', s.points.map((p) => h('li', p))),
-        h('a.btn', { href: `#/strategy/${next.id}` }, 'Next idea: ' + next.name))));
+        h('div.line-actions',
+          h('a.btn.btn-primary', { href: '#/practice/strategy' }, icon('target', 16), 'Practise: find the square'),
+          h('a.btn', { href: `#/strategy/${next.id}` }, 'Next idea: ' + next.name)))));
 }

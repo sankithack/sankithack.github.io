@@ -11,17 +11,56 @@
       "Before every queen move ask: does Black still have a legal move? Stalemate throws away the win."
     ],
     "lines": [
-      { "title": "Mating from the edge", "fen": "8/6k1/4Q3/8/4K3/8/8/8 w - - 0 1", "mate": true,
+      {
+        "title": "Mating from the edge",
+        "fen": "8/6k1/4Q3/8/4K3/8/8/8 w - - 0 1",
+        "mate": true,
         "moves": [
-          { "san": "Kf5", "note": "The queen already confines Black to the corner area. Now the king walks up.", "squares": ["f8", "g8", "h8", "h7", "g7"] },
-          { "san": "Kh7" },
-          { "san": "Kf6", "note": "The kings are close; Black has only h8 left." },
-          { "san": "Kh8" },
-          { "san": "Qe7", "note": "Not Qg6?? — that's stalemate. Qe7 leaves Black the g8 square.", "arrows": ["e7g7"] },
-          { "san": "Kg8" },
-          { "san": "Qg7#", "note": "Protected by the king: checkmate." }
-        ] }
-    ]
+          {
+            "san": "Kf5",
+            "note": "The queen already confines Black to the corner area. Now the king walks up.",
+            "squares": [
+              "f8",
+              "g8",
+              "h8",
+              "h7",
+              "g7"
+            ]
+          },
+          {
+            "san": "Kh7"
+          },
+          {
+            "san": "Kf6",
+            "note": "The kings are close; Black has only h8 left."
+          },
+          {
+            "san": "Kh8"
+          },
+          {
+            "san": "Qe7",
+            "note": "Not Qg6?? — that's stalemate. Qe7 leaves Black the g8 square.",
+            "arrows": [
+              "e7g7"
+            ]
+          },
+          {
+            "san": "Kg8"
+          },
+          {
+            "san": "Qg7#",
+            "note": "Protected by the king: checkmate."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "mate",
+      "fen": "8/8/8/4k3/8/8/8/3QK3 w - - 0 1",
+      "goal": "win",
+      "side": "w",
+      "intro": "Mate the lone king from the middle of the board. Use the queen to shrink the box (a knight's move away), then bring your king."
+    }
   },
   {
     "id": "kr-vs-k",
@@ -35,15 +74,49 @@
       "If the enemy king isn't in opposition, make a waiting rook move along the fence."
     ],
     "lines": [
-      { "title": "The final steps", "fen": "6k1/R7/8/4K3/8/8/8/8 w - - 0 1", "mate": true,
+      {
+        "title": "The final steps",
+        "fen": "6k1/R7/8/4K3/8/8/8/8 w - - 0 1",
+        "mate": true,
         "moves": [
-          { "san": "Kf6", "note": "The a7-rook fences Black on the 8th rank. Now the king approaches.", "squares": ["a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"] },
-          { "san": "Kh8" },
-          { "san": "Kg6", "note": "Black must step back into opposition." },
-          { "san": "Kg8" },
-          { "san": "Ra8#", "note": "Kings in opposition, rook checks along the edge: mate." }
-        ] }
-    ]
+          {
+            "san": "Kf6",
+            "note": "The a7-rook fences Black on the 8th rank. Now the king approaches.",
+            "squares": [
+              "a8",
+              "b8",
+              "c8",
+              "d8",
+              "e8",
+              "f8",
+              "g8",
+              "h8"
+            ]
+          },
+          {
+            "san": "Kh8"
+          },
+          {
+            "san": "Kg6",
+            "note": "Black must step back into opposition."
+          },
+          {
+            "san": "Kg8"
+          },
+          {
+            "san": "Ra8#",
+            "note": "Kings in opposition, rook checks along the edge: mate."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "mate",
+      "fen": "8/8/8/4k3/8/8/8/R3K3 w - - 0 1",
+      "goal": "win",
+      "side": "w",
+      "intro": "Cut the king off with the rook, walk your king up, and use waiting moves to get the opposition."
+    }
   },
   {
     "id": "two-bishops",
@@ -57,17 +130,52 @@
       "Use waiting moves with a bishop to give the move back to Black when needed — without stalemating."
     ],
     "lines": [
-      { "title": "Mate in the corner", "fen": "6k1/8/6K1/8/4BB2/8/8/8 w - - 0 1", "mate": true,
+      {
+        "title": "Mate in the corner",
+        "fen": "6k1/8/6K1/8/4BB2/8/8/8 w - - 0 1",
+        "mate": true,
         "moves": [
-          { "san": "Bd6", "note": "Takes f8 from the king.", "arrows": ["d6f8"] },
-          { "san": "Kh8" },
-          { "san": "Bf5", "note": "A waiting move — not Bd5?? which would be stalemate." },
-          { "san": "Kg8" },
-          { "san": "Be6+", "note": "Check from the light bishop; f8 is still covered.", "arrows": ["e6g8"] },
-          { "san": "Kh8" },
-          { "san": "Be5#", "note": "The dark bishop checks along the long diagonal; g8 is covered. Mate." }
-        ] }
-    ]
+          {
+            "san": "Bd6",
+            "note": "Takes f8 from the king.",
+            "arrows": [
+              "d6f8"
+            ]
+          },
+          {
+            "san": "Kh8"
+          },
+          {
+            "san": "Bf5",
+            "note": "A waiting move — not Bd5?? which would be stalemate."
+          },
+          {
+            "san": "Kg8"
+          },
+          {
+            "san": "Be6+",
+            "note": "Check from the light bishop; f8 is still covered.",
+            "arrows": [
+              "e6g8"
+            ]
+          },
+          {
+            "san": "Kh8"
+          },
+          {
+            "san": "Be5#",
+            "note": "The dark bishop checks along the long diagonal; g8 is covered. Mate."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "mate",
+      "fen": "8/8/8/4k3/8/8/8/2B1KB2 w - - 0 1",
+      "goal": "win",
+      "side": "w",
+      "intro": "The hardest basic mate. Keep the bishops side by side, drive the king to a corner, and never stalemate."
+    }
   },
   {
     "id": "king-activation",
@@ -81,17 +189,47 @@
       "The side whose king arrives first usually wins king-and-pawn endings."
     ],
     "lines": [
-      { "title": "Both kings race to the centre", "fen": "6k1/pp3ppp/8/8/8/8/PP3PPP/6K1 w - - 0 1",
+      {
+        "title": "Both kings race to the centre",
+        "fen": "6k1/pp3ppp/8/8/8/8/PP3PPP/6K1 w - - 0 1",
         "moves": [
-          { "san": "Kf1", "note": "Head for the centre immediately.", "arrows": ["f1e2", "e2d3"] },
-          { "san": "Kf8" },
-          { "san": "Ke2" },
-          { "san": "Ke7" },
-          { "san": "Kd3" },
-          { "san": "Kd6" },
-          { "san": "Kd4", "note": "White's king is on the most central square first, ready for c4/b4 or e4–f4 depending on where Black weakens.", "squares": ["d4"] }
-        ] }
-    ]
+          {
+            "san": "Kf1",
+            "note": "Head for the centre immediately.",
+            "arrows": [
+              "f1e2",
+              "e2d3"
+            ]
+          },
+          {
+            "san": "Kf8"
+          },
+          {
+            "san": "Ke2"
+          },
+          {
+            "san": "Ke7"
+          },
+          {
+            "san": "Kd3"
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "Kd4",
+            "note": "White's king is on the most central square first, ready for c4/b4 or e4–f4 depending on where Black weakens.",
+            "squares": [
+              "d4"
+            ]
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "drill",
+      "line": 0
+    }
   },
   {
     "id": "opposition",
@@ -105,36 +243,106 @@
       "With king + pawn vs king, the defender draws by taking the opposition in front of the pawn."
     ],
     "lines": [
-      { "title": "Black to move loses", "fen": "8/4k3/8/4K3/4P3/8/8/8 b - - 0 1", "expect": "loss",
+      {
+        "title": "Black to move loses",
+        "fen": "8/4k3/8/4K3/4P3/8/8/8 b - - 0 1",
+        "expect": "loss",
         "moves": [
-          { "san": "Kd7", "note": "Kings were in opposition with Black to move — Black must give way.", "squares": ["e6"] },
-          { "san": "Kf6", "note": "White's king outflanks to the side and advances." },
-          { "san": "Ke8" },
-          { "san": "e5", "note": "The king is in front of the pawn — the pawn can now advance safely." },
-          { "san": "Kf8" },
-          { "san": "e6" },
-          { "san": "Ke8" },
-          { "san": "e7", "note": "The f6-king controls f7 and e7, so the pawn is safe." },
-          { "san": "Kd7" },
-          { "san": "Kf7" },
-          { "san": "Kd6" },
-          { "san": "e8=Q" }
-        ] },
-      { "title": "White to move: Black holds", "fen": "8/4k3/8/4K3/4P3/8/8/8 w - - 0 1", "expect": "draw",
+          {
+            "san": "Kd7",
+            "note": "Kings were in opposition with Black to move — Black must give way.",
+            "squares": [
+              "e6"
+            ]
+          },
+          {
+            "san": "Kf6",
+            "note": "White's king outflanks to the side and advances."
+          },
+          {
+            "san": "Ke8"
+          },
+          {
+            "san": "e5",
+            "note": "The king is in front of the pawn — the pawn can now advance safely."
+          },
+          {
+            "san": "Kf8"
+          },
+          {
+            "san": "e6"
+          },
+          {
+            "san": "Ke8"
+          },
+          {
+            "san": "e7",
+            "note": "The f6-king controls f7 and e7, so the pawn is safe."
+          },
+          {
+            "san": "Kd7"
+          },
+          {
+            "san": "Kf7"
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "e8=Q"
+          }
+        ]
+      },
+      {
+        "title": "White to move: Black holds",
+        "fen": "8/4k3/8/4K3/4P3/8/8/8 w - - 0 1",
+        "expect": "draw",
         "moves": [
-          { "san": "Kd5", "note": "With White to move, Black can always answer by taking the opposition." },
-          { "san": "Kd7", "note": "Opposition!" },
-          { "san": "e5" },
-          { "san": "Ke7" },
-          { "san": "e6" },
-          { "san": "Ke8", "note": "Back to the queening square — the only drawing move." },
-          { "san": "Kd6" },
-          { "san": "Kd8", "note": "Opposition again." },
-          { "san": "e7+" },
-          { "san": "Ke8" },
-          { "san": "Ke6", "note": "Stalemate: Black has no legal move. Draw." }
-        ] }
-    ]
+          {
+            "san": "Kd5",
+            "note": "With White to move, Black can always answer by taking the opposition."
+          },
+          {
+            "san": "Kd7",
+            "note": "Opposition!"
+          },
+          {
+            "san": "e5"
+          },
+          {
+            "san": "Ke7"
+          },
+          {
+            "san": "e6"
+          },
+          {
+            "san": "Ke8",
+            "note": "Back to the queening square — the only drawing move."
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "Kd8",
+            "note": "Opposition again."
+          },
+          {
+            "san": "e7+"
+          },
+          {
+            "san": "Ke8"
+          },
+          {
+            "san": "Ke6",
+            "note": "Stalemate: Black has no legal move. Draw."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
   },
   {
     "id": "triangulation",
@@ -148,31 +356,102 @@
       "Walk the triangle (three moves) while they shuttle (two moves) — the same position returns with them to move."
     ],
     "lines": [
-      { "title": "Kd4–d3–c3–d4", "fen": "8/8/1k1p4/3P4/2PK4/8/8/8 w - - 0 1", "expect": "win",
+      {
+        "title": "Kd4–d3–c3–d4",
+        "fen": "8/8/1k1p4/3P4/2PK4/8/8/8 w - - 0 1",
+        "expect": "win",
         "moves": [
-          { "san": "Kd3", "note": "With White to move, nothing works directly. White starts the triangle d3–c3–d4.", "arrows": ["d4d3", "d3c3", "c3d4"], "squares": ["d4", "d3", "c3"] },
-          { "san": "Kc5", "note": "Black must keep c5/b6 in reach to stop Kc4–b5." },
-          { "san": "Kc3" },
-          { "san": "Kb6" },
-          { "san": "Kd4", "note": "The starting position — but now it's Black to move. White has 'passed' the move.", "squares": ["d4", "b6"] },
-          { "san": "Kc7", "note": "Black has to give ground; c5 can no longer be held." },
-          { "san": "Ke4", "note": "The white king heads for the d6-pawn via f5 and e6." },
-          { "san": "Kd7" },
-          { "san": "Kf5" },
-          { "san": "Ke7" },
-          { "san": "Kg6", "note": "Outflanking: Black can't guard both e6 and the f7/f6 entry squares." },
-          { "san": "Kd8" },
-          { "san": "Kf6" },
-          { "san": "Kd7" },
-          { "san": "Kf7" },
-          { "san": "Kd8" },
-          { "san": "Ke6" },
-          { "san": "Kc7" },
-          { "san": "Ke7" },
-          { "san": "Kb6" },
-          { "san": "Kxd6", "note": "The d6-pawn falls and White's d-pawn will promote." }
-        ] }
-    ]
+          {
+            "san": "Kd3",
+            "note": "With White to move, nothing works directly. White starts the triangle d3–c3–d4.",
+            "arrows": [
+              "d4d3",
+              "d3c3",
+              "c3d4"
+            ],
+            "squares": [
+              "d4",
+              "d3",
+              "c3"
+            ]
+          },
+          {
+            "san": "Kc5",
+            "note": "Black must keep c5/b6 in reach to stop Kc4–b5."
+          },
+          {
+            "san": "Kc3"
+          },
+          {
+            "san": "Kb6"
+          },
+          {
+            "san": "Kd4",
+            "note": "The starting position — but now it's Black to move. White has 'passed' the move.",
+            "squares": [
+              "d4",
+              "b6"
+            ]
+          },
+          {
+            "san": "Kc7",
+            "note": "Black has to give ground; c5 can no longer be held."
+          },
+          {
+            "san": "Ke4",
+            "note": "The white king heads for the d6-pawn via f5 and e6."
+          },
+          {
+            "san": "Kd7"
+          },
+          {
+            "san": "Kf5"
+          },
+          {
+            "san": "Ke7"
+          },
+          {
+            "san": "Kg6",
+            "note": "Outflanking: Black can't guard both e6 and the f7/f6 entry squares."
+          },
+          {
+            "san": "Kd8"
+          },
+          {
+            "san": "Kf6"
+          },
+          {
+            "san": "Kd7"
+          },
+          {
+            "san": "Kf7"
+          },
+          {
+            "san": "Kd8"
+          },
+          {
+            "san": "Ke6"
+          },
+          {
+            "san": "Kc7"
+          },
+          {
+            "san": "Ke7"
+          },
+          {
+            "san": "Kb6"
+          },
+          {
+            "san": "Kxd6",
+            "note": "The d6-pawn falls and White's d-pawn will promote."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
   },
   {
     "id": "passed-pawns",
@@ -186,25 +465,69 @@
       "Blockade enemy passed pawns with a piece directly in front of them."
     ],
     "lines": [
-      { "title": "The outside passer decides", "fen": "8/8/4k3/6p1/P3K1P1/8/8/8 w - - 0 1", "expect": "win",
+      {
+        "title": "The outside passer decides",
+        "fen": "8/8/4k3/6p1/P3K1P1/8/8/8 w - - 0 1",
+        "expect": "win",
         "moves": [
-          { "san": "a5", "note": "The a-pawn runs; Black's king must chase it.", "arrows": ["a5a8"] },
-          { "san": "Kd6" },
-          { "san": "Kf5", "note": "While Black chases, White's king attacks g5." },
-          { "san": "Kc6" },
-          { "san": "Kxg5" },
-          { "san": "Kb5" },
-          { "san": "Kf6" },
-          { "san": "Kxa5" },
-          { "san": "g5", "note": "Black's king is far away on a5: the g-pawn queens." },
-          { "san": "Kb6" },
-          { "san": "g6" },
-          { "san": "Kc7" },
-          { "san": "g7" },
-          { "san": "Kd7" },
-          { "san": "g8=Q" }
-        ] }
-    ]
+          {
+            "san": "a5",
+            "note": "The a-pawn runs; Black's king must chase it.",
+            "arrows": [
+              "a5a8"
+            ]
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "Kf5",
+            "note": "While Black chases, White's king attacks g5."
+          },
+          {
+            "san": "Kc6"
+          },
+          {
+            "san": "Kxg5"
+          },
+          {
+            "san": "Kb5"
+          },
+          {
+            "san": "Kf6"
+          },
+          {
+            "san": "Kxa5"
+          },
+          {
+            "san": "g5",
+            "note": "Black's king is far away on a5: the g-pawn queens."
+          },
+          {
+            "san": "Kb6"
+          },
+          {
+            "san": "g6"
+          },
+          {
+            "san": "Kc7"
+          },
+          {
+            "san": "g7"
+          },
+          {
+            "san": "Kd7"
+          },
+          {
+            "san": "g8=Q"
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
   },
   {
     "id": "rule-of-the-square",
@@ -218,19 +541,53 @@
       "A pawn on its starting rank can jump two squares — count from the square in front."
     ],
     "lines": [
-      { "title": "The king steps into the square", "fen": "8/8/8/5k2/P7/8/8/7K b - - 0 1", "expect": "draw",
+      {
+        "title": "The king steps into the square",
+        "fen": "8/8/8/5k2/P7/8/8/7K b - - 0 1",
+        "expect": "draw",
         "moves": [
-          { "san": "Ke5", "note": "The square of the a4-pawn is a4–e4–e8–a8. The king steps into it — the pawn is caught.", "squares": ["a4", "e4", "e8", "a8", "e5"] },
-          { "san": "a5" },
-          { "san": "Kd6" },
-          { "san": "a6" },
-          { "san": "Kc7" },
-          { "san": "a7" },
-          { "san": "Kb7" },
-          { "san": "a8=Q+" },
-          { "san": "Kxa8" }
-        ] }
-    ]
+          {
+            "san": "Ke5",
+            "note": "The square of the a4-pawn is a4–e4–e8–a8. The king steps into it — the pawn is caught.",
+            "squares": [
+              "a4",
+              "e4",
+              "e8",
+              "a8",
+              "e5"
+            ]
+          },
+          {
+            "san": "a5"
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "a6"
+          },
+          {
+            "san": "Kc7"
+          },
+          {
+            "san": "a7"
+          },
+          {
+            "san": "Kb7"
+          },
+          {
+            "san": "a8=Q+"
+          },
+          {
+            "san": "Kxa8"
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
   },
   {
     "id": "key-squares",
@@ -244,19 +601,52 @@
       "Exception: rook pawns are usually drawn if the defending king reaches the corner."
     ],
     "lines": [
-      { "title": "King on a key square wins", "fen": "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1", "expect": "win",
+      {
+        "title": "King on a key square wins",
+        "fen": "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1",
+        "expect": "win",
         "moves": [
-          { "san": "Kd6", "note": "White's king is already on a key square (e6). Kd6 keeps control of e7 and d7.", "squares": ["d6", "e6", "f6"] },
-          { "san": "Kf7" },
-          { "san": "Kd7", "note": "Controls e8 and e7; the pawn walks in." },
-          { "san": "Kf8" },
-          { "san": "e6" },
-          { "san": "Kg7" },
-          { "san": "e7" },
-          { "san": "Kf7" },
-          { "san": "e8=Q+" }
-        ] }
-    ]
+          {
+            "san": "Kd6",
+            "note": "White's king is already on a key square (e6). Kd6 keeps control of e7 and d7.",
+            "squares": [
+              "d6",
+              "e6",
+              "f6"
+            ]
+          },
+          {
+            "san": "Kf7"
+          },
+          {
+            "san": "Kd7",
+            "note": "Controls e8 and e7; the pawn walks in."
+          },
+          {
+            "san": "Kf8"
+          },
+          {
+            "san": "e6"
+          },
+          {
+            "san": "Kg7"
+          },
+          {
+            "san": "e7"
+          },
+          {
+            "san": "Kf7"
+          },
+          {
+            "san": "e8=Q+"
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
   },
   {
     "id": "lucena",
@@ -270,23 +660,67 @@
       "Step out with the king; when the checks come, block with the rook on the 4th rank."
     ],
     "lines": [
-      { "title": "Building the bridge", "fen": "3K4/3P2k1/8/8/8/8/2r5/5R2 w - - 0 1",
+      {
+        "title": "Building the bridge",
+        "fen": "3K4/3P2k1/8/8/8/8/2r5/5R2 w - - 0 1",
         "moves": [
-          { "san": "Rf4", "note": "The bridge: the rook goes to the 4th rank, still cutting Black's king off on the f-file.", "arrows": ["f4d4"] },
-          { "san": "Rc1", "note": "Black waits." },
-          { "san": "Ke7", "note": "The king steps out from in front of the pawn." },
-          { "san": "Re1+" },
-          { "san": "Kd6" },
-          { "san": "Rd1+" },
-          { "san": "Ke6" },
-          { "san": "Re1+" },
-          { "san": "Kd5" },
-          { "san": "Rd1+" },
-          { "san": "Rd4", "note": "The bridge is complete: the checks are over and the pawn promotes.", "squares": ["d4"] },
-          { "san": "Re1" },
-          { "san": "d8=Q" }
-        ] }
-    ]
+          {
+            "san": "Rf4",
+            "note": "The bridge: the rook goes to the 4th rank, still cutting Black's king off on the f-file.",
+            "arrows": [
+              "f4d4"
+            ]
+          },
+          {
+            "san": "Rc1",
+            "note": "Black waits."
+          },
+          {
+            "san": "Ke7",
+            "note": "The king steps out from in front of the pawn."
+          },
+          {
+            "san": "Re1+"
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "Rd1+"
+          },
+          {
+            "san": "Ke6"
+          },
+          {
+            "san": "Re1+"
+          },
+          {
+            "san": "Kd5"
+          },
+          {
+            "san": "Rd1+"
+          },
+          {
+            "san": "Rd4",
+            "note": "The bridge is complete: the checks are over and the pawn promotes.",
+            "squares": [
+              "d4"
+            ]
+          },
+          {
+            "san": "Re1"
+          },
+          {
+            "san": "d8=Q"
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "drill",
+      "line": 0,
+      "side": "w"
+    }
   },
   {
     "id": "philidor",
@@ -300,18 +734,55 @@
       "The attacker can never escape the checks without abandoning the pawn."
     ],
     "lines": [
-      { "title": "The third-rank defence", "fen": "4k3/7R/1r6/3KP3/8/8/8/8 w - - 0 1",
+      {
+        "title": "The third-rank defence",
+        "fen": "4k3/7R/1r6/3KP3/8/8/8/8 w - - 0 1",
         "moves": [
-          { "san": "e6", "note": "If White waits, Black's rook stays on the 6th and the king can't advance. So White pushes...", "squares": ["b6", "c6", "d6", "e6", "f6"] },
-          { "san": "Rb1", "note": "...and now the rook drops to the back: the white king has no shelter from checks.", "arrows": ["b1d1"] },
-          { "san": "Kd6" },
-          { "san": "Rd1+" },
-          { "san": "Ke5" },
-          { "san": "Re1+" },
-          { "san": "Kd6" },
-          { "san": "Rd1+", "note": "Endless checks — a draw." }
-        ] }
-    ]
+          {
+            "san": "e6",
+            "note": "If White waits, Black's rook stays on the 6th and the king can't advance. So White pushes...",
+            "squares": [
+              "b6",
+              "c6",
+              "d6",
+              "e6",
+              "f6"
+            ]
+          },
+          {
+            "san": "Rb1",
+            "note": "...and now the rook drops to the back: the white king has no shelter from checks.",
+            "arrows": [
+              "b1d1"
+            ]
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "Rd1+"
+          },
+          {
+            "san": "Ke5"
+          },
+          {
+            "san": "Re1+"
+          },
+          {
+            "san": "Kd6"
+          },
+          {
+            "san": "Rd1+",
+            "note": "Endless checks — a draw."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "drill",
+      "line": 0,
+      "side": "b"
+    }
   },
   {
     "id": "rook-behind-pawn",
@@ -325,16 +796,43 @@
       "A rook in front of a pawn is tied down and passive."
     ],
     "lines": [
-      { "title": "The pawn marches with rook support", "fen": "8/8/5k2/8/P7/8/r7/R4K2 w - - 0 1",
+      {
+        "title": "The pawn marches with rook support",
+        "fen": "8/8/5k2/8/P7/8/r7/R4K2 w - - 0 1",
         "moves": [
-          { "san": "a5", "note": "Black's rook is in front of the pawn — passive. White's rook behind it supports every step.", "arrows": ["a1a5"] },
-          { "san": "Ke6" },
-          { "san": "a6" },
-          { "san": "Kd7" },
-          { "san": "a7", "note": "Black's rook is now stuck in front, and the black king must stay near b7. White's king is free to walk in." },
-          { "san": "Kc7" },
-          { "san": "Ke1" }
-        ] }
-    ]
+          {
+            "san": "a5",
+            "note": "Black's rook is in front of the pawn — passive. White's rook behind it supports every step.",
+            "arrows": [
+              "a1a5"
+            ]
+          },
+          {
+            "san": "Ke6"
+          },
+          {
+            "san": "a6"
+          },
+          {
+            "san": "Kd7"
+          },
+          {
+            "san": "a7",
+            "note": "Black's rook is now stuck in front, and the black king must stay near b7. White's king is free to walk in."
+          },
+          {
+            "san": "Kc7"
+          },
+          {
+            "san": "Ke1"
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "drill",
+      "line": 0,
+      "side": "w"
+    }
   }
 ]
