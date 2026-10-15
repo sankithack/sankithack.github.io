@@ -1,6 +1,7 @@
 import { h, icon, cap } from '../lib/dom.js';
 import { LineViewer } from '../lib/viewer.js';
 import { lineText, normMove } from '../lib/line.js';
+import { buildTree, walk, linesOf } from '../lib/tree.js';
 import { markSeen, isSeen, isMastered } from '../lib/store.js';
 import { page, pageHead, tag, levelTag, chips, lazyBoard } from './common.js';
 
@@ -146,12 +147,47 @@ export function renderDetail(data, id, sub) {
       ? lineItem(a.title, a.moves, a.text, levelTag('advanced'), a.text, a.text)
       : h('article.line-item.line-item-text', h('div.line-item-head', h('h3', a.title), levelTag('advanced')), h('p', a.text)))));
 
+  // ----- opening tree: every line merged into one branching explorer
+  const KIND_NAME = { main: 'Main line', variation: 'Variation', trap: 'Trap', counter: 'How to beat it', advanced: 'Advanced' };
+  const root = buildTree(linesOf(o));
+  let path = o.mainLine.slice(0, o.defining || 0).map((m) => normMove(m).san);
+  const treePanel = h('div.tab-panel');
+  const moveNo = (i) => (i % 2 === 0 ? `${i / 2 + 1}.` : `${Math.floor(i / 2) + 1}…`);
+  const goTo = (newPath) => {
+    const grew = newPath.length === path.length + 1 && newPath.slice(0, -1).join() === path.join();
+    path = newPath;
+    nowPlaying.replaceChildren(h('span.muted', 'On the board: '), h('strong', 'Opening tree'));
+    activeItem?.classList.remove('active'); activeItem = null;
+    viewer.load({ moves: path, startAt: grew ? path.length - 1 : path.length, orientation: o.side });
+    if (grew) setTimeout(() => viewer.show(path.length), 30);
+    paintTree();
+  };
+  function paintTree() {
+    const node = walk(root, path) || root;
+    const kids = [...node.children.values()].sort((a, b) => b.lines.length - a.lines.length);
+    treePanel.replaceChildren(...[
+      h('p.muted', 'Every line of this opening merged into one tree. Pick a move to play it on the board and see which lines continue.'),
+      h('nav.tree-path', { 'aria-label': 'Moves so far' },
+        h('button.chip' + (path.length ? '' : '.on'), { type: 'button', onclick: () => goTo([]) }, 'Start'),
+        path.map((san, i) => h('button.chip' + (i === path.length - 1 ? '.on' : ''), { type: 'button', onclick: () => goTo(path.slice(0, i + 1)) }, moveNo(i) + san))),
+      node.note ? h('p.tree-note', node.note) : null,
+      kids.length ? h('h3', `Next moves (${node.lines.length} line${node.lines.length === 1 ? '' : 's'} pass through here)`) : h('h3', 'End of the book here'),
+      h('ul.tree-moves', kids.map((k) => h('li', h('button.tree-move', { type: 'button', onclick: () => goTo([...path, k.san]) },
+        h('span.tree-san', moveNo(path.length) + k.san),
+        h('span.tree-count', `${k.lines.length} line${k.lines.length === 1 ? '' : 's'}`),
+        h('span.tree-names', k.lines.slice(0, 3).map((l) => l.name).join(', ') + (k.lines.length > 3 ? ` and ${k.lines.length - 3} more` : '')))))),
+      node.ends.length ? h('div.tree-ends', h('h3', 'Lines that end here'), h('ul', node.ends.map((l) => h('li', h('strong', l.name), l.name !== KIND_NAME[l.kind] ? [' ', h('span.tag', KIND_NAME[l.kind])] : null)))) : null,
+      path.length ? h('button.btn.btn-small', { type: 'button', onclick: () => goTo(path.slice(0, -1)) }, icon('prev', 16), 'Take back') : null].filter(Boolean));
+  }
+  paintTree();
+
   const tabs = [
     ['overview', 'Overview', overview],
     ['variations', `Variations (${o.variations.length})`, variations],
     ['traps', `Traps & tricks (${o.traps.length})`, traps],
     ['counters', 'How to beat it', counters],
     ['advanced', 'Advanced', advanced],
+    ['tree', 'Tree', treePanel],
   ];
   const tabBar = h('div.tabs', { role: 'tablist', 'aria-label': `${o.name} sections` });
   const panelWrap = h('div.tab-panels');
@@ -163,7 +199,7 @@ export function renderDetail(data, id, sub) {
   };
   tabs.forEach(([k, label, panel]) => {
     panel.setAttribute('role', 'tabpanel');
-    tabBar.append(h('button.tab', { type: 'button', role: 'tab', 'data-k': k, onclick: () => showTab(k, true) }, label));
+    tabBar.append(h('button.tab', { type: 'button', role: 'tab', 'data-k': k, onclick: () => { showTab(k, true); if (k === 'tree') goTo(path); } }, label));
     panelWrap.append(panel);
   });
   tabBar.addEventListener('keydown', (e) => {
@@ -180,6 +216,7 @@ export function renderDetail(data, id, sub) {
   showTab(tabs.some((t) => t[0] === startTab) ? startTab : 'overview');
 
   play('Main line', o.mainLine, o.purpose);
+  if (tabBar.querySelector('.tab.on')?.dataset.k === 'tree') goTo(path);
 
   return page(o.name,
     h('nav.crumbs', { 'aria-label': 'Breadcrumb' }, h('a', { href: '#/openings' }, 'Openings'), h('span', o.name)),

@@ -72,7 +72,7 @@ function openingChooser(data) {
       h('summary', h('strong', o.name), h('span.muted', ` ${done}/${ls.length} mastered`), h('span.mini-meter', h('span', { style: { width: `${(done / ls.length) * 100}%` } }))),
       h('ul.drill-lines', ls.map((l) => h('li', h('a', { href: `#/practice/opening/${o.id}/${l.kind}/${l.idx}` },
         isMastered(l.key) ? icon('check', 16) : h('span.dot'), h('span', l.title), h('span.muted.small', ` ${KIND_LABEL[l.kind]}`), levelTag(l.level))))));
-  }));
+  }).filter(Boolean));
   paint();
   const random = () => { const pool = lines.filter((l) => !isMastered(l.key) && (filter === 'all' || l.kind === filter)); const l = shuffle(pool.length ? pool : lines)[0]; location.hash = `#/practice/opening/${l.opening.id}/${l.kind}/${l.idx}`; };
   return page('Opening drills', crumbs('Opening drills'),
