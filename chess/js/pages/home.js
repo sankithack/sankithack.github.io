@@ -2,6 +2,7 @@ import { h, icon } from '../lib/dom.js';
 import { LineViewer } from '../lib/viewer.js';
 import { page, ring } from './common.js';
 import { progress, best } from '../lib/store.js';
+import { todayPlan, warmupOfDay } from './guide.js';
 
 export function render(data) {
   const game = data.games[0];
@@ -30,7 +31,22 @@ export function render(data) {
       h('span.phase-body', h('span.phase-title', title), h('span.phase-range', range), h('span.phase-desc', desc)),
       h('span.phase-meta', meta), icon('arrow', 22));
 
-  return page('Home', hero,
+  const plan = todayPlan(data);
+  const [warmHref, warmLabel] = warmupOfDay();
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const streak = p.streak.day === today ? p.streak.count : 0;
+  const alive = p.streak.day === yesterday ? p.streak.count : 0; // still saveable today
+  const todayCard = h('section.today', { 'aria-label': "Today's training" },
+    h('div.today-head',
+      h('div', h('h2', "Today's training"), h('p.muted', `Stage ${plan.index + 1}: ${plan.stage.range} — ${plan.stage.title}. ${plan.done} of ${plan.total} done.`)),
+      h('div.streak' + (streak ? '.on' : ''), { title: 'Days in a row with study or practice' }, h('span.streak-num', String(streak || alive)), h('span.streak-label', streak ? 'day streak' : 'study today to keep your streak'))),
+    h('ol.today-list',
+      h('li', h('a', { href: warmHref }, h('span.today-kind', 'Warm-up'), warmLabel)),
+      plan.items.map((r) => h('li', h('a', { href: r.href }, h('span.today-kind', 'Next step'), r.label)))),
+    h('a.today-more', { href: '#/guide' }, 'See the whole roadmap'));
+
+  return page('Home', hero, todayCard,
     h('section.phases', { 'aria-label': 'The three phases of the game' },
       phase('I', '#/openings', 'Openings', 'Moves 1–12', 'Ten openings with annotated main lines, named variations, traps and the best replies.', `${data.openings.length} openings, ${variationCount} variations`),
       phase('II', '#/tactics', 'Middlegame', 'Moves 12–40', 'Tactical motifs and mating patterns to solve yourself, strategic ideas that tell you what to aim for, and how to attack the king.', `${data.tactics.length} tactics, ${data.strategy.length} plans`),

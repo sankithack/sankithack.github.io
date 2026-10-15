@@ -694,3 +694,19 @@ body.sheet-open { overflow: hidden; }
 }
 .puzzle-switch { margin: 0.25rem 0 1rem; }
 a.chip { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* today's training */
+.today { margin: 0 0 3rem; padding: 1.4rem 1.5rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--brass); }
+.today-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+.today-head h2 { margin-bottom: 0.2rem; }
+.streak { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.9rem; border-radius: 999px; background: var(--surface-2); font-family: var(--display); }
+.streak-num { font-weight: 800; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.streak-label { font-size: 0.85rem; color: var(--ink-2); max-width: 11rem; line-height: 1.25; }
+.streak.on { background: var(--brass-soft); }
+.streak.on .streak-num { color: var(--brass-ink); animation: pop 400ms var(--ease); }
+.today-list { list-style: none; padding: 0; margin: 1rem 0 0.75rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0.6rem; counter-reset: none; }
+.today-list li { margin: 0; }
+.today-list a { display: flex; flex-direction: column; gap: 0.2rem; height: 100%; padding: 0.8rem 0.95rem; border-radius: var(--radius); background: var(--bg); text-decoration: none; font: 600 0.97rem/1.35 var(--display); transition: transform 180ms var(--ease), background 160ms; }
+.today-list a:hover { transform: translateY(-2px); background: var(--brass-soft); color: var(--ink); }
+.today-kind { font-size: 0.78rem; font-weight: 600; color: var(--brass-ink); }
+.today-more { font: 600 0.9rem var(--display); }
