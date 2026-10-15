@@ -4,159 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Submission &amp; sync – AMDVLK Driver Atlas</title>
-<meta name="description" content="vkQueueSubmit through XGL, PAL IQueue::Submit and its amdgpu backend, libdrm amdgpu_cs_submit_raw2 and DRM_IOCTL_AMDGPU_CS; IBs, BO lists, rings, fences, semaphores and syncobjs.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="submit">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Submission &amp; synchronization</h1>
-      <p class="lede">Submission turns recorded command chunks into one CS ioctl. The ioctl carries IB descriptors, a BO
-        list and syncobj wait/signal lists. The kernel validates it, queues a job, and eventually writes an
-        <code>INDIRECT_BUFFER</code> packet into a hardware ring. Fences and semaphores are DRM syncobjs throughout.</p>
-
-      <div class="prose">
-      <h2 id="overview">The path in one paragraph</h2>
-      <p><code>vkQueueSubmit</code> → <code>Queue::Submit</code> (XGL) queues the semaphore waits, collects each command
-        buffer's <code>Pal::ICmdBuffer</code>, and calls <code>IQueue::Submit</code>. PAL's core
-        <code>Queue::SubmitInternal</code> associates fences and calls <code>OsSubmit</code>. The amdgpu backend builds
-        the BO list from residency references, turns each command stream into an IB, packs IB + syncobj + BO-list
-        chunks, and calls libdrm <code>amdgpu_cs_submit_raw2</code>, which issues <code>DRM_IOCTL_AMDGPU_CS</code>. In the
-        kernel, <code>amdgpu_cs_ioctl</code> parses and validates and pushes a job to the DRM GPU scheduler. When its
-        dependencies resolve, <code>amdgpu_job_run</code> → <code>amdgpu_ib_schedule</code> writes the IB pointers and a
-        fence into the ring.</p>
-      </div>
-
-      <h2 id="trace">Step-through: vkQueueSubmit → ring, then fences &amp; semaphores</h2>
-      <div data-flow="submit"></div>
-
-      <h2 id="example">Worked example: one submit with a timeline wait, a semaphore signal and a fence</h2>
-      <div class="example-walk">
-<pre class="example"><code class="language-c ex">VkTimelineSemaphoreSubmitInfo tl = {
-    .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
-    .waitSemaphoreValueCount = 1, .pWaitSemaphoreValues = &amp;(uint64_t){ 5 } };
-VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-VkSubmitInfo submit = {
-    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .pNext = &amp;tl,
-    .waitSemaphoreCount = 1, .pWaitSemaphores = &amp;uploadTimeline, .pWaitDstStageMask = &amp;stage,
-    .commandBufferCount = 1, .pCommandBuffers = &amp;cmd,
-    .signalSemaphoreCount = 1, .pSignalSemaphores = &amp;renderDone };
-vkQueueSubmit(queue, 1, &amp;submit, frameFence);</code></pre>
-        <ol>
-          <li><b>Wait, recorded not performed:</b> <code>PalWaitSemaphores</code> calls
-            <code class="ex">WaitQueueSemaphore(uploadTimeline, 5)</code>. PAL's amdgpu queue just pushes {syncobj, 5} onto
-            <code>m_waitSemList</code>.</li>
-          <li><b>Submit:</b> XGL builds a <code>Pal::SubmitInfo</code> with one command buffer and the fence.
-            <code>OsSubmit</code> refreshes the BO list if needed, and <code>SubmitPm4</code> adds IBs: PAL's internal
-            preamble stream(s), then the command buffer's first chunk, then any postamble.</li>
-          <li><b>One ioctl:</b> <code>SubmitIbsRaw</code> builds the chunk array:
-            <code>AMDGPU_CHUNK_ID_IB</code> per IB, <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> {uploadTimeline, 5},
-            a signal chunk containing the queue's <code>m_lastSignaledSyncObject</code>, and the BO list as
-            <code>AMDGPU_CHUNK_ID_BO_HANDLES</code>. Then one <code>DRM_IOCTL_AMDGPU_CS</code>.</li>
-          <li><b>Kernel:</b> the timeline wait becomes a scheduler dependency. The job runs once point 5 signals, its IBs
-            are emitted as <code>INDIRECT_BUFFER</code> packets on the GFX ring, and the job's fence signals the queue's
-            syncobj when the GPU finishes.</li>
-          <li><b>After the ioctl:</b> PAL copies the fence of <code>m_lastSignaledSyncObject</code> into
-            <code class="ex">frameFence</code>'s syncobj (<code>DoAssociateFenceWithLastSubmit</code>), and XGL's
-            <code>PalSignalSemaphores</code> does the same for <code class="ex">renderDone</code>
-            (<code>Queue::SignalSemaphore</code> → <code>ConveySyncObjectState</code>).</li>
-          <li><b>Waiting on the CPU:</b> <code class="ex">vkWaitForFences(frameFence)</code> becomes <code>amdgpu_cs_syncobj_wait</code>
-            on that syncobj. Nothing polls the GPU.</li>
-        </ol>
-        <p>In total: one CS ioctl and two syncobj-transfer ioctls, and no CPU blocking anywhere in
-          <code>vkQueueSubmit</code>.</p>
-      </div>
-
-
-      <div class="prose">
-      <h2 id="ibs">IBs and rings</h2>
-      <p>An <b>IB</b> is just <code>{va_start, ib_bytes, ip_type, ring, flags}</code>
-        (<a data-ref="uapi_chunk_ib">drm_amdgpu_cs_chunk_ib</a>): a pointer to PM4 that PAL already wrote into GPU
-        memory. PAL submits one IB per command stream: the stream's first chunk, with the remaining chunks reached by
-        chaining. The IP type selects the ring family:</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Vulkan queue family</th><th>PAL queue/engine</th><th><code>ip_type</code></th><th>Hardware</th></tr></thead>
-        <tbody>
-          <tr><td>GRAPHICS | COMPUTE | TRANSFER | SPARSE</td><td><code>QueueTypeUniversal</code> / <code>EngineTypeUniversal</code></td><td><code>AMDGPU_HW_IP_GFX</code></td><td>GFX ring (CP PFP/ME)</td></tr>
-          <tr><td>COMPUTE | TRANSFER | SPARSE</td><td><code>QueueTypeCompute</code> / <code>EngineTypeCompute</code></td><td><code>AMDGPU_HW_IP_COMPUTE</code></td><td>compute rings (MEC / ACE)</td></tr>
-          <tr><td>TRANSFER | SPARSE</td><td><code>QueueTypeDma</code> / <code>EngineTypeDma</code></td><td><code>AMDGPU_HW_IP_DMA</code></td><td>SDMA ring (SDMA packets, not PM4)</td></tr>
-        </tbody>
-      </table></div>
-      <div data-panel="xgl-queue-families"></div>
-      <p>Each PAL queue owns a kernel <b>context</b> (<code>amdgpu_cs_ctx_create2</code>, via
-        <a data-ref="pal_ctx_create">CreateCommandSubmissionContextRaw</a>). The CS ioctl names that context, and the
-        kernel returns a per-context sequence number that identifies the submission.</p>
-
-      <h2 id="bo-list">BO lists</h2>
-      <p>Every BO the GPU may access must be in the submission's BO list, unless it was created
-        <code>VM_ALWAYS_VALID</code>. PAL builds the list in <a data-ref="pal_update_reslist">UpdateResourceList</a>
-        from the device-global references XGL registered at allocation time (<a href="memory.html#residency">Topic 2</a>)
-        and reuses the previous list when nothing changed. On current kernels the list goes inline in the CS ioctl as
-        an <code>AMDGPU_CHUNK_ID_BO_HANDLES</code> chunk. On the legacy path PAL first creates a kernel list object
-        (<code>DRM_AMDGPU_BO_LIST</code>, via <a data-ref="drm_bo_list_create_raw">amdgpu_bo_list_create_raw</a>) and passes
-        its handle instead. In the kernel, <a data-ref="k_parser_bos">amdgpu_cs_parser_bos</a> locks and validates
-        every listed BO before the job may run.</p>
-
-      <h2 id="sync">Fences, semaphores, timelines → syncobjs</h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Vulkan</th><th>XGL → PAL</th><th>amdgpu backend</th><th>GPU-side wait / signal</th><th>Host-side wait / signal</th></tr></thead>
-        <tbody>
-          <tr><td><code>VkFence</code></td><td><code>Fence</code> → <code>Pal::IFence</code></td>
-            <td><code>SyncobjFence</code> (one syncobj); legacy <code>TimestampFence</code> on old kernels</td>
-            <td>signal: after the CS, the queue's <code>m_lastSignaledSyncObject</code> fence is
-              <a data-ref="pal_convey">transferred</a> into the fence's syncobj</td>
-            <td><code>vkWaitForFences</code> → <code>WaitForSyncobjFences</code> → <code>amdgpu_cs_syncobj_wait</code></td></tr>
-          <tr><td>binary <code>VkSemaphore</code></td><td><code>Semaphore</code> → <code>Pal::IQueueSemaphore</code></td>
-            <td><code>QueueSemaphore</code> (one syncobj)</td>
-            <td>wait: <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> chunk at point 0; signal: transfer from the last-submit syncobj</td>
-            <td>— (binary semaphores have no host operations)</td></tr>
-          <tr><td>timeline <code>VkSemaphore</code></td><td>same, with <code>flags.timeline</code></td>
-            <td>same syncobj used as a timeline</td>
-            <td>wait: <code>AMDGPU_CHUNK_ID_SYNCOBJ_TIMELINE_WAIT</code> at the requested point; signal: transfer into the requested point</td>
-            <td><code>vkWaitSemaphores</code> / <code>vkSignalSemaphore</code> → <a data-ref="pal_wait_sem_value">WaitSemaphoreValue</a> /
-              <a data-ref="pal_signal_sem_value">SignalSemaphoreValue</a> → <code>amdgpu_cs_syncobj_timeline_wait</code> /
-              <code>amdgpu_cs_syncobj_timeline_signal</code></td></tr>
-        </tbody>
-      </table></div>
-      <p>The design rests on one trick: <b>every CS ioctl signals the queue's private syncobj</b>
-        (<code>m_lastSignaledSyncObject</code>, appended to the signal chunk). Anything that must signal when that
-        submission finishes, whether a <code>VkFence</code> or a Vulkan signal semaphore, gets a <em>copy</em> of that
-        fence through <a data-ref="pal_convey">ConveySyncObjectState</a>. That function uses
-        <code>amdgpu_cs_syncobj_transfer</code>, or a sync-file export/import as a fallback. Waits are never done on
-        the CPU: they become kernel scheduler dependencies, so a submission blocked on a semaphore costs no CPU time.</p>
-      <p>Ioctl-level detail for the syncobj chunks is in the kernel's <code>amdgpu_cs_p2_syncobj_in</code>,
-        <code>amdgpu_cs_p2_syncobj_timeline_wait</code>, <code>amdgpu_cs_p2_syncobj_out</code> and
-        <code>amdgpu_cs_p2_syncobj_timeline_signal</code> (<a data-ref="k_p2_syncobj_in">amdgpu_cs.c</a>).</p>
-
-      <h2 id="kernel">The kernel side</h2>
-      <div data-panel="ioctl-table"></div>
-      <p><a data-ref="k_cs_ioctl">amdgpu_cs_ioctl</a> runs a fixed sequence: <code>amdgpu_cs_parser_init</code> →
-        <code>amdgpu_cs_pass1</code> (copy and parse chunks) → <code>amdgpu_cs_pass2</code> (IBs, syncobj dependencies) →
-        <code>amdgpu_cs_parser_bos</code> (lock and validate BOs) → <code>amdgpu_cs_patch_jobs</code> →
-        <code>amdgpu_cs_vm_handling</code> (page tables up to date) → <code>amdgpu_cs_sync_rings</code> →
-        <code>amdgpu_cs_submit</code>, which calls <code>drm_sched_entity_push_job</code>. The DRM scheduler later calls
-        <code>amdgpu_job_run</code>, which calls <code>amdgpu_ib_schedule</code>. For each IB, the ring's
-        <code>emit_ib</code> (e.g. <a data-ref="k_gfx11_emit_ib">gfx_v11_0_ring_emit_ib_gfx</a>) writes an
-        <code>INDIRECT_BUFFER</code> packet with the IB address and the process's VMID. The CP then executes PAL's PM4
-        using the process's page tables.</p>
-      <p class="callout note">The kernel checkout is newer (2026) than the AMDVLK sources (2025-04). Newer uAPI (e.g.
-        <code>AMDGPU_USERQ</code> user-mode queues, visible in the ioctl table) is never issued by PAL's amdgpu backend in these sources.</p>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

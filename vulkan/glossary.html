@@ -4,31 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Glossary – AMDVLK Driver Atlas</title>
-<meta name="description" content="Definitions of the driver terms used across the site: BO, IB, GART, VA, PM4, LGC, syncobj and more.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="glossary">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Glossary</h1>
-      <p class="lede">Elsewhere on the site, these terms are dotted-underlined. Hover over one, or focus it with the
-        keyboard, to see the definition.</p>
-      <div class="prose"><dl class="glossary" id="glossary-list"></dl></div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">tpnh8y0T8tjx4WxDzsxbFosm2LKIEIbfI3XPZ0DRBP2e+BBUREgslJt6xZE0yvhqUIcYgz+AEkuAgAf0qhbJAyrom8uJ7xlLBpMdVZunW9aQgYVi1ZcEqdj53NFNtUmahbP+QKxjpeW3V8YdivxHdvGF94ybFXpn6jyNLLekrLApbvGxj0zfXyXDkWTf7CZCxfJb4BsXeOjp8wh34fAFP0vXkWgm/QIMRh0JKl+NtJ6IcIAgrNCW1wXryR9cMoFPTNzCZWiLkuerGRwXAKmLMHcgEZJ0TzNpGigzSx7rt+m5VQWQg22VMi3FN8AjBwl9c9WWqy3mKYuIBBav/1o9NsbB9EplPususuUsFpcN7gAFjt0Sv7HUQNbRkfgJtZH2/DGUCjxD2DmnJJJxQqLPC91PFi1SErmCdPkc8qCSB3hLO3D6Xfb11YcdY8GHOv77u4yb4huVLSbAcfKaGzUBs9JneefCKW5Yka4MbrIBl8Gz7spb4UtDxIkQLtBSsg9CbOR8tZ55zKl3D4Cbfj2AW3J5XR24Rfx0VX331+P9q8ykvQRaO7kS/WzfLck1d5rxvWJ+4/EEp1kbpCcvsg2frL98XaDQu5x0LFry2WXoY0oxSNYGLSpZAygw+HH+1WvNGDsg909OEcsqNmzcSytNrVptnu/MPQ6e6JZ2oMgCR6+RbMXyz7rssCTmN4pFLsfIeFfI0Hg59xaeoRHDZw7JVw==</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

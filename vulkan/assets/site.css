@@ -416,3 +416,81 @@ table.ref .tag { display: inline-block; font-size: .74rem; padding: 1px 5px; mar
   .hero h1 { font-size: 2.1rem; }
 }
 table.ref tr.focus td { background: var(--pad-soft); }
+
+/* ---------- fixes from the screenshot review ---------- */
+h1, h2, h3 { overflow-wrap: break-word; }
+.tracer > *, .tracer-main, .diagram-wrap > *, .hero > * { min-width: 0; }
+table.ref { table-layout: fixed; }
+table.ref td { overflow-wrap: anywhere; }
+table.ref td.name { white-space: normal; }
+table.ref th:first-child { width: 26%; }
+table.ref th:last-child { width: 15%; }
+table.ref[data-tab="passes"] th:first-child { width: 3.5em; }
+table.ref[data-tab="passes"] th:nth-child(2) { width: 26%; }
+table.ref[data-tab="pm4"] th:nth-child(2) { width: 6em; }
+table.ref[data-tab="pm4"] th:last-child { width: 30%; }
+table.ref[data-tab="settings"] th:nth-child(2) { width: 18%; }
+table.ref[data-tab="extensions"] th:nth-child(2) { width: 6em; }
+
+/* hero: headline on the left, the call running down the stack on the right */
+.hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 36px; align-items: start; }
+.hero h1 { font-size: clamp(2.2rem, 3.9vw, 3.4rem); }
+.hero-stack .stack .layer { margin-bottom: 14px; padding: 8px 12px; }
+.hero-stack .stack .layer::after { bottom: -15px; height: 14px; }
+.hero-stack .stack .layer.side::after { bottom: auto; height: 2px; }
+.hero-stack .flow-ctl { margin-top: 2px; }
+.hero-detail { margin: 8px 0 0; }
+.hero-detail .layer-detail { position: static; min-height: 0; }
+@media (max-width: 1100px) {
+  .hero { grid-template-columns: 1fr; gap: 12px; }
+}
+@media (max-width: 900px) {
+  table.ref { table-layout: auto; }
+  table.ref th:first-child, table.ref th:last-child { width: auto; }
+  table.ref td[data-l]::before { font-family: var(--sans); font-weight: 600; }
+  .hero-stack .stack .layer.side::after { left: 50%; top: auto; bottom: -15px; width: 2px; height: 14px; }
+}
+table.ref td a.src { overflow-wrap: normal; word-break: normal; }
+
+/* ---------- password gate (protected build only; see tools/protect.js) ---------- */
+.gate { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.gate.checking .gate-card { visibility: hidden; }
+.gate-card {
+  width: min(100%, 400px); background: var(--sheet); border: 1px solid var(--rule); border-top: 4px solid var(--pad);
+  border-radius: var(--r-ui); padding: 26px 26px 20px; display: flex; flex-direction: column; gap: 10px;
+}
+.gate-card h1 { font-size: 1.6rem; margin: 6px 0 0; }
+.gate-card p { margin: 0; color: var(--graphite); }
+.gate-card label { font-weight: 600; font-size: .92rem; margin-top: 6px; }
+.gate-mark { width: 36px; height: 36px; }
+.gate-row { display: flex; gap: 8px; }
+.gate-row input {
+  flex: 1; min-width: 0; height: 44px; border: 1px solid var(--rule); border-radius: var(--r-ui); background: var(--board);
+  color: var(--ink); font: inherit; padding: 0 12px;
+}
+.gate-row input:focus { border-color: var(--trace); outline: none; box-shadow: 0 0 0 3px var(--trace-soft); }
+.gate-row .btn { min-height: 44px; }
+.gate-submit { min-height: 44px; margin-top: 4px; }
+.gate-error { color: var(--l-gpu) !important; font-weight: 600; font-size: .92rem; }
+.gate-note { font-size: .84rem; }
+
+/* gate motion: the gold pad runs along the trace while the key is derived; a wrong password shakes the card;
+   success sends the pad home, lifts the card away and fades the page in. All off with reduced motion. */
+.gate-card { animation: gate-in .45s cubic-bezier(.2,.7,.2,1); }
+.gate-trace { position: relative; height: 2px; background: var(--rule); margin: 8px 0 4px; border-radius: 1px; }
+.gate-pad {
+  position: absolute; top: -5px; left: 0; width: 12px; height: 12px; border-radius: 2px; background: var(--pad);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pad) 25%, transparent), 0 0 12px color-mix(in srgb, var(--pad) 70%, transparent);
+}
+.gate.working .gate-pad { animation: pad-run .9s cubic-bezier(.45,.05,.35,1) infinite alternate; }
+.gate.done .gate-pad { left: calc(100% - 12px); transition: left .25s ease-out; }
+.gate.done .gate-trace { background: linear-gradient(90deg, var(--trace), var(--pad)); }
+.gate.error .gate-card { animation: gate-shake .4s ease-in-out; }
+.gate.leaving .gate-card { animation: gate-out .3s ease-in forwards; }
+.unlocked-in { animation: content-in .45s cubic-bezier(.2,.7,.2,1); }
+@keyframes gate-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pad-run { from { left: 0; } to { left: calc(100% - 12px); } }
+@keyframes gate-shake { 0%, 100% { transform: none; } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+@keyframes gate-out { to { opacity: 0; transform: translateY(-14px) scale(.98); } }
+/* opacity only: a transform here would make the phone step dock (position: fixed) move with the layout */
+@keyframes content-in { from { opacity: 0; } to { opacity: 1; } }

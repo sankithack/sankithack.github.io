@@ -4,168 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Command buffers &amp; PM4 – AMDVLK Driver Atlas</title>
-<meta name="description" content="vkBeginCommandBuffer and vkCmdDraw through XGL into PAL's ICmdBuffer, chunk allocation, and the PM4 packets PAL's hardware layers build, with an annotated DRAW_INDEX_AUTO.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="cmdbuf">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Command buffers &amp; PM4</h1>
-      <p class="lede">Recording a Vulkan command buffer means PAL writing PM4 packets into chunks of GPU-visible memory.
-        Nothing reaches the kernel until submission. This page follows <code>vkCmdDraw</code> down to the three DWORDs it
-        produces and takes them apart bit by bit.</p>
-
-      <div class="prose">
-      <h2 id="chunks">Pools, allocators and chunks</h2>
-      <p>Each <code>VkCommandPool</code> owns a PAL <code>ICmdAllocator</code>
-        (<a data-ref="xgl_cmdpool_alloc">vk_cmd_pool.cpp</a>). The allocator manages separate pools for several kinds
-        of data. All are GPU memory carved into uniform <b>chunks</b>:</p>
-      <ul>
-        <li><code>CommandDataAlloc</code> holds the PM4 command streams themselves.</li>
-        <li><code>EmbeddedDataAlloc</code> / <code>LargeEmbeddedDataAlloc</code> hold "embedded data": tables and
-          constants that PAL writes at record time for commands to reference (the large variant is for allocations
-          over 32 KB).</li>
-        <li><code>GpuScratchMemAlloc</code> is GPU-only scratch for PAL's internal use.</li>
-      </ul>
-      <p>A <code>CmdStream</code> asks for space with <code>ReserveCommands</code> and gives back what it didn't use
-        with <code>CommitCommands</code>. When a chunk fills, <a data-ref="pal_getnextchunk">CmdStream::GetNextChunk</a>
-        takes one of the stream's retained chunks or calls
-        <a data-ref="pal_getnewchunk">CmdAllocator::GetNewChunk</a>. The allocator pops its <em>free list</em> (known
-        idle), then scans its <em>reuse list</em> for chunks whose GPU work has finished (<code>IsIdleOnGpu</code>), and
-        only then creates a new <code>CmdStreamAllocation</code>, split into <code>numChunks</code> chunks. Successive
-        chunks of one stream are <a data-ref="pal_chain">chained</a> with chaining packets at each chunk's tail, so at submit time only the stream's <b>first</b> chunk is handed to the kernel
-        as an IB (see <a href="submit.html#ibs">Topic 5</a>).</p>
-
-      <h2 id="hot-path">The draw hot path</h2>
-      <p>XGL does little at draw time. <code>CmdBuffer::Draw</code> flushes any changed Vulkan dynamic state into PAL
-        (<code>ValidateGraphicsStates</code>) and calls <code>ICmdBuffer::CmdDraw</code>. That call is an inline jump
-        through <code>m_funcTable.pfnCmdDraw</code>, which the HWL fills with a template instantiation specialized for
-        the GPU and the command buffer's options. The HWL's <code>CmdDraw</code>:</p>
-      <ol>
-        <li><b>Validates</b> (<code>ValidateDraw</code>): writes dirty state as <code>SET_SH_REG</code> /
-          <code>SET_CONTEXT_REG</code> packets. This covers the bound pipeline's registers, user-data SGPRs (descriptor
-          table addresses, push constants), viewport/scissor, and draw-time values such as
-          <a data-ref="pal_num_instances">NUM_INSTANCES</a> and the
-          <a data-ref="pal_vertex_offset">vertex offset</a>. The full register sequence is
-          <span class="not-traced">not traced</span> line by line.</li>
-        <li><b>Builds the draw packet</b> into reserved space: <code>DRAW_INDEX_AUTO</code> for non-indexed draws,
-          <code>IT_DRAW_INDEX_2</code> for indexed, <code>IT_DRAW_INDIRECT</code>/<code>IT_DRAW_INDEX_INDIRECT</code> or
-          <code>IT_EXECUTE_INDIRECT__EXECINDIRECT</code> variants for indirect draws.</li>
-        <li><b>Commits</b> the space.</li>
-      </ol>
-      <div data-panel="gfx9-set-sh-seq"></div>
-      </div>
-
-      <h2 id="trace">Step-through: vkBeginCommandBuffer → vkCmdDraw → PM4</h2>
-      <div data-flow="cmdbuf"></div>
-
-      <h2 id="example">Worked example: the PM4 for one draw and one dispatch</h2>
-      <div class="example-walk">
-<pre class="example"><code class="language-c ex">vkBeginCommandBuffer(cmd, &amp;begin);
-vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gfxPipeline);
-vkCmdDraw(cmd, 3, 1, 0, 0);
-vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, csPipeline);
-vkCmdDispatch(cmd, 64, 1, 1);
-vkEndCommandBuffer(cmd);</code></pre>
-        <h3>The draw, on a GFX10/11 GPU</h3>
-        <ol>
-          <li><b>Validation packets first.</b> <code>ValidateDraw</code> writes whatever is dirty: the pipeline's shader
-            and context registers (<code>SET_SH_REG</code> and <code>SET_CONTEXT_REG</code>, or packed register pairs on GFX11), user-data SGPRs (descriptor table
-            pointers, the vertex offset), viewport and scissor. Because the instance count changed from "unknown" to 1,
-            it also emits <code>NUM_INSTANCES</code>: header <code class="nv">0xC0002F00</code> (opcode 0x2F, count 0), then
-            <code class="nv">0x00000001</code>.</li>
-          <li><b>The draw packet:</b> <code class="nv">0xC0012D00 0x00000003 0x00000002</code>. That is the type-3 header for
-            <code>IT_DRAW_INDEX_AUTO</code>, a vertex count of 3, and <code>VGT_DRAW_INITIATOR</code> with
-            <code>SOURCE_SELECT</code> = auto-index. Reproduce it in the <a href="#pm4">packet widget</a>.</li>
-        </ol>
-        <h3>The dispatch</h3>
-        <ol>
-          <li><b>Validation:</b> <code>ValidateDispatchPalAbi</code> writes the compute shader's registers and user data.</li>
-          <li><b>The packet:</b> 5 DWORDs (<code>PM4_ME_DISPATCH_DIRECT_SIZEDW__CORE</code> = 5).
-            <ul>
-              <li>Header <code class="nv">0xC0031502</code>: type 3, count 5 − 2 = 3, opcode <code>IT_DISPATCH_DIRECT</code> = 0x15,
-                shader type 1 (<code>ShaderCompute</code>).</li>
-              <li><code>dim_x</code> = 64, <code>dim_y</code> = 1, <code>dim_z</code> = 1.</li>
-              <li><code>dispatch_initiator</code> = <code class="nv">0x00000045</code> for a wave64 shader: <code>COMPUTE_SHADER_EN</code>
-                (bit 0), <code>FORCE_START_AT_000</code> (bit 2, because the universal command buffer instantiates
-                <code>BuildDispatchDirect&lt;false, true&gt;</code>) and <code>ORDER_MODE</code> (bit 6). A wave32 shader
-                adds <code>CS_W32_EN</code> (bit 15) to give <code class="nv">0x00008045</code>
-                (<a data-ref="ex_dispatch_initiator">wave32 bit</a>).</li>
-            </ul></li>
-        </ol>
-        <h3>Where it all lives</h3>
-        <p>All of these DWORDs go into the command buffer's draw-engine stream (<code>m_deCmdStream</code>), in a chunk
-          from the pool's <code>CommandDataAlloc</code>. At <code>vkEndCommandBuffer</code> the stream is closed, and at
-          submit its first chunk becomes one IB (<a href="submit.html#ibs">Topic 5</a>).</p>
-      </div>
-
-
-      <h2 id="pm4">Anatomy of a real packet: DRAW_INDEX_AUTO</h2>
-      <div class="prose">
-      <p>This is the packet <a data-ref="pal_build_dia">CmdUtil::BuildDrawIndexAuto</a> writes for <code>vkCmdDraw</code>.
-        The field layouts come from PAL's generated chip headers (<code>PM4_ME_TYPE_3_HEADER</code>,
-        <code>PM4_PFP_DRAW_INDEX_AUTO</code>, <code>VGT_DRAW_INITIATOR</code>). Change the inputs to see the DWORDs
-        change, and click a field to see what it means.</p>
-      </div>
-      <div class="pm4" id="pm4-widget"></div>
-      <div class="two-col">
-        <div data-panel="pm4-header-struct"></div>
-        <div data-panel="pm4-draw-index-auto-struct"></div>
-      </div>
-      <div class="two-col">
-        <div data-panel="vgt-draw-initiator"></div>
-        <div data-panel="di-src-sel"></div>
-      </div>
-      <div class="two-col">
-        <div data-panel="pm4-opcodes"></div>
-        <div data-panel="kernel-packet3"></div>
-      </div>
-      <div class="prose">
-      <p>Where the other fields come from: the instance count and first vertex/instance are <em>not</em> in this packet.
-        PAL wrote them during validation as an <code>IT_NUM_INSTANCES</code> packet and as user-data SGPRs that the
-        compiled vertex shader reads. That is why <code>DRAW_INDEX_AUTO</code> needs only a vertex count.</p>
-
-      <h2 id="dispatch">Compute: DISPATCH_DIRECT</h2>
-      <p><code>vkCmdDispatch</code> follows the same shape: <code>CmdBuffer::Dispatch</code> →
-        <code>ICmdBuffer::CmdDispatch</code> → HWL <code>CmdDispatch</code> →
-        <a data-ref="pal_build_dispatch">CmdUtil::BuildDispatchDirect</a>. That builds a 5-DWORD packet (header,
-        <code>dim_x</code>, <code>dim_y</code>, <code>dim_z</code>, <code>dispatch_initiator</code>) with
-        <code>shaderType = ShaderCompute</code>. On a compute-only queue the same builder writes into a
-        <code>ComputeCmdBuffer</code> stream that runs on the MEC.</p>
-
-      <h2 id="barriers">Barriers: ACQUIRE_MEM and RELEASE_MEM</h2>
-      <p>On GFX10+ XGL expresses <code>vkCmdPipelineBarrier</code> in PAL's acquire/release model
-        (<code>useReleaseAcquire</code>). PAL's <code>BarrierMgr</code> turns the source stages into <b>release events</b>
-        (e.g. a bottom-of-pipe <code>RELEASE_MEM</code> event, optionally with cache write-back) and the destination
-        stages into an <b>acquire point</b> (how early in the pipe the CP must wait). Cache invalidations go into an
-        <code>ACQUIRE_MEM</code>. Image layout transitions may add decompression or clear blits through PAL's internal
-        RPM (<code class="nv">hw/gfxip/rpm</code>), which is <span class="not-traced">not traced</span> here. One generation
-        difference is visible in the code: on GFX11 the color/depth (RB) caches can no longer be flushed by an
-        <code>ACQUIRE_MEM</code> (<a data-ref="pal_gfx11_acqmem_assert">assert</a>).</p>
-
-      <h2 id="gfx12">GFX12 differences</h2>
-      <p>GFX12 has its own HWL (<code class="nv">hw/gfxip/gfx12</code>) with its own <code>UniversalCmdBuffer</code>,
-        <code>CmdUtil</code> and packet headers. The draw packet is built the same way, but register writes are
-        organized around <em>pair</em> packets:</p>
-      <div data-panel="gfx12-draw"></div>
-      <div data-panel="gfx12-sh-pairs"></div>
-      <div data-panel="gfx11-pairs"></div>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>
