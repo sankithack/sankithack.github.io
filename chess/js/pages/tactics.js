@@ -18,7 +18,7 @@ export function render(data) {
   const paint = () => wrap.replaceChildren(...[...new Set(data.tactics.map((t) => t.group))].map((g) => {
     const list = data.tactics.filter((t) => t.group === g && (level === 'all' || t.level === level));
     return list.length ? h('section.eg-group', h('h2', g), h('div.tactic-grid', list.map(card))) : null;
-  }));
+  }).filter(Boolean));
   paint();
   return page('Tactics',
     pageHead('Tactics', `${data.tactics.length} motifs and mating patterns that win games. Each has a definition, a memory hook and a position to solve yourself — drag, tap or type your move.`,
