@@ -36,6 +36,7 @@ export function buildIndex(data) {
     ['Practice', 'Follow the moves', 'Practice', '#/practice/visualize', 'blindfold visualization'],
     ['Practice', 'Square colours', 'Practice', '#/practice/colors', 'light dark blindfold'],
     ['Practice', 'Review a game', 'Paste a PGN', '#/review', 'pgn analyse analysis blunder'],
+    ['Settings', 'Your progress', 'Back up, restore, reset', '#/progress', 'backup export import restore reset device sync'],
     ['Trainer', 'Square trainer', 'Board coordinates', '#/train/squares', 'coordinates notation'],
     ['Trainer', 'Quiz', 'Openings, tactics, endgames', '#/train/quiz', 'test'],
     ['Trainer', 'Flashcards', 'Memory hooks', '#/train/cards', 'spaced repetition'],
