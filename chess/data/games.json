@@ -1,0 +1,25 @@
+[
+  {
+    "id": "opera-game",
+    "title": "The Opera Game",
+    "players": "Paul Morphy vs Duke Karl of Brunswick & Count Isouard",
+    "event": "Paris Opera, 1858",
+    "lesson": "Development beats material: Morphy gives pieces away to open lines while his opponents' pieces sit at home.",
+    "moves": [
+      { "san": "e4" }, { "san": "e5" }, { "san": "Nf3" }, { "san": "d6", "note": "Philidor's Defence — solid but passive." },
+      { "san": "d4" }, { "san": "Bg4", "note": "Pins the knight, but Black will have to give up this bishop." },
+      { "san": "dxe5" }, { "san": "Bxf3" }, { "san": "Qxf3", "note": "White's queen comes out with a developing gain of tempo." },
+      { "san": "dxe5" }, { "san": "Bc4", "note": "Threatening Qxf7#.", "arrows": ["!f3f7", "!c4f7"] },
+      { "san": "Nf6" }, { "san": "Qb3", "note": "A double attack on f7 and b7.", "arrows": ["!b3f7", "!b3b7"] },
+      { "san": "Qe7" }, { "san": "Nc3", "note": "Morphy develops instead of grabbing b7." },
+      { "san": "c6" }, { "san": "Bg5", "note": "Pins the f6-knight. Every white piece is active.", "arrows": ["g5f6"] },
+      { "san": "b5" }, { "san": "Nxb5", "note": "A sacrifice to open lines against the uncastled king." },
+      { "san": "cxb5" }, { "san": "Bxb5+" }, { "san": "Nbd7" },
+      { "san": "O-O-O", "note": "The rook joins with tempo on the pinned d7-knight.", "arrows": ["d1d7"] },
+      { "san": "Rd8" }, { "san": "Rxd7" }, { "san": "Rxd7" }, { "san": "Rd1", "note": "Another rook to the d-file — pile up on the pin." },
+      { "san": "Qe6" }, { "san": "Bxd7+" }, { "san": "Nxd7" },
+      { "san": "Qb8+", "note": "The queen sacrifice: deflecting the d7-knight.", "arrows": ["b3b8"] },
+      { "san": "Nxb8" }, { "san": "Rd8#", "note": "Checkmate with the last two pieces. Black's h8-rook and f8-bishop never moved." }
+    ]
+  }
+]

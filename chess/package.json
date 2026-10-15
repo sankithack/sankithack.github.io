@@ -1,0 +1,11 @@
+{
+  "name": "chess-strategy-academy",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Static chess strategy course: openings, middlegame, endgame, trainers. No build step.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "validate": "node scripts/validate-data.mjs"
+  }
+}

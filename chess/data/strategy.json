@@ -1,0 +1,128 @@
+[
+  {
+    "id": "pawn-structure",
+    "name": "Pawn structure",
+    "mnemonic": "Pawns are the skeleton; pieces are the muscles. Attack a chain at its base.",
+    "summary": "Pawns can't move backwards, so their placement decides which squares are strong, which are weak, and where each side should play.",
+    "setup": ["e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3"],
+    "arrows": ["c5d4", "f7f6", "~f2f4"],
+    "squares": ["d4", "e5"],
+    "points": [
+      "A pawn chain (here d4–e5) is strongest at its head and weakest at its base: Black attacks d4 with ...c5 and the head with ...f6.",
+      "Pawns point to where you should attack: White's chain points to the kingside, Black's to the queenside.",
+      "Isolated, doubled and backward pawns are long-term weaknesses; passed pawns are long-term strengths."
+    ]
+  },
+  {
+    "id": "weak-squares",
+    "name": "Weak squares",
+    "mnemonic": "A hole is a square no pawn can ever guard again.",
+    "summary": "A square that can no longer be defended by a pawn is a permanent home for enemy pieces.",
+    "setup": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6"],
+    "arrows": ["c3d5", "~f1c4"],
+    "squares": ["d5"],
+    "points": [
+      "After ...e5 in the Najdorf, d5 can't be covered by a black pawn any more — it's a hole.",
+      "Black compensates by controlling d5 with pieces (...Be6, ...Nbd7–b6) or by forcing the ...d5 break.",
+      "Every pawn move creates a potential weakness behind it — move pawns with a purpose."
+    ]
+  },
+  {
+    "id": "outposts",
+    "name": "Outposts",
+    "mnemonic": "A knight on an outpost is like a tooth in the opponent's jaw.",
+    "summary": "An outpost is a square in enemy territory, protected by your pawn, that no enemy pawn can attack. Knights love them.",
+    "fen": "r4rk1/pp2bppp/3p4/3Np3/2P1P3/8/PP3PPP/R4RK1 w - - 0 1",
+    "arrows": ["c4d5", "e4d5", "d5e7", "d5b6"],
+    "squares": ["d5"],
+    "points": [
+      "The d5-knight is supported by two pawns and can never be chased by a black pawn (no c- or e-pawn can reach c6/e6).",
+      "From d5 it hits c7, e7, b6 and f6 — it controls Black's whole position.",
+      "The only way to remove it is to trade a piece for it; often Black has no suitable piece."
+    ]
+  },
+  {
+    "id": "open-files",
+    "name": "Open files",
+    "mnemonic": "Rooks belong on open files — and then on the 7th rank.",
+    "summary": "A file with no pawns is a highway for rooks. Controlling it lets your rooks invade the enemy position.",
+    "fen": "r4rk1/ppp2ppp/4pn2/8/8/4PN2/PPPR1PPP/3R2K1 w - - 0 1",
+    "arrows": ["d2d7", "d1d8"],
+    "squares": ["d7"],
+    "points": [
+      "Doubling rooks (here on d1 and d2) wins control of the file — a single rook can be challenged.",
+      "The goal is to invade: a rook on the 7th rank attacks pawns and confines the king.",
+      "Contest open files early; once the enemy doubles, you may never get in."
+    ]
+  },
+  {
+    "id": "piece-activity",
+    "name": "Piece activity",
+    "mnemonic": "Improve your worst piece.",
+    "summary": "A piece is only as good as the squares it controls. Active pieces win games even without extra material.",
+    "fen": "rn4k1/p1R2ppp/1p2p3/8/3N4/4P3/PP3PPP/6K1 w - - 0 1",
+    "arrows": ["c7a7", "c7f7", "d4c6", "~d4b5"],
+    "squares": ["c7", "b8", "a8"],
+    "points": [
+      "Material is equal, but White's rook on the 7th and centralised knight dominate Black's undeveloped rook and knight.",
+      "Ask every move: which piece is doing least? Move that one.",
+      "Trade your bad pieces; keep your good ones."
+    ]
+  },
+  {
+    "id": "king-safety",
+    "name": "King safety",
+    "mnemonic": "Pawns in front of your king are walls — every pawn move is a brick removed.",
+    "summary": "Castle early, keep the pawn shield intact, and don't open lines towards your own king.",
+    "setup": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "O-O", "Nf6", "d3", "O-O", "Bg5", "h6", "Bh4", "g5", "Bg3"],
+    "arrows": ["f3h4", "h4f5", "!c4f7"],
+    "squares": ["f5", "h5", "g8"],
+    "points": [
+      "...h6 and ...g5 gained time against the bishop but tore holes on f5 and h5 next to Black's king.",
+      "White's knight heads for f5 via h4; the queen can follow to h5.",
+      "Count attackers vs defenders around the king; if the attackers outnumber defenders, a sacrifice may work."
+    ]
+  },
+  {
+    "id": "space",
+    "name": "Space advantage",
+    "mnemonic": "More space, more room to manoeuvre — but more ground to defend.",
+    "summary": "Pawns further up the board give your pieces more squares behind them and restrict the opponent's pieces.",
+    "setup": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "O-O", "Nc6", "d5", "Ne7"],
+    "arrows": ["c4c5", "~f7f5"],
+    "squares": ["c4", "d5", "e4"],
+    "points": [
+      "White's pawns on c4, d5 and e4 claim the queenside and centre; Black claims the kingside with ...f5.",
+      "The side with less space should trade pieces — cramped positions suffocate when crowded.",
+      "The side with more space should avoid trades and prepare a pawn break to open lines."
+    ]
+  },
+  {
+    "id": "good-bad-bishop",
+    "name": "Good vs bad bishop",
+    "mnemonic": "A bishop is bad when its own pawns stand on its colour.",
+    "summary": "A bishop that is blocked by its own pawns is 'bad'; one whose pawns are on the other colour is 'good'.",
+    "setup": ["e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3", "Qb6"],
+    "arrows": ["~c8d7", "f1d3"],
+    "squares": ["c8", "d5", "e6"],
+    "points": [
+      "Black's pawns on d5 and e6 sit on light squares, so the c8-bishop is hemmed in — a classic French bad bishop.",
+      "White's f1-bishop is good: his pawns on d4 and e5 are on dark squares, leaving its diagonals open.",
+      "Plans: trade your bad bishop (...b6 and ...Ba6), or put your pawns on the other colour."
+    ]
+  },
+  {
+    "id": "initiative",
+    "name": "Initiative",
+    "mnemonic": "Make threats; force your opponent to react instead of plan.",
+    "summary": "The player who makes the threats dictates the game. The initiative can be worth a pawn or more.",
+    "setup": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "Ng5", "d5", "exd5", "Na5", "Bb5+", "c6", "dxc6", "bxc6", "Be2", "h6", "Nf3", "e4"],
+    "arrows": ["!e4f3", "~d8d4", "f8c5"],
+    "squares": ["f3"],
+    "points": [
+      "Black is a pawn down, but every move came with a threat: ...Na5 hit the bishop, ...h6 the knight, ...e4 the knight again.",
+      "While White retreats, Black develops; soon ...Bc5/...Bd6, ...O-O and ...Qc7 follow with an attack.",
+      "To keep the initiative, keep creating threats — one quiet move can hand it back."
+    ]
+  }
+]
