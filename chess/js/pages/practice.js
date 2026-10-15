@@ -35,6 +35,8 @@ function hub(data) {
     section('Strategy & endgames', 'Find the key square, then win (or hold) endgames against the computer.',
       tile('#/practice/strategy', 'Find the square', `${data.strategy.length} positions: click the weak square, the outpost, the bad bishop…`, `Best ${best('strategy')}/${Math.min(10, data.strategy.length)}`, 'compass'),
       tile('#/practice/endgame/kq-vs-k', 'Endgames vs computer', 'Mate with K+Q, K+R and two bishops; win or draw king-and-pawn endings against perfect defence.', null, 'flag')),
+    section('Your games', 'The fastest way to improve: look at your own games and find the moments that decided them.',
+      tile('#/review', 'Review a game', 'Paste a PGN from Lichess or Chess.com. Step through it, see every check and capture, and jump to loose pieces and missed mates.', null, 'search')),
     section('Memory & vision', 'Train the mental board: square names and colours, remembering positions, following moves without a board.',
       tile('#/train/squares', 'Square trainer', 'Click the named square against the clock.', `Best ${best('squares')}`, 'target'),
       tile('#/practice/colors', 'Square colours', 'Light or dark? Answer without looking — the first blindfold skill.', `Best ${best('colors')}`, 'eye'),

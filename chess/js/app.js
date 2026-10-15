@@ -9,6 +9,7 @@ import * as endgames from './pages/endgames.js';
 import * as train from './pages/train.js';
 import * as practice from './pages/practice.js';
 import * as guide from './pages/guide.js';
+import * as review from './pages/review.js';
 
 // [path, label, icon, shown in the phone tab bar]
 const NAV = [
@@ -30,6 +31,7 @@ const ROUTES = {
   train: train.render,
   practice: practice.render,
   guide: guide.render,
+  review: review.render,
 };
 
 // ---------- theme
@@ -70,7 +72,8 @@ function renderRail() {
       h('div.more-grid', NAV.filter((n) => !n[3]).map(([path, label, ic]) => h('a.more-link', { href: '#/' + path, onclick: () => toggleMore(false) }, icon(ic, 24), label)),
         h('a.more-link', { href: '#/guide/think', onclick: () => toggleMore(false) }, icon('target', 24), 'How to think'),
         h('a.more-link', { href: '#/guide/attack', onclick: () => toggleMore(false) }, icon('flag', 24), 'Attack'),
-        h('a.more-link', { href: '#/guide/memory', onclick: () => toggleMore(false) }, icon('eye', 24), 'Memory')),
+        h('a.more-link', { href: '#/guide/memory', onclick: () => toggleMore(false) }, icon('eye', 24), 'Memory'),
+        h('a.more-link', { href: '#/review', onclick: () => toggleMore(false) }, icon('search', 24), 'Review a game')),
       themeButton()));
   document.body.append(sheet);
 }
