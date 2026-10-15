@@ -4,177 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Use cases and settings – AMDVLK Driver Atlas</title>
-<meta name="description" content="Practical debugging, profiling and shader workflows for AMDVLK, each tied to the driver setting that enables it and the code that reads it.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="usecases">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Use cases and driver settings</h1>
-      <p class="lede">Concrete things you can do with this driver, each tied to the setting that enables it and the line
-        of code that reads that setting. Every setting name below is checked against the settings files at the pinned
-        commit.</p>
-
-      <div class="prose">
-      <h2 id="how">How settings are applied</h2>
-      <p>The <a data-ref="readme_settings">AMDVLK README</a> says to put one <code class="nv">name,value</code> pair per line
-        in <code class="nv">amdVulkanSettings.cfg</code> or <code class="nv">amdPalSettings.cfg</code>, in
-        <code class="nv">/etc/amd</code> or the directory named by <code class="nv">$AMD_CONFIG_DIR</code>. Lines starting with
-        <code class="nv">;</code> are comments, and settings are read only when a device is created, so restart the
-        application after editing. Enum settings take the number shown in the <a href="reference.html#settings">code
-        reference</a>; bitmask settings take the sum of their bits.</p>
-      <p>Every XGL and PAL setting, with its type, default, allowed values and description, is in the
-        <a href="reference.html#settings">settings tab</a>.</p>
-      <div class="callout warn"><p><b>The README is out of date in two places.</b> It lists
-        <a data-ref="readme_vmalwaysvalid">EnableVmAlwaysValid</a> and <a data-ref="readme_diskcache">AllowVkPipelineCachingToDisk</a>,
-        but neither name exists in any settings file at the pinned commits. Their entries below were replaced by the
-        settings that do exist.</p></div>
-      </div>
-
-      <h2 id="debug">Debugging correctness</h2>
-        <section class="uc" id="uc-hang">
-          <h3>Find the submission that hangs or corrupts the GPU</h3>
-          <p class="why">When a GPU hang or corrupted frame can't be pinned to one command buffer.</p>
-<pre class="cfg"><code class="cfg">WaitAfterSubmit,1</code></pre>
-          <p>XGL then waits for the queue to go idle after every PAL submission. With <code>multiSubmitChaining</code> off, <code>PalQueueSubmit</code> also submits command buffers one at a time, so a hang shows up right after the offending one. Expect a large slowdown.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/WaitAfterSubmit">WaitAfterSubmit</a>, <a href="reference.html#settings/MultiSubmitChaining">MultiSubmitChaining</a>. Read at: <a data-ref="uc_wait_after_submit"></a>, <a data-ref="uc_multi_submit"></a></p>
-          <p class="callout warn">The README also suggests <a href="reference.html#settings/IdleAfterSubmitGpuMask">IdleAfterSubmitGpuMask</a>. It is defined in <a data-ref="uc_idle_after_submit">settings_core.json</a>, but no source file in the pinned PAL reads its value, so it has no effect in this build.</p>
-        </section>
-        <section class="uc" id="uc-barriers">
-          <h3>Check whether a bug is a missing barrier</h3>
-          <p class="why">When rendering is wrong only sometimes, or only on some GPUs: a classic sign of a missing pipeline barrier.</p>
-<pre class="cfg"><code class="cfg">DbgBarrierPostCmdEnable,0x8FFFFFFF</code></pre>
-          <p>XGL inserts a full barrier after every command in the mask (<code>DbgBarrierPostCmd</code> runs after draws, dispatches, copies and so on). If the bug disappears, a barrier is missing. Narrow it down with the individual bits, e.g. <code>DbgBarrierDrawIndexed</code> = 2 or <code>DbgBarrierDispatch</code> = 8.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/DbgBarrierPostCmdEnable">DbgBarrierPostCmdEnable</a>. Read at: <a data-ref="uc_dbg_barrier"></a></p>
-          <p class="callout warn">The setting's own description says it requires a driver built with <code class="nv">VKI_ENABLE_DEBUG_BARRIERS=1</code>.</p>
-        </section>
-        <section class="uc" id="uc-residency">
-          <h3>Rule out a residency or eviction bug</h3>
-          <p class="why">When a crash or corruption might be caused by memory being evicted or missing from a submission's BO list.</p>
-<pre class="cfg"><code class="cfg">AlwaysResident,1</code></pre>
-          <p>PAL creates every BO with <code>AMDGPU_GEM_CREATE_NO_EVICT</code> and stops building BO lists on submit (the <code>alwaysResident</code> checks in <code>AllocateOrPinMemory</code> and <code>OsSubmit</code>). If the problem goes away, look at memory residency (<a href="memory.html#residency">Topic 2</a>).</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/AlwaysResident">AlwaysResident</a>. Read at: <a data-ref="uc_always_resident_alloc"></a>, <a data-ref="uc_always_resident_submit"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-zero">
-          <h3>Zero new VRAM allocations (already the default here)</h3>
-          <p class="why">When results depend on stale memory contents.</p>
-<pre class="cfg"><code class="cfg">InitializeVramToZero,1</code></pre>
-          <p>XGL passes <code>initializeToZero</code> to PAL, which adds <code>AMDGPU_GEM_CREATE_VRAM_CLEARED</code> to VRAM allocations. The upstream kernel checked out here already sets that flag on every GEM create (its comment says "always clear VRAM"), so with this kernel new VRAM is zeroed either way and the setting changes nothing.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/InitializeVramToZero">InitializeVramToZero</a> (default true on Linux). Read at: <a data-ref="uc_init_vram"></a>, <a data-ref="uc_vram_cleared"></a>, <a data-ref="k_always_clear"></a></p>
-          
-        </section>
-
-      <h2 id="shaders">Shaders and pipelines</h2>
-        <section class="uc" id="uc-dump">
-          <h3>Dump every pipeline, its SPIR-V and the compiled code</h3>
-          <p class="why">When a shader looks miscompiled, or you want the ISA of a hot pipeline.</p>
-<pre class="cfg"><code class="cfg">EnablePipelineDump,1
-PipelineDumpDir,spvPipeline</code></pre>
-          <p>Every pipeline creation writes a <code class="nv">.pipe</code> file (the full <code>Vkgc</code> build info) and the SPIR-V of its shaders, named by pipeline hash. The README says the directory is relative to <code class="nv">$AMD_DEBUG_DIR</code>, <code class="nv">$TMPDIR</code> or <code class="nv">/var/tmp</code>. A .pipe file can be recompiled offline with LLPC's standalone <code class="nv">amdllpc</code> tool.</p>
-          <p class="setting-facts">Settings: <a href="reference.html#settings/EnablePipelineDump">EnablePipelineDump</a>, <a href="reference.html#settings/PipelineDumpDir">PipelineDumpDir</a>. Read at: <a data-ref="uc_pipeline_dump"></a>. See <a data-ref="readme_dump"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-replace">
-          <h3>Replace one shader without rebuilding the application</h3>
-          <p class="why">When you want to test a fix to a shader you can't easily rebuild.</p>
-<pre class="cfg"><code class="cfg">ShaderReplaceMode,1
-ShaderReplaceDir,ShaderReplace</code></pre>
-          <p>With mode 1 (<code>ShaderReplaceShaderHash</code>), for a shader whose hash is AAA, a file <code class="nv">shader_0xAAA_replace.spv</code> in the replacement directory is used instead of the original SPIR-V. Other modes replace by pipeline hash (2, 3), by ISA (4), or both (5). Get the hashes from a pipeline dump first.</p>
-          <p class="setting-facts">Settings: <a href="reference.html#settings/ShaderReplaceMode">ShaderReplaceMode</a>, <a href="reference.html#settings/ShaderReplaceDir">ShaderReplaceDir</a>. Read at: <a data-ref="uc_shader_replace"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-cache">
-          <h3>Measure cold compile times or rule out a stale cache</h3>
-          <p class="why">When first-run stutter matters, or a bug might come from a cached binary.</p>
-<pre class="cfg"><code class="cfg">ShaderCacheMode,0</code></pre>
-          <p>Mode 0 (<code>ShaderCacheDisable</code>) stops XGL from giving LLPC its internal cache adapter, so caches 3 and 4 on <a href="shaders.html#caching">the shaders page</a> stay empty. Mode 2 (<code>ShaderCacheEnableOnDisk</code>) persists the cache to disk instead.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/ShaderCacheMode">ShaderCacheMode</a>. Read at: <a data-ref="uc_shader_cache"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-ngg">
-          <h3>Compare NGG against the legacy geometry path (GFX10 only)</h3>
-          <p class="why">When a geometry-heavy workload behaves differently than expected on GFX10.</p>
-<pre class="cfg"><code class="cfg">EnableNgg,0</code></pre>
-          <p><code>EnableNgg</code> is a bitmask of pipeline types: VS/FS = 1, GS = 2, tessellation = 4, tessellation + GS = 8 (default 1 | 4). XGL sets <code>nggState.enableNgg</code> per pipeline from it. On GFX11 and later LGC enables NGG regardless (<a href="shaders.html#gfx">the shaders page</a>).</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/EnableNgg">EnableNgg</a>. Read at: <a data-ref="uc_ngg"></a></p>
-          
-        </section>
-
-      <h2 id="perf">Performance</h2>
-        <section class="uc" id="uc-cpu-bound">
-          <h3>Find out whether you are CPU-bound</h3>
-          <p class="why">When you need to know how fast the application would run with an infinitely fast GPU.</p>
-<pre class="cfg"><code class="cfg">IFH,1</code></pre>
-          <p>Infinitely Fast Hardware. With <code>IfhModePal</code> (1), PAL replaces every submitted command buffer with a dummy one, so the GPU does almost no work. If the frame rate hardly changes, the bottleneck is on the CPU. Mode 2 (<code>IfhModeKmd</code>) instead creates kernel contexts with <code>AMDGPU_CTX_FLAGS_IFH</code>; that flag comes from PAL's own extension header (<code class="nv">amdgpu_drm_exts.h</code>) and is not in the upstream kernel uAPI checked out here, so use mode 1 on upstream kernels.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/IFH">IFH</a>. Read at: <a data-ref="uc_ifh_dummy"></a>, <a data-ref="uc_ifh_ctx"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-profile">
-          <h3>Time every draw on the GPU</h3>
-          <p class="why">When you need per-draw or per-command-buffer GPU timings without an external profiler.</p>
-<pre class="cfg"><code class="cfg">GpuProfilerMode,1
-GpuProfilerConfig.Granularity,0
-GpuProfilerConfig.StartFrame,100
-GpuProfilerConfig.FrameCount,1</code></pre>
-          <p>PAL inserts its GpuProfiler layer between XGL and the core, which records timestamps around each command. Granularity 0 is per draw, 1 per command buffer, 2 per frame. The README describes the CSV output and a <code class="nv">timingReport.py</code> script that summarizes it. Modes 2 and 3 also capture thread traces.</p>
-          <p class="setting-facts">Settings: <a href="reference.html#settings/GpuProfilerMode">GpuProfilerMode</a>, <a href="reference.html#settings/GpuProfilerConfig.Granularity">GpuProfilerConfig.Granularity</a>, <a href="reference.html#settings/GpuProfilerConfig.StartFrame">GpuProfilerConfig.StartFrame</a>, <a href="reference.html#settings/GpuProfilerConfig.FrameCount">GpuProfilerConfig.FrameCount</a>. Read at: <a data-ref="uc_profiler"></a>. See <a data-ref="readme_profiler"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-overlay">
-          <h3>Watch frame times and memory per heap live</h3>
-          <p class="why">When you want an on-screen view of FPS, CPU and GPU frame time, and how much memory each heap holds.</p>
-<pre class="cfg"><code class="cfg">DebugOverlayEnabled,1</code></pre>
-          <p>PAL wraps its platform in the debug-overlay layer, which draws on presented images. The memory ledger maps directly onto the heaps on <a href="memory.html#heaps">the memory page</a>.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/DebugOverlayEnabled">DebugOverlayEnabled</a>. Read at: <a data-ref="uc_overlay"></a>. See <a data-ref="readme_overlay"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-upload">
-          <h3>Make CPU writes to GART memory write-combined</h3>
-          <p class="why">When an application maps a HOST_CACHED memory type only to stream data to the GPU.</p>
-<pre class="cfg"><code class="cfg">OverrideHeapGartCacheableToUswc,1</code></pre>
-          <p>XGL silently moves allocations from <code>GpuHeapGartCacheable</code> to <code>GpuHeapGartUswc</code>. CPU writes become write-combined and fast, but CPU reads from those mappings become very slow, so only use it for write-only uploads.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/OverrideHeapGartCacheableToUswc">OverrideHeapGartCacheableToUswc</a>. Read at: <a data-ref="uc_gart_override"></a></p>
-          
-        </section>
-        <section class="uc" id="uc-mapping">
-          <h3>Stop repeated map/unmap from costing mmap calls</h3>
-          <p class="why">When an application maps and unmaps the same memory every frame.</p>
-<pre class="cfg"><code class="cfg">SkipUnMapMemory,1</code></pre>
-          <p>XGL keeps the first CPU mapping and returns it on later <code>vkMapMemory</code> calls, avoiding a <code>DRM_AMDGPU_GEM_MMAP</code> plus <code>mmap</code> each time.</p>
-          <p class="setting-facts">Setting: <a href="reference.html#settings/SkipUnMapMemory">SkipUnMapMemory</a>. Read at: <a data-ref="uc_skip_unmap"></a></p>
-          
-        </section>
-
-      <div class="prose">
-      <h2 id="learning">Use cases for learning the codebase</h2>
-      <ul>
-        <li><b>Answer "what does this Vulkan call do in the driver?"</b> Find it in the
-          <a href="reference.html#entrypoints">entry-point table</a>; its first call takes you to the XGL method, and the
-          topic pages take it further down.</li>
-        <li><b>Answer "which ioctl does this end in?"</b> The <a href="reference.html#drmprocs">PAL → libdrm</a> tab maps
-          each libdrm function PAL calls to the ioctl its body issues and to the kernel handler.</li>
-        <li><b>Read an unfamiliar PM4 dump.</b> Look up the opcode byte in the <a href="reference.html#pm4">PM4 tab</a>,
-          then use the <a href="cmdbuf.html#pm4">packet widget</a> to decode a header.</li>
-        <li><b>Understand a compile-time difference between GPUs.</b> The <a href="reference.html#passes">compiler
-          passes</a> tab shows which LGC passes are conditional on the GFX level.</li>
-      </ul>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

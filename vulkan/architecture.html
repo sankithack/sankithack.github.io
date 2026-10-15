@@ -4,145 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Architecture &amp; loader entry – AMDVLK Driver Atlas</title>
-<meta name="description" content="How XGL, PAL and LLPC relate; how the Vulkan loader enters the AMDVLK ICD; dispatch tables and handle wrapping.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="architecture">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Architecture &amp; loader entry</h1>
-      <p class="lede">Three AMD libraries make up the driver, and each has one job. <b>XGL</b> speaks Vulkan. <b>PAL</b>
-        speaks GPU and OS. <b>LLPC</b> turns SPIR-V pipelines into machine code. This page shows how they connect and how
-        a Vulkan call enters them.</p>
-
-      <div class="prose">
-      <h2 id="roles">Who does what</h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Component</th><th>Repo / dir</th><th>Owns</th><th>Doesn't know about</th></tr></thead>
-        <tbody>
-          <tr><td><b>XGL</b></td><td><code class="nv">xgl/icd/api</code></td><td>Vulkan semantics: entry points, memory types,
-            render passes, descriptor sets, barriers in Vulkan terms, pipeline caches.</td><td>PM4, registers, ioctls.</td></tr>
-          <tr><td><b>PAL</b></td><td><code class="nv">pal/src/core</code></td><td>Hardware and OS: GPU memory, command
-            buffers as PM4, queues, fences. Per-generation HWLs in <code class="nv">hw/gfxip/gfx9</code> and
-            <code class="nv">hw/gfxip/gfx12</code>. OS backend in <code class="nv">os/amdgpu</code>.</td><td>Vulkan. PAL is
-            shared with other AMD drivers.</td></tr>
-          <tr><td><b>LLPC / LGC</b></td><td><code class="nv">llpc/llpc</code>, <code class="nv">llpc/lgc</code></td><td>SPIR-V →
-            LLVM IR → AMDGPU ELF with PAL metadata. Uses AMD's LLVM fork for codegen.</td><td>GPU memory or submission.
-            It returns bytes; XGL hands them to PAL.</td></tr>
-        </tbody>
-      </table></div>
-      <p>The dependency arrows only point one way. XGL calls PAL interfaces (<code>Pal::IDevice</code>,
-        <code>Pal::IGpuMemory</code>, <code>Pal::ICmdBuffer</code>, <code>Pal::IQueue</code>) and the LLPC interface
-        (<code>Llpc::ICompiler</code>). PAL calls libdrm. The two libraries never call each other: the only thing that
-        moves from LLPC to PAL is the ELF blob, and XGL carries it.</p>
-      </div>
-
-      <h2 id="trace">Step-through: from loader to PAL</h2>
-      <div data-flow="arch"></div>
-
-      <h2 id="example">Worked example: what happens when an app calls vkCmdDraw</h2>
-      <div class="example-walk">
-<pre class="example"><code class="language-c ex">PFN_vkCmdDraw pfnDraw = (PFN_vkCmdDraw)vkGetDeviceProcAddr(device, "vkCmdDraw");
-pfnDraw(cmd, 3, 1, 0, 0);   /* or plain vkCmdDraw(cmd, 3, 1, 0, 0) through the loader */</code></pre>
-        <ol>
-          <li><b>Lookup:</b> <code>vkGetDeviceProcAddr</code> uses the <em>device</em> dispatch table
-            (<a data-ref="ex_get_proc_device">vk_dispatch.cpp</a>). <code>GetEntryPoint</code> finds
-            <code>vkCmdDraw</code> in <code>g_EntryPointMetadataTable</code>, sees it is a DEVICE-level entry point, and
-            returns XGL's <code>vk::entry::vkCmdDraw</code>. Calling the returned pointer skips the loader's trampoline;
-            calling <code>vkCmdDraw</code> directly goes through the loader, which reads the dispatch pointer from the
-            first word of the <code>VkCommandBuffer</code>.</li>
-          <li><b>Handle to object:</b> <code>VkCommandBuffer</code> is dispatchable, so it points at a
-            <code>Dispatchable&lt;CmdBuffer&gt;</code>. <code>ApiCmdBuffer::ObjectFromHandle</code> skips the
-            <code>VK_LOADER_DATA</code> word to reach the <code>CmdBuffer</code> object
-            (<a data-ref="ex_dispatchable_offset">pointer arithmetic</a>).</li>
-          <li><b>XGL to PAL:</b> <code>CmdBuffer::Draw</code> calls <code>ICmdBuffer::CmdDraw</code> on the PAL command
-            buffer it owns, once per GPU in the device mask.</li>
-          <li><b>PAL to hardware layer:</b> the call jumps through <code>m_funcTable</code> into the GFX10/11 or GFX12
-            hardware layer chosen at device creation. <a href="cmdbuf.html">Topic 4</a> follows it down to PM4.</li>
-        </ol>
-        <p>Every arrow in this chain is a direct call or a table jump in user space. Nothing reaches the kernel until
-          <code>vkQueueSubmit</code>.</p>
-      </div>
-
-
-      <div class="prose">
-      <h2 id="loader">Loader entry and dispatch tables</h2>
-      <p>The Khronos loader reads <a data-ref="xgl_icd_json">amd-icd.json</a>, loads the library, and calls
-        <a data-ref="xgl_negotiate">vk_icdNegotiateLoaderICDInterfaceVersion</a>. XGL accepts interface versions 3 through 6.
-        From then on, every function pointer the loader hands the application comes from
-        <a data-ref="xgl_icd_gipa">vk_icdGetInstanceProcAddr</a>.</p>
-      <p>XGL keeps three kinds of <code>DispatchTable</code>. The <b>global</b> table, <code>g_GlobalDispatchTable</code>,
-        answers before an instance exists. Each <b>instance</b> has a table filtered by the enabled API version and
-        instance extensions, and each <b>device</b> has one filtered by device extensions. Every table is filled by the
-        same <a data-ref="xgl_dispatch_init">DispatchTable::Init</a>, which pairs each name with the internal
-        <code>vk::entry::</code> implementation.</p>
-
-      <h2 id="handles">Handles are pointers; the loader owns the first word</h2>
-      <p>For <b>dispatchable</b> handles (<code>VkInstance</code>, <code>VkPhysicalDevice</code>, <code>VkDevice</code>,
-        <code>VkQueue</code>, <code>VkCommandBuffer</code>), the loader writes its own dispatch pointer into the first
-        pointer-sized word of the object. XGL's <a data-ref="xgl_dispatchable">Dispatchable&lt;C&gt;</a> template reserves
-        that word as <code>VK_LOADER_DATA</code> (seeded with <code>ICD_LOADER_MAGIC</code>) and stores the real C++
-        object right after it. <code>ObjectFromHandle</code> converts a handle into a pointer to that object.</p>
-      <p><b>Non-dispatchable</b> handles (<code>VkDeviceMemory</code>, <code>VkBuffer</code>, <code>VkPipeline</code>…)
-        need no loader word. <a data-ref="xgl_nondispatchable">NonDispatchable&lt;&gt;</a> just casts the 64-bit handle
-        to a pointer.</p>
-
-      <h2 id="wrapping">XGL objects wrap PAL objects</h2>
-      <p>Almost every XGL object holds one PAL object per GPU in the device group, and PAL never allocates CPU memory
-        for API objects itself. XGL first asks PAL how big its object is (e.g. <code>GetGpuMemorySize</code>,
-        <code>GetFenceSize</code>, <code>GetCmdAllocatorSize</code>), then usually makes <em>one</em> allocation (semaphores are an exception and allocate the two separately) through the
-        application's <code>VkAllocationCallbacks</code> holding <code>[XGL object][PAL object × N GPUs]</code>, and
-        finally calls PAL's <code>Create*</code> with a placement address inside it.</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Vulkan handle</th><th>XGL class</th><th>PAL interface it owns</th></tr></thead>
-        <tbody>
-          <tr><td><code>VkInstance</code></td><td><code>Instance</code></td><td><code>Pal::IPlatform</code> (<a data-ref="xgl_create_platform">Pal::CreatePlatform</a>)</td></tr>
-          <tr><td><code>VkPhysicalDevice</code> / <code>VkDevice</code></td><td><code>PhysicalDevice</code> / <code>Device</code></td><td><code>Pal::IDevice</code> (<a data-ref="xgl_paldevice">Device::PalDevice</a>)</td></tr>
-          <tr><td><code>VkDeviceMemory</code></td><td><code>Memory</code></td><td><code>Pal::IGpuMemory</code></td></tr>
-          <tr><td><code>VkCommandPool</code> / <code>VkCommandBuffer</code></td><td><code>CmdPool</code> / <code>CmdBuffer</code></td><td><code>Pal::ICmdAllocator</code> / <code>Pal::ICmdBuffer</code></td></tr>
-          <tr><td><code>VkQueue</code></td><td><code>Queue</code></td><td><code>Pal::IQueue</code></td></tr>
-          <tr><td><code>VkPipeline</code></td><td><code>GraphicsPipeline</code> / <code>ComputePipeline</code></td><td><code>Pal::IPipeline</code></td></tr>
-          <tr><td><code>VkFence</code> / <code>VkSemaphore</code></td><td><code>Fence</code> / <code>Semaphore</code></td><td><code>Pal::IFence</code> / <code>Pal::IQueueSemaphore</code></td></tr>
-        </tbody>
-      </table></div>
-
-      <h2 id="hwl">PAL picks a hardware layer and an OS layer</h2>
-      <p>Inside PAL, the generic <code>Pal::Device</code> creates a <code>GfxDevice</code> for the detected GFX IP
-        (<a data-ref="pal_hwl_select">device.cpp</a>). On Linux, the OS-specific object is an <code>Amdgpu::Device</code>
-        that talks to libdrm through a table of <code>dlsym</code>'d function pointers:</p>
-      <div data-panel="drm-loader"></div>
-
-      <h2 id="llpc">Where LLPC is invoked</h2>
-      <p>Each <code>PhysicalDevice</code> has a <code>PipelineCompiler</code>. During initialization it converts PAL's
-        <code>GfxIpLevel</code> into a <code>Vkgc::GfxIpVersion</code> and creates the <code>Llpc::ICompiler</code>
-        (<a data-ref="xgl_llpc_create">compiler_solution_llpc.cpp</a>). After that, LLPC is called from exactly two
-        places: <code>BuildShaderModule</code> (shader module creation) and
-        <code>BuildGraphicsPipeline</code>/<code>BuildComputePipeline</code> (pipeline creation, on a cache miss). See
-        <a href="shaders.html">Topic 3</a>.</p>
-
-      <h2 id="gfx">Which GPU generations?</h2>
-      <p>The pinned PAL enumerates only GFX10.1 and newer for current clients:</p>
-      <div data-panel="gfxip-enum"></div>
-      <div data-panel="llpc-gfx10-only"></div>
-      <p>GFX9 (Vega) support was removed from these final AMDVLK sources. The AMDVLK README says
-        <em>“For Pre-GFX10 GPUs, please use v-2023.Q3.3 or older release.”</em> Everything on this site therefore
-        describes GFX10, GFX11 and GFX12.</p>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

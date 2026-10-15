@@ -4,179 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shader compilation – AMDVLK Driver Atlas</title>
-<meta name="description" content="VkShaderModule and pipeline creation in XGL, handoff to LLPC, SPIR-V to LLVM IR, LGC lowering, the AMDGPU backend, the PAL ELF, caching and GFX-level differences.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="shaders">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Shader compilation</h1>
-      <p class="lede">AMDVLK compiles <em>pipelines</em>, not shaders. A shader module is only hashed and preprocessed;
-        when a pipeline is created, LLPC translates each stage's SPIR-V to LLVM IR, links the stages into one module,
-        lowers it with full knowledge of the pipeline state, and has LLVM emit a single ELF that PAL loads.</p>
-
-      <div class="prose">
-      <h2 id="overview">The pipeline in one picture</h2>
-      <ol class="path">
-        <li><b>XGL</b>: <code>vkCreateShaderModule</code> → <code>PipelineCompiler::BuildShaderModule</code> → LLPC
-          <code>BuildShaderModule</code>, which hashes the SPIR-V and records usage. No ISA is produced yet.</li>
-        <li><b>XGL</b>: <code>vkCreateGraphicsPipelines</code> → cache lookups → <code>ConvertGraphicsPipelineInfo</code>
-          builds a <code>Vkgc::GraphicsPipelineBuildInfo</code> from all the Vulkan state.</li>
-        <li><b>LLPC front end</b>: per stage, <code>LowerTranslator</code> → SPIRV reader (<code>SPIRVToLLVM</code>)
-          → front-end lowering passes. The stages are then linked into one pipeline module.</li>
-        <li><b>LGC middle end</b>: <code>PipelineState::generate</code> → <code>LgcLowering::addPasses</code>:
-          state-dependent lowering, hardware stage mapping, NGG.</li>
-        <li><b>LLVM AMDGPU backend</b>: <code>addPassesToEmitFile</code> on target <code>amdgcn--amdpal</code> with
-          CPU <code class="nv">gfx10xx</code>/<code class="nv">gfx11xx</code>/<code class="nv">gfx12xx</code>. It produces ISA plus a PAL metadata note,
-          packaged as an ELF.</li>
-        <li><b>PAL</b>: <code>IDevice::CreateGraphicsPipeline</code> reads the ELF with <code>PipelineAbiReader</code>,
-          uploads code with <code>CodeObjectUploader</code>, and turns the metadata into register state.</li>
-      </ol>
-      </div>
-
-      <h2 id="trace">Step-through: shader module → pipeline → ELF → PAL</h2>
-      <div data-flow="shaders"></div>
-
-      <h2 id="example">Worked example: the same pipeline, created twice</h2>
-      <div class="example-walk">
-<pre class="example"><code class="language-c ex">VkGraphicsPipelineCreateInfo info = {
-    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    .stageCount = 2, .pStages = stages,             /* vertex + fragment SPIR-V */
-    .pVertexInputState = &amp;vertexInput,             /* binding 0: R32G32B32_SFLOAT position */
-    .pColorBlendState = &amp;blend, .layout = layout,  /* render target: B8G8R8A8_UNORM */
-    /* ... */ };
-vkCreateGraphicsPipelines(device, cache, 1, &amp;info, NULL, &amp;pipeA);
-vkCreateGraphicsPipelines(device, cache, 1, &amp;info, NULL, &amp;pipeB);   /* identical */</code></pre>
-        <h3>First creation: everything misses</h3>
-        <ol>
-          <li><b>Cache lookups:</b> the shader modules were hashed at <code>vkCreateShaderModule</code>.
-            <code>GetCachedPipelineBinary</code> misses in <code>cache</code> and in XGL's internal binary cache.</li>
-          <li><b>State capture:</b> <code>ConvertGraphicsPipelineInfo</code> records, among other things, the vertex
-            format (<a data-ref="ex_vertex_input">BuildVertexInputInterfaceState</a>), the colour format and blend
-            (<a data-ref="ex_frag_output">BuildFragmentOutputInterfaceState</a>) and the descriptor layout
-            (<a data-ref="ex_resource_mapping">BuildPipelineResourceMapping</a>).</li>
-          <li><b>LLPC:</b> each stage's SPIR-V becomes LLVM IR, the two modules are linked, and LGC lowers them. The state
-            above is consumed here: <a data-ref="ex_lower_vertex_fetch">LowerVertexFetch</a> generates loads that
-            unpack three floats, <a data-ref="ex_lower_color_export">LowerFragmentColorExport</a> converts the output to
-            the B8G8R8A8 export format, and <a data-ref="ex_lower_desc">LowerDesc</a> turns resource accesses into loads
-            relative to user-data pointers.</li>
-          <li><b>Codegen:</b> on a GFX11 GPU the target is <code>gfx1100</code> (for example), NGG is forced on, and the
-            vertex shader becomes part of an NGG primitive shader. LLVM emits ISA plus PAL metadata into one ELF.</li>
-          <li><b>PAL:</b> the ELF is uploaded to GPU memory and the register values are prepared. On a cache-enabled
-            device the ELF is also stored in the caches.</li>
-        </ol>
-        <h3>Second creation: one lookup</h3>
-        <p>The cache ID is the same, so <code>GetCachedPipelineBinary</code> hits (in <code>cache</code> if the app passed
-          one, otherwise in XGL's internal cache) and LLPC is never called. Only the PAL pipeline object is created again
-          from the cached ELF.</p>
-        <h3>What a different state would do</h3>
-        <p>Change the render-target format to R16G16B16A16_SFLOAT and the colour export code changes, so it is a new
-          pipeline compile. LGC's per-stage cache (<code>CheckShaderCache</code>) is designed to let the unchanged vertex stage be
-          reused.</p>
-      </div>
-
-
-      <div class="prose">
-      <h2 id="spirv">SPIR-V → LLVM IR</h2>
-      <p><a data-ref="llpc_lowertranslator">LowerTranslator</a> is an LLVM module pass that runs the SPIRV reader on one
-        shader stage. Before translating, it optionally runs a SPIR-V optimizer and builds the specialization-constant
-        map from <code>VkSpecializationInfo</code>. <a data-ref="llpc_readspirv">llvm::readSpirv</a> parses the binary into
-        a <code>SPIRVModule</code>, and <code>SPIRVToLLVM::translate</code> picks the requested entry point and emits
-        IR. The translator is constructed with an <code>lgc::Builder</code>, so resource and built-in operations become
-        LGC operations that are resolved later, not raw hardware intrinsics.</p>
-      <p>Front-end lowering (<a data-ref="llpc_lowering_addpasses">Lowering::addPasses</a>) then cleans up SPIR-V
-        constructs: CFG merges, aggressive inlining, access chains, terminators, globals, memory operations, math
-        precision. Once every stage is lowered, the per-stage modules are linked into one pipeline module.</p>
-
-      <h2 id="lgc">LGC: pipeline-state-dependent lowering</h2>
-      <p>LGC receives the pipeline state that XGL converted (vertex input formats, color target formats and blend,
-        descriptor layout as user-data nodes, GFX IP, options) through <code>setPipelineState</code>. Its pass list
-        (<a data-ref="lgc_addpasses">LgcLowering::addPasses</a>) is where that state is consumed:</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Pass</th><th>Needs which pipeline state</th></tr></thead>
-        <tbody>
-          <tr><td><code>LowerVertexFetch</code></td><td>Vertex binding/attribute formats and strides, to generate fetch code for VS inputs.</td></tr>
-          <tr><td><code>LowerFragmentColorExport</code></td><td>Color attachment formats and blend, to pick export formats and conversions.</td></tr>
-          <tr><td><code>LowerDesc</code></td><td>Descriptor layout (resource mapping), to turn descriptor accesses into loads from user data/descriptor tables.</td></tr>
-          <tr><td><code>LowerInOut</code></td><td>Which stages exist and how they are merged, to lower inter-stage I/O.</td></tr>
-          <tr><td><code>PreparePipelineAbi</code></td><td>Which stages exist, to merge API stages into hardware stages and lay out the PAL ABI.</td></tr>
-          <tr><td><code>CheckShaderCache</code></td><td>Runs after <code>CollectResourceUsage</code>, so a stage can be skipped if an identical one was already compiled.</td></tr>
-        </tbody>
-      </table></div>
-
-      <h2 id="caching">Where caching happens</h2>
-      <p>Pipeline creation tries four lookups, roughly from cheapest to most expensive to miss:</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Cache</th><th>Key</th><th>Code</th></tr></thead>
-        <tbody>
-          <tr><td>1</td><td>XGL shader-module cache (in-memory map, then the internal binary cache)</td><td>hash of SPIR-V</td>
-            <td><a data-ref="xgl_load_module_cache">LoadShaderModuleFromCache</a></td></tr>
-          <tr><td>2</td><td>XGL pipeline-binary cache: the app's <code>VkPipelineCache</code> first, then XGL's internal
-            <code>PipelineBinaryCache</code></td><td>pipeline cache ID (MetroHash of create info)</td>
-            <td><a data-ref="xgl_get_cached_pipeline">GetCachedPipelineBinary</a></td></tr>
-          <tr><td>3</td><td>LLPC whole-pipeline cache (<code>CacheFullPipelines</code>, on by default)</td><td>LLPC <code>cacheHash</code></td>
-            <td><a data-ref="llpc_cache_full">BuildGraphicsPipeline</a></td></tr>
-          <tr><td>4</td><td>LGC per-stage cache (<code>EnablePerStageCache</code>, on by default)</td><td>per-stage hash</td>
-            <td><code>CheckShaderCache</code> pass</td></tr>
-        </tbody>
-      </table></div>
-      <p>LLPC's "internal" caches are XGL's <code>PipelineBinaryCache</code> exposed through a <code>Vkgc::ICache</code>
-        adapter (<a data-ref="xgl_cache_adapter">GetCacheAdapter</a>), unless the <code>shaderCacheMode</code> setting
-        disables it. The AMDVLK README documents on-disk caching under <code class="nv">~/.cache/AMD/VkCache</code>
-        (setting <code>AllowVkPipelineCachingToDisk</code>). PAL's archive-file layer behind that is
-        <span class="not-traced">not traced</span> here.</p>
-
-      <h2 id="backend">AMDGPU backend → ELF → PAL</h2>
-      <p>LGC creates an LLVM <code>TargetMachine</code> for triple <code>amdgcn--amdpal</code> with a CPU name derived
-        from the GFX IP (<a data-ref="lgc_gpuname">getGpuNameString</a>: {11,0,0} → <code>gfx1100</code>) and calls
-        <code>addPassesToEmitFile</code>. Inside LLVM, <a data-ref="llvm_emit_palmd">AMDGPUAsmPrinter::EmitPALMetadata</a>
-        records each hardware stage's entry symbol and register usage into <code>AMDGPUPALMetadata</code>, which is
-        written as a MsgPack note (<a data-ref="llvm_palmd_blob">toBlob</a>). The instruction selection, register
-        allocation and scheduling that produce the ISA are standard LLVM codegen and are
-        <span class="not-traced">not traced</span> on this site.</p>
-      <p>PAL never interprets the ISA. <a data-ref="pal_abireader_init">PipelineAbiReader</a> finds the symbols and
-        metadata; <code>CodeObjectUploader</code> copies the code into GPU memory and applies relocations; the HWL
-        (<a data-ref="pal_gfx9_hwlinit">Gfx9</a> / <a data-ref="pal_gfx12_hwlinit">Gfx12</a>
-        <code>GraphicsPipeline::HwlInit</code>) builds the register values it will later write with SET_SH_REG /
-        SET_CONTEXT_REG when the pipeline is bound.</p>
-      <div data-panel="llvm-processors"></div>
-
-      <h2 id="gfx">How the GFX IP level changes the output</h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Aspect</th><th>GFX10 (10.1, 10.3)</th><th>GFX11 (11.0, 11.5)</th><th>GFX12</th><th>Where</th></tr></thead>
-        <tbody>
-          <tr><td>LLVM CPU</td><td><code>gfx1010</code>…<code>gfx1036</code></td><td><code>gfx1100</code>…<code>gfx1151</code></td><td><code>gfx1201</code></td>
-            <td><a data-ref="lgc_gpunamemap">GpuNameMap</a></td></tr>
-          <tr><td>NGG (primitive shaders)</td><td>on unless <code>NggFlagDisable</code></td><td><b>mandatory</b></td><td><b>mandatory</b></td>
-            <td><a data-ref="lgc_ngg">LgcLowering</a></td></tr>
-          <tr><td>Extra LGC passes</td><td>—</td><td><code>CollectImageOperations</code></td><td><code>CollectImageOperations</code>, <code>AddBufferOperationMetadata</code></td>
-            <td><a data-ref="lgc_collect_image_ops">≥ 11</a>, <a data-ref="lgc_buffer_md">≥ 12</a></td></tr>
-          <tr><td>Buffer format encodings</td><td>e.g. <code>BUF_FORMAT_32_32_32_32_FLOAT_GFX10</code></td><td colspan="2">e.g. <code>BUF_FORMAT_32_32_32_32_FLOAT_GFX11</code></td>
-            <td><a data-ref="lgc_buf_format">PreparePipelineAbi</a></td></tr>
-          <tr><td>PAL HWL that loads it</td><td colspan="2"><code>Gfx9::GraphicsPipeline</code> (dir <code class="nv">hw/gfxip/gfx9</code>)</td><td><code>Gfx12::GraphicsPipeline</code></td>
-            <td><a data-ref="pal_hwl_select">HWL selection</a></td></tr>
-          <tr><td>GFX9 (Vega)</td><td colspan="3">Not supported by these sources: LLPC asserts <code>gfxIp.major &gt;= 10</code>; no <code>GfxIp9</code> for current PAL clients.</td>
-            <td><a data-ref="llpc_gfx10_assert">ICompiler::Create</a></td></tr>
-        </tbody>
-      </table></div>
-      <p>Beyond these switches, most generation differences sit inside the LLVM backend (instruction encodings and
-        scheduling models such as <code>GFX12SpeedModel</code>) and are not traced here.</p>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

@@ -4,177 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Memory allocation – AMDVLK Driver Atlas</title>
-<meta name="description" content="vkAllocateMemory traced through XGL, PAL's IGpuMemory, libdrm and the amdgpu GEM ioctls: heaps, VA vs. backing, residency, mapping.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="memory">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Memory allocation</h1>
-      <p class="lede"><code>vkAllocateMemory</code> runs through every software layer: XGL picks a PAL heap, PAL reserves
-        a GPU virtual address, creates a buffer object in the kernel and maps it at that address, and XGL marks the
-        memory resident for every future submission.</p>
-
-      <div class="prose">
-      <h2 id="three-ops">Virtual address vs. physical backing: three separate operations</h2>
-      <p>On amdgpu, a usable allocation is the result of three independent steps, and PAL performs them separately in
-        <a data-ref="pal_allocorpin">Amdgpu::GpuMemory::AllocateOrPinMemory</a>:</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>What</th><th>PAL call</th><th>libdrm</th><th>Kernel</th></tr></thead>
-        <tbody>
-          <tr><td>A</td><td><b>Reserve a GPU VA range</b></td><td><code>AssignVirtualAddress</code></td>
-            <td><a data-ref="drm_va_range_alloc">amdgpu_va_range_alloc</a></td><td><b>none.</b> The VA allocator lives in
-            user space (<code>dev-&gt;va_mgr</code>).</td></tr>
-          <tr><td>B</td><td><b>Create physical backing</b> (a BO in VRAM or GTT)</td><td><code>AllocBuffer</code></td>
-            <td><a data-ref="drm_bo_alloc">amdgpu_bo_alloc</a></td><td><code>DRM_AMDGPU_GEM_CREATE</code> →
-            <a data-ref="k_gem_create">amdgpu_gem_create_ioctl</a></td></tr>
-          <tr><td>C</td><td><b>Map B at A</b> in the process's GPU page tables</td><td><code>MapVirtualAddress</code></td>
-            <td><a data-ref="drm_va_op_raw">amdgpu_bo_va_op_raw</a></td><td><code>DRM_AMDGPU_GEM_VA</code> →
-            <a data-ref="k_gem_va">amdgpu_gem_va_ioctl</a> → <code>amdgpu_vm_bo_map</code></td></tr>
-        </tbody>
-      </table></div>
-      <p>Keeping them separate is what makes <b>virtual (sparse/PRT) allocations</b> cheap. For memory created with
-        <code>flags.virtualAlloc</code>, PAL does step A and then only reserves the range as PRT
-        (<a data-ref="pal_reserve_prt">Device::ReservePrtVaRange</a>), with no backing. Sparse binding later maps real
-        BOs into pieces of that range. A <code>VkBuffer</code> or <code>VkImage</code> bound to ordinary memory gets
-        no VA of its own. Its address is the memory's VA plus the bind offset (<a data-ref="xgl_buffer_bind_va">Buffer bind</a>).</p>
-      </div>
-
-      <h2 id="trace">Step-through: vkAllocateMemory → kernel</h2>
-      <div data-flow="memory"></div>
-
-      <h2 id="example">Worked examples: three allocations</h2>
-      <div class="example-walk">
-        <h3>1. A 64 MiB upload buffer the CPU writes every frame</h3>
-<pre class="example"><code class="language-c ex">VkMemoryAllocateInfo info = {
-    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, .allocationSize = 64u &lt;&lt; 20,
-    .memoryTypeIndex = typeWith(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) };
-vkAllocateMemory(device, &amp;info, NULL, &amp;mem);
-vkMapMemory(device, mem, 0, VK_WHOLE_SIZE, 0, &amp;ptr);</code></pre>
-        <p>(<code class="nv">typeWith</code> stands for the usual "first memory type with these flags" loop.)</p>
-        <ol>
-          <li><b>Which type?</b> On a discrete GPU without Resizable BAR, XGL's <a data-ref="ex_heap_priority">priority
-            order</a> puts the GartUswc type second, after the device-local Invisible type, so the first
-            HOST_VISIBLE | HOST_COHERENT match is <code>GpuHeapGartUswc</code>.</li>
-          <li><b>VA:</b> PAL reserves 64 MiB of GPU virtual address space in the default partition
-            (<a data-ref="ex_va_partition">ChooseVaPartition</a>); libdrm hands it out in user space.</li>
-          <li><b>Backing:</b> <code>AMDGPU_GEM_CREATE</code> with domain GTT and <code>AMDGPU_GEM_CREATE_CPU_GTT_USWC</code>.
-            For memory private to the process, and when the kernel supports it, PAL adds <code>AMDGPU_GEM_CREATE_VM_ALWAYS_VALID</code>.</li>
-          <li><b>Map:</b> <code>AMDGPU_GEM_VA</code> maps the BO at the VA. That is the second and last ioctl for the
-            allocation.</li>
-          <li><b>Residency:</b> XGL calls <code>AddMemReference</code>, but because the BO is always-valid, the per-queue
-            reference maps skip it and it never appears in a BO list.</li>
-          <li><b>CPU map:</b> <code>vkMapMemory</code> passes PAL's CPU-visible check, then libdrm does one
-            <code>AMDGPU_GEM_MMAP</code> ioctl and an <code>mmap</code>. CPU writes through the pointer are
-            write-combined (fast); reads through it are very slow.</li>
-        </ol>
-        <h3>2. A 256 MiB device-local image heap</h3>
-        <ol>
-          <li>The first DEVICE_LOCAL type is the Invisible type, so <code>heaps[0]</code> = <code>GpuHeapInvisible</code>.</li>
-          <li><code>AMDGPU_GEM_CREATE</code> with domain VRAM and <code>AMDGPU_GEM_CREATE_NO_CPU_ACCESS</code>: the kernel may
-            place it outside the CPU-visible BAR window.</li>
-          <li>Calling <code>vkMapMemory</code> on it (which the Vulkan spec forbids anyway) reaches PAL's
-            <code>ErrorNotMappable</code> branch and returns <code>VK_ERROR_MEMORY_MAP_FAILED</code>
-            (<a data-ref="ex_mem_map_failed">vk_memory.cpp</a>).</li>
-        </ol>
-        <h3>3. The same requests on a Resizable BAR system</h3>
-        <ol>
-          <li>PAL reports an Invisible heap of size 0. XGL still exposes the device-local type, but routes it to
-            <code>GpuHeapLocal</code>.</li>
-          <li>PAL's amdgpu layer gives Invisible the same domain and flags as Local, so all VRAM is CPU-mappable.</li>
-        </ol>
-      </div>
-
-
-      <div class="prose">
-      <h2 id="heaps">How heaps and memory types are derived</h2>
-      <p>PAL describes memory as four <b>heaps</b>. The kernel has two <b>domains</b>. Vulkan exposes <b>memory heaps</b>
-        and <b>memory types</b>. The table connects them, using PAL's default heap flags
-        (<a data-ref="pal_heap_props">Device::InitMemoryHeapProperties</a>), XGL's conversion
-        (<a data-ref="xgl_memtypes">PhysicalDevice memory-type setup</a>) and PAL's amdgpu translation
-        (<a data-ref="pal_heap_domain">heapToDomain / heapToFlags</a>):</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>PAL heap</th><th>PAL heap flags (default)</th><th>Vulkan memory type flags</th><th>Vulkan heap</th><th>Kernel domain + create flags</th></tr></thead>
-        <tbody>
-          <tr><td><code>GpuHeapInvisible</code></td><td>cpuUncached</td><td>DEVICE_LOCAL</td><td>VRAM (DEVICE_LOCAL)</td>
-            <td><code>AMDGPU_GEM_DOMAIN_VRAM</code> + <code>AMDGPU_GEM_CREATE_NO_CPU_ACCESS</code></td></tr>
-          <tr><td><code>GpuHeapLocal</code></td><td>cpuVisible, cpuGpuCoherent, cpuUncached, cpuWriteCombined</td>
-            <td>DEVICE_LOCAL | HOST_VISIBLE | HOST_COHERENT</td><td>CPU-visible VRAM (DEVICE_LOCAL)</td>
-            <td><code>AMDGPU_GEM_DOMAIN_VRAM</code> + <code>AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED</code> | <code>AMDGPU_GEM_CREATE_CPU_GTT_USWC</code></td></tr>
-          <tr><td><code>GpuHeapGartUswc</code></td><td>cpuVisible, cpuGpuCoherent, cpuUncached, cpuWriteCombined</td>
-            <td>HOST_VISIBLE | HOST_COHERENT</td><td>system memory</td>
-            <td><code>AMDGPU_GEM_DOMAIN_GTT</code> + <code>AMDGPU_GEM_CREATE_CPU_GTT_USWC</code></td></tr>
-          <tr><td><code>GpuHeapGartCacheable</code></td><td>cpuVisible, cpuGpuCoherent</td>
-            <td>HOST_VISIBLE | HOST_COHERENT | HOST_CACHED</td><td><em>shares the GartUswc heap</em></td>
-            <td><code>AMDGPU_GEM_DOMAIN_GTT</code>, no extra flag (CPU-cached)</td></tr>
-        </tbody>
-      </table></div>
-      <ul>
-        <li><b>Order matters.</b> XGL creates heaps and types in the fixed priority order Invisible, GartUswc, Local,
-          GartCacheable, so memory type indices follow that order on a typical discrete GPU.</li>
-        <li><b>Heap flags.</b> <a data-ref="xgl_heapflags">PalGpuHeapToVkMemoryHeapFlags</a> marks Local and Invisible
-          as <code>VK_MEMORY_HEAP_DEVICE_LOCAL_BIT</code>.</li>
-        <li><b>Resizable BAR.</b> When PAL reports an Invisible heap of size 0 (all VRAM CPU-visible), XGL routes the
-          Invisible memory type to <code>GpuHeapLocal</code>, and PAL's amdgpu layer treats Invisible like Local.</li>
-        <li><b>“Local” vs. “Invisible” is only a hint to the kernel.</b> Both are VRAM. The
-          <code>CPU_ACCESS_REQUIRED</code>/<code>NO_CPU_ACCESS</code> flags steer placement inside or outside the
-          CPU-visible BAR window, and the PAL comment notes the kernel may change this at runtime.</li>
-        <li>Device-coherent types for <code>VK_AMD_device_coherent_memory</code> are added as extra types when the
-          GPU supports GL2-uncached access (<code>supportGl2Uncached</code>).</li>
-      </ul>
-
-      <h2 id="residency">Residency, memory references and the BO list</h2>
-      <p>On amdgpu, a BO that the GPU will touch must either appear in the submission's <b>BO list</b> or be
-        <b>VM-always-valid</b>. The kernel uses the list to validate (and, if needed, move back) every BO before running
-        the job. Vulkan has no residency API, so XGL takes the simplest correct route:</p>
-      <ol>
-        <li><a data-ref="xgl_addmemref">Device::AddMemReference</a> is called for <b>every</b> allocation. It calls
-          <code>IDevice::AddGpuMemoryReferences</code> with <code>pQueue = nullptr</code>, meaning "device-global".</li>
-        <li><a data-ref="pal_dev_addrefs">Amdgpu::Device::AddGpuMemoryReferences</a> adds the memory to every queue's
-          <code>m_globalRefMap</code>. Memory created <code>VM_ALWAYS_VALID</code> is
-          <a data-ref="pal_queue_skip_always_valid">skipped</a>, because the kernel keeps it valid in the process VM.</li>
-        <li>At submit time <a data-ref="pal_update_reslist">Queue::UpdateResourceList</a> turns the map into the BO list
-          passed with the CS ioctl (see <a href="submit.html#bo-list">Topic 5</a>).</li>
-      </ol>
-      <p>PAL requests <a data-ref="pal_vm_always_valid">AMDGPU_GEM_CREATE_VM_ALWAYS_VALID</a> when the kernel supports it
-        and the memory is private to the process (not shareable, not exported, not flippable, not peer-writable). Those
-        BOs share the VM root's reservation object (<a data-ref="k_gem_create_always_valid">kernel side</a>), so they never need
-        to appear in the BO list.</p>
-
-      <h2 id="mapping">Mapping host-visible memory</h2>
-      <p><code>vkMapMemory</code> → <code>Memory::Map</code> → <code>IGpuMemory::Map</code>. PAL refuses virtual memory and
-        anything not CPU-visible (<code>ErrorNotMappable</code>), which is why Invisible-heap memory types lack
-        HOST_VISIBLE. For a mappable BO, libdrm's <a data-ref="drm_bo_cpu_map">amdgpu_bo_cpu_map</a> asks the kernel
-        (<code>DRM_AMDGPU_GEM_MMAP</code>) for the BO's fake mmap offset and then calls <code>mmap</code> on the DRM file
-        descriptor. CPU accesses to VRAM pages go through the PCIe BAR; GTT pages are ordinary system pages, either
-        write-combined (USWC) or cached. How the kernel services the resulting page faults (TTM) is
-        <span class="not-traced">not traced</span>.</p>
-      <p>Mappings are reference-counted inside libdrm per BO. XGL can keep a mapping alive for the object's lifetime
-        with the <code>skipUnMapMemory</code> setting.</p>
-
-      <h2 id="not-traced">Not traced on this page</h2>
-      <ul>
-        <li>TTM placement, eviction and the VRAM → GTT fallback inside <code>amdgpu_bo_create</code>.</li>
-        <li>Page-table writing in <code>amdgpu_gem_va_update_vm</code> / <code>amdgpu_vm_bo_update</code>.</li>
-        <li>Imported/exported memory (<code>OpenExternalMemory</code>, dma-buf) and pinned host memory
-          (<code>CreateGpuPinnedMemory</code> → <code>PinMemory</code>) are only mentioned, not stepped through.</li>
-      </ul>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

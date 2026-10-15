@@ -4,117 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Descriptor sets – AMDVLK Driver Atlas</title>
-<meta name="description" content="How vkUpdateDescriptorSets writes hardware descriptors (SRDs) into CPU-mapped GPU memory and how bound sets reach shader registers in AMDVLK.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="descriptors">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Descriptor sets</h1>
-      <p class="lede">A descriptor set is a block of GPU memory full of hardware descriptors (SRDs). XGL writes those
-        bytes from the CPU, puts the set's address into a few shader registers when you bind it, and the compiled shader
-        loads descriptors from that address. This page follows one uniform buffer from layout to ISA.</p>
-
-      <div class="prose">
-      <h2 id="model">The model in four sentences</h2>
-      <ol>
-        <li><b>Layout:</b> each binding gets a fixed size and offset inside the set's memory, from PAL's SRD sizes
-          (<a data-ref="ds_layout_create">DescriptorSetLayout::Create</a>).</li>
-        <li><b>Pool and allocation:</b> a pool is one CPU-mapped GPU allocation, and allocating a set reserves a range of it.</li>
-        <li><b>Update:</b> writing a descriptor is a CPU store of 16 or 32 bytes into that range. No command, no ioctl.</li>
-        <li><b>Bind and use:</b> binding records the set's GPU address as user data. At draw time PAL writes it into the
-          shader's user SGPRs, and the shader loads SRDs relative to it.</li>
-      </ol>
-      </div>
-
-      <h2 id="trace">Step-through: layout → pool → update → bind → shader load</h2>
-      <div data-flow="descriptors"></div>
-
-      <h2 id="srd">Build a buffer SRD</h2>
-      <div class="prose">
-      <p>This is the descriptor <code>vkUpdateDescriptorSets</code> writes for a <code>VK_DESCRIPTOR_TYPE_STORAGE_BUFFER</code>
-        on GFX10/11. The fields and constants are the ones PAL's <code>CreateUntypedBufferViewSrds</code> uses. Change
-        the address, range or stride and watch the four DWORDs change.</p>
-      </div>
-      <div class="pm4" id="srd-widget"></div>
-
-      <h2 id="example">Worked example: one uniform buffer, end to end</h2>
-      <div class="example-walk">
-        <p>An application has a 256-byte uniform block at offset 512 of a buffer, bound as set 0, binding 0, and a
-          fragment shader that reads it.</p>
-<pre class="example"><code class="language-c ex">VkDescriptorSetLayoutBinding binding = {
-    .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT };
-/* ... vkCreateDescriptorSetLayout, vkCreateDescriptorPool, vkAllocateDescriptorSets ... */
-VkDescriptorBufferInfo info = { .buffer = ubo, .offset = 512, .range = 256 };
-VkWriteDescriptorSet write = {
-    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = set, .dstBinding = 0,
-    .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .pBufferInfo = &amp;info };
-vkUpdateDescriptorSets(device, 1, &amp;write, 0, NULL);
-vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &amp;set, 0, NULL);
-vkCmdDraw(cmd, 3, 1, 0, 0);</code></pre>
-        <h3>What the driver does</h3>
-        <ol>
-          <li><b>Layout:</b> binding 0 is a uniform buffer, so its static size is <code>untypedBufferView</code>
-            (a 16-byte <code>BufferSrd</code> on GFX10/11). The set's static section is 4 DWORDs.</li>
-          <li><b>Allocate:</b> the pool's bump allocator returns an aligned offset; the set's CPU and GPU addresses are
-            the pool's base plus that offset.</li>
-          <li><b>Update:</b> <code>WriteBufferInfoDescriptors</code> computes <code>gpuAddr</code> = buffer VA + 512 and
-            range 256, then PAL encodes the SRD straight into the set's memory. Put the buffer's address plus 512 into
-            the SRD builder above, with range 256: DW2 is <code>0x00000100</code> and DW3 is the fixed raw-buffer
-            pattern.</li>
-          <li><b>Bind:</b> the set's GPU address goes into <code>setBindingData</code> and, through
-            <code>CmdSetUserData</code>, into PAL's user-data entries at the pipeline layout's
-            <code>setBindingRegBase</code>. No PM4 is written yet.</li>
-          <li><b>Draw:</b> <code>ValidateDraw</code> finds the entries dirty and emits a <code>SET_SH_REG</code> that puts
-            the pointer into the pixel shader's user SGPRs (<code>WriteUserDataEntriesToSgprs</code>), then the
-            <code>DRAW_INDEX_AUTO</code> from <a href="cmdbuf.html#pm4">Topic 4</a>.</li>
-          <li><b>Shader:</b> when the pipeline was compiled, LGC's <code>LowerDesc</code> turned the uniform-block access
-            into "load 4 DWORDs at (descriptor table pointer + binding offset)", using the resource mapping XGL built
-            from the same pipeline layout (<a data-ref="ex_resource_mapping">BuildPipelineResourceMapping</a>).</li>
-        </ol>
-        <h3>Variations</h3>
-        <ul>
-          <li><b><code>VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC</code>:</b> takes no space in the set. At bind time XGL
-            patches the dynamic offset into the SRD and puts the whole descriptor in user data, so changing the offset
-            per draw needs no memory write.</li>
-          <li><b>Sampled image:</b> the 32-byte <code>ImageSrd</code> was built at <code>vkCreateImageView</code>; the
-            update is a <code>memcpy</code>.</li>
-          <li><b>Null descriptor:</b> a <code>VK_NULL_HANDLE</code> view writes zeros. For buffers PAL also leaves
-            DW3 = 0 when the address is 0 (try address 0 above).</li>
-          <li><b>Push constants:</b> same user-data mechanism, without any memory at all.</li>
-        </ul>
-      </div>
-
-      <div class="prose">
-      <h2 id="why-layout">Why pipelines depend on the pipeline layout</h2>
-      <p>The compiled ISA hard-codes which SGPRs hold which set pointers and the offset of every binding. Both come from
-        the <code>VkPipelineLayout</code> through the resource mapping. That's why a pipeline must be used with a
-        compatible layout, and why changing the layout means compiling a new pipeline.</p>
-
-      <h2 id="gfx">Generation differences</h2>
-      <ul>
-        <li>GFX12 has its own SRD encodings (<code>sq_buf_rsrc_t</code> and <code>sq_img_rsrc_t</code> in the gfx12 chip
-          headers); the builder above shows the GFX10/11 layout.</li>
-        <li>The descriptor sizes an application sees through <code>VK_EXT_descriptor_buffer</code> are exactly PAL's
-          <code>srdSizes</code>, so they can change with the generation.</li>
-      </ul>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>

@@ -4,86 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sources, SHAs &amp; status – AMDVLK Driver Atlas</title>
-<meta name="description" content="Pinned commits, archive status and what was not traced.">
+<meta name="description" content="Password-protected.">
 <script>try{var t=localStorage.getItem("drv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body data-page="versions">
-<a class="skip" href="#main">Skip to content</a>
-<div class="layout">
-  <aside class="sidebar" id="sidebar"></aside>
-  <div class="main">
-    <header class="topbar" id="topbar"></header>
-    <main id="main" class="content">
-      <h1>Sources, SHAs &amp; status</h1>
-      <p class="lede">Every code panel and source link on this site points at the commits below. Excerpts are cut from
-        these checkouts by <code class="nv">tools/build.py</code>, and <code class="nv">tools/verify.py</code> checks every
-        identifier and reference against them.</p>
-      <div class="prose">
-      <h2 id="shas">Pinned commits</h2>
-      <div id="versions-table"></div>
-      <p>The same table, with branch names and dates, is in <code class="nv">src/VERSIONS.md</code>. xgl, pal and llpc were
-        cloned from branch <code class="nv">dev</code>, which AMDVLK's <code class="nv">default.xml</code> manifest pins; at clone
-        time <code class="nv">dev</code> and <code class="nv">master</code> pointed to the same final commit. The LLVM fork is
-        the manifest's <code class="nv">amd-gfx-gpuopen-dev</code> branch, sparse-checked-out to
-        <code class="nv">llvm/lib/Target/AMDGPU</code>. Linux is a sparse checkout of
-        <code class="nv">drivers/gpu/drm/amd/amdgpu</code> and <code class="nv">include/uapi/drm</code>.</p>
-
-      <h2 id="status">Archive / discontinuation status (checked 2026-10-14)</h2>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Repository</th><th>GitHub “archived”</th><th>README / notes</th><th>Last commit</th></tr></thead>
-        <tbody>
-          <tr><td>AMDVLK</td><td>no</td><td>README line 2: “This project is discontinued” (links discussion #416)</td><td>2025-09-15</td></tr>
-          <tr><td>xgl</td><td><span class="badge-arch">archived</span></td><td>no notice in README</td><td>2025-04-29</td></tr>
-          <tr><td>pal</td><td><span class="badge-arch">archived</span></td><td>no notice in README</td><td>2025-04-29</td></tr>
-          <tr><td>llpc</td><td><span class="badge-arch">archived</span></td><td>no notice in README</td><td>2025-04-29</td></tr>
-          <tr><td>llvm-project (GPUOpen)</td><td><span class="badge-arch">archived</span></td><td>AMD's LLVM fork used by LLPC</td><td>2025-04-22</td></tr>
-          <tr><td>libdrm (freedesktop GitLab)</td><td>active</td><td>—</td><td>2026-09-17</td></tr>
-          <tr><td>linux (torvalds)</td><td>active</td><td>—</td><td>2026-10-14</td></tr>
-        </tbody>
-      </table></div>
-      <p class="callout warn">Because libdrm and Linux are much newer than the frozen AMDVLK code, the kernel and libdrm
-        line numbers match today's code, which may differ from the versions AMDVLK last shipped against. The
-        interfaces used here (GEM create/VA/mmap, CS with chunks, syncobjs) are long-standing uAPI.</p>
-
-      <h2 id="not-traced">Not traced, or traced only to the entry point</h2>
-      <ul>
-        <li><b>Vulkan loader internals</b>: the Khronos loader isn't in any cloned repo. Only the ICD interface XGL
-          exports is shown.</li>
-        <li><b>PAL <code>ValidateDraw</code> register sequence</b>: shown at the call site only.</li>
-        <li><b>LLVM AMDGPU instruction selection, register allocation and scheduling</b>: entry points only
-          (<code>addPassesToEmitFile</code>, <code>AMDGPUAsmPrinter</code>, PAL metadata).</li>
-        <li><b>gpurt</b> (ray-tracing library), <b>MetroHash</b> and <b>CWPack</b>: listed in the manifest but not
-          cloned. Ray-tracing pipelines are out of scope.</li>
-        <li><b>PAL's on-disk archive-file pipeline cache</b>: mentioned only.</li>
-        <li><b>Kernel memory management</b> (TTM placement and eviction, page-table updates, mmap fault path) and the
-          GPU scheduler's internals: entry functions only.</li>
-        <li><b>GFX9 (Vega)</b>: support was removed from these sources, so there is nothing to trace.</li>
-        <li><b>Barrier-driven decompression blits (RPM)</b> and <b>image layout handling</b>: not stepped through.</li>
-      </ul>
-
-      <h2 id="method">How this site was built and checked</h2>
-      <ol>
-        <li>Read the code and wrote the call chains (<code class="nv">PLAN.md</code>).</li>
-        <li><code class="nv">tools/spec.py</code> describes each step by <em>anchor text</em>, not line number.
-          <code class="nv">tools/build.py</code> finds the anchor in the source, cuts the excerpt (≤ 30 lines), checks
-          that the listed symbols appear inside it, and builds a SHA-pinned permalink.</li>
-        <li><code class="nv">tools/verify.py</code> extracts every <code>&lt;code&gt;</code> identifier and every reference
-          from the pages and the generated data, and checks each against the checkouts. It also checks internal links
-          and anchors.</li>
-        <li>A headless Chromium run clicks through the diagram, every stepper, search, the PM4 widget and dark mode.</li>
-      </ol>
-      </div>
-    </main>
-  </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="assets/data/flows.js"></script>
-<script src="assets/data/reference.js"></script>
-<script src="assets/data/search-index.js"></script>
-<script src="assets/site.js"></script>
+<main class="gate checking" id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <svg class="brand-mark gate-mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="3" fill="var(--trace)"/><path d="M8 6v18M8 15h14" stroke="var(--sheet)" stroke-width="2" opacity=".55"/><rect x="17" y="10" width="10" height="10" rx="1.5" fill="var(--pad)"/></svg>
+    <h1>AMDVLK Driver Atlas</h1>
+    <p>This site is password-protected. Enter the password to open it.</p>
+    <div class="gate-trace" aria-hidden="true"><span class="gate-pad"></span></div>
+    <input type="text" name="username" value="AMDVLK Driver Atlas" autocomplete="username" hidden>
+    <label for="gate-pw">Password</label>
+    <div class="gate-row">
+      <input id="gate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" class="btn" id="gate-show" aria-pressed="false" aria-controls="gate-pw">Show</button>
+    </div>
+    <p class="gate-error" id="gate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="btn primary gate-submit" id="gate-submit">Unlock</button>
+    <p class="gate-note">The site stays unlocked until you close this tab or select Lock.</p>
+  </form>
+  <noscript><p class="gate-note">Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="page-body">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</script>
+<script src="assets/data/lock.js"></script>
+<script src="assets/data/enc-flows.js"></script>
+<script src="assets/data/enc-reference.js"></script>
+<script src="assets/data/enc-search.js"></script>
+<script src="assets/data/enc-app.js"></script>
+<script src="assets/gate.js"></script>
 </body>
 </html>
