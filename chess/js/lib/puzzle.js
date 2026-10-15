@@ -7,6 +7,14 @@ import { h, icon } from './dom.js';
 
 export const startFenOf = (t) => buildLine({ fen: t.fen, setup: t.setup })[0].fen;
 
+/** Every puzzle position: each motif's main position plus its `extra` positions (ids "fork", "fork-2", ...). */
+export function allPuzzles(tactics) {
+  return tactics.flatMap((t) => [
+    { ...t, pid: t.id, motif: t },
+    ...(t.extra || []).map((x, i) => ({ ...t, fen: undefined, setup: undefined, arrows: undefined, squares: undefined, ...x, pid: `${t.id}-${i + 2}`, motif: t })),
+  ]);
+}
+
 /**
  * o: { onSolved({ clean }), onFailed(), compact (no hint/solution buttons), failOnMistake }
  * returns { el, reset }

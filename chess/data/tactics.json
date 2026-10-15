@@ -22,7 +22,48 @@
       "g8"
     ],
     "level": "beginner",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "rn4k1/p5pp/8/8/7q/8/5PPP/3Q2K1 w - - 0 1",
+        "solution": [
+          "Qd5+",
+          "Kh8",
+          "Qxa8"
+        ],
+        "goal": "Win a rook",
+        "hint": "Find a queen check that also hits a8.",
+        "explanation": "Qd5+ checks along the diagonal to g8 and at the same time attacks the a8-rook along the other diagonal. The queen forks in two directions.",
+        "arrows": [
+          "d1d5",
+          "d5a8"
+        ],
+        "squares": [
+          "g8",
+          "a8"
+        ]
+      },
+      {
+        "fen": "4r1k1/ppp2ppp/3b1n2/8/3PP3/8/5PPP/R5K1 w - - 0 1",
+        "solution": [
+          "e5",
+          "Bb4",
+          "exf6"
+        ],
+        "goal": "Win a piece",
+        "hint": "A pawn can fork too.",
+        "explanation": "e5 attacks the d6-bishop and the f6-knight at once, and the d4-pawn protects it. Black can save only one piece.",
+        "arrows": [
+          "e4e5",
+          "e5d6",
+          "e5f6"
+        ],
+        "squares": [
+          "d6",
+          "f6"
+        ]
+      }
+    ]
   },
   {
     "id": "pin",
@@ -46,7 +87,25 @@
       "h8"
     ],
     "level": "beginner",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "r3k2r/pp3ppp/8/4n3/8/8/PP3PPP/4R1K1 w - - 0 1",
+        "solution": [
+          "f4"
+        ],
+        "goal": "Win a piece",
+        "hint": "The knight cannot move — attack it.",
+        "explanation": "The e5-knight is pinned to the king by the e1-rook. f4 attacks it with a pawn, and the pinned knight can't escape: White wins a knight for a pawn.",
+        "arrows": [
+          "e1e8",
+          "f4e5"
+        ],
+        "squares": [
+          "e5"
+        ]
+      }
+    ]
   },
   {
     "id": "skewer",
@@ -70,7 +129,28 @@
       "h7"
     ],
     "level": "beginner",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "6r1/p6p/4k1p1/8/8/8/PP3PPP/5BK1 w - - 0 1",
+        "solution": [
+          "Bc4+",
+          "Kd6",
+          "Bxg8"
+        ],
+        "goal": "Win a rook",
+        "hint": "Check the king along the diagonal that leads to g8.",
+        "explanation": "Bc4+ checks the king on the c4–g8 diagonal. Once the king steps aside, the bishop takes the rook standing behind it.",
+        "arrows": [
+          "f1c4",
+          "c4g8"
+        ],
+        "squares": [
+          "e6",
+          "g8"
+        ]
+      }
+    ]
   },
   {
     "id": "discovered-attack",
@@ -94,7 +174,27 @@
       "d6"
     ],
     "level": "intermediate",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "r6q/pp2kp1p/3p4/8/3N4/8/PB3PPP/6K1 w - - 0 1",
+        "solution": [
+          "Nf5+",
+          "Ke6",
+          "Bxh8"
+        ],
+        "goal": "Win the queen",
+        "hint": "The knight blocks your bishop's diagonal. Move it with check.",
+        "explanation": "Nf5+ is check, and it uncovers the b2-bishop against the h8-queen. Black must answer the check, so the queen falls.",
+        "arrows": [
+          "d4f5",
+          "!b2h8"
+        ],
+        "squares": [
+          "h8"
+        ]
+      }
+    ]
   },
   {
     "id": "double-check",
@@ -289,7 +389,28 @@
       "h7"
     ],
     "level": "intermediate",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "r5k1/pp3ppp/5n2/3b2B1/8/8/PP3PPP/3R2K1 w - - 0 1",
+        "solution": [
+          "Bxf6",
+          "gxf6",
+          "Rxd5"
+        ],
+        "goal": "Win a piece",
+        "hint": "Which piece protects the d5-bishop?",
+        "explanation": "Only the f6-knight defends the d5-bishop. Bxf6 removes it, and after the recapture Rxd5 wins a piece.",
+        "arrows": [
+          "g5f6",
+          "d1d5"
+        ],
+        "squares": [
+          "d5",
+          "f6"
+        ]
+      }
+    ]
   },
   {
     "id": "x-ray",
@@ -367,7 +488,26 @@
       "h7"
     ],
     "level": "beginner",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "6k1/p4ppp/1n6/8/8/8/1q3PPP/3R2K1 w - - 0 1",
+        "solution": [
+          "Rd8#"
+        ],
+        "goal": "Checkmate",
+        "hint": "Look at Black's first rank.",
+        "explanation": "Black's own pawns on f7, g7 and h7 imprison the king, and no black piece can reach d8 or block on e8/f8. Rd8 is mate despite Black's extra material.",
+        "arrows": [
+          "d1d8"
+        ],
+        "squares": [
+          "f7",
+          "g7",
+          "h7"
+        ]
+      }
+    ]
   },
   {
     "id": "scholars-mate",

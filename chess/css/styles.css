@@ -692,3 +692,5 @@ body.sheet-open { overflow: hidden; }
   .line-item { padding: 0.9rem; }
   .scoresheet { max-height: 12rem; }
 }
+.puzzle-switch { margin: 0.25rem 0 1rem; }
+a.chip { text-decoration: none; display: inline-flex; align-items: center; }
