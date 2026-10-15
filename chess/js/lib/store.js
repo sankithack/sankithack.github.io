@@ -51,3 +51,8 @@ export const isMastered = (id) => (state.drills?.[id]?.perfect || 0) > 0;
 export function loadOptional(name) { return loadData(name).catch(() => null); }
 
 export function resetProgress() { state = blank(); write(); }
+/** Replace or merge progress from a sanitised backup (see progress-io.js). */
+export function restoreProgress(next, mode, merge) {
+  state = { ...blank(), ...(mode === 'merge' ? merge(state, next) : next) };
+  write();
+}

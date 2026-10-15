@@ -10,6 +10,7 @@ import * as train from './pages/train.js';
 import * as practice from './pages/practice.js';
 import * as guide from './pages/guide.js';
 import * as review from './pages/review.js';
+import * as progressPage from './pages/progress.js';
 import { initSearch, openSearch } from './lib/search.js';
 
 // [path, label, icon, shown in the phone tab bar]
@@ -33,6 +34,7 @@ const ROUTES = {
   practice: practice.render,
   guide: guide.render,
   review: review.render,
+  progress: progressPage.render,
 };
 
 // ---------- theme
@@ -76,7 +78,8 @@ function renderRail() {
         h('a.more-link', { href: '#/guide/think', onclick: () => toggleMore(false) }, icon('target', 24), 'How to think'),
         h('a.more-link', { href: '#/guide/attack', onclick: () => toggleMore(false) }, icon('flag', 24), 'Attack'),
         h('a.more-link', { href: '#/guide/memory', onclick: () => toggleMore(false) }, icon('eye', 24), 'Memory'),
-        h('a.more-link', { href: '#/review', onclick: () => toggleMore(false) }, icon('search', 24), 'Review a game')),
+        h('a.more-link', { href: '#/review', onclick: () => toggleMore(false) }, icon('search', 24), 'Review a game'),
+        h('a.more-link', { href: '#/progress', onclick: () => toggleMore(false) }, icon('check', 24), 'My progress')),
       themeButton()));
   document.body.append(sheet);
   // phones: a floating search button (the tab bar has no room)

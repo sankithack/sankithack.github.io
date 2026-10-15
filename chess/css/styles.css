@@ -790,3 +790,19 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
   .palette-hint { display: none; }
   .page-head h1, .study-head h1 { padding-right: 48px; }
 }
+
+/* progress page */
+.progress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 1.25rem; }
+.io-card { padding: 1.3rem; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 0.75rem; align-content: start; }
+.io-card h2 { margin: 0; font-size: 1.3rem; }
+.io-danger { border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+.btn-danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.btn-danger:hover { background: var(--bad); color: #fff; border-color: var(--bad); }
+.progress-stats { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; margin: 0; }
+.progress-stats dt { color: var(--ink-2); }
+.progress-stats dd { margin: 0; font: 700 1rem var(--display); font-variant-numeric: tabular-nums; text-align: right; }
+.io-msg:not(:empty) { margin-top: 1.25rem; padding: 0.8rem 1rem; border-radius: var(--radius); font: 600 0.95rem var(--display); animation: vt-in 260ms var(--ease); }
+.io-good { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+.io-bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+label.btn { cursor: pointer; }
