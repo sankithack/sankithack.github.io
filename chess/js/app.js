@@ -24,7 +24,7 @@ const NAV = [
 const ROUTES = {
   '': home.render,
   openings: (data, id, sub) => (id ? openings.renderDetail(data, id, sub) : openings.render(data)),
-  tactics: (data, id) => (id ? tactics.renderDetail(data, id) : tactics.render(data)),
+  tactics: (data, id, sub) => (id ? tactics.renderDetail(data, id, sub) : tactics.render(data)),
   strategy: strategy.render,
   endgames: (data, id) => (id ? endgames.renderDetail(data, id) : endgames.render(data)),
   train: train.render,

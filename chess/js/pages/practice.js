@@ -3,7 +3,7 @@ import { h, icon, shuffle, cap } from '../lib/dom.js';
 import { Board } from '../lib/board.js';
 import { LineDrill } from '../lib/drill.js';
 import { Sparring } from '../lib/sparring.js';
-import { createPuzzle, startFenOf } from '../lib/puzzle.js';
+import { createPuzzle, startFenOf, allPuzzles } from '../lib/puzzle.js';
 import { Chess, buildLine, lineText, normMove, parseArrow } from '../lib/line.js';
 import { findMove, bare } from '../lib/moves.js';
 import { recordDrill, drillState, isMastered, markSolved, saveBest, best } from '../lib/store.js';
@@ -112,13 +112,13 @@ function rush(data) {
   const scoreEl = h('span.sq-score', '0');
   const info = h('div.rush-info');
   const startBtn = h('button.btn.btn-primary', { type: 'button', onclick: () => begin() }, 'Start the rush');
-  const pool = () => data.tactics.filter((t) => level === 'all' || t.level === level);
+  const pool = () => allPuzzles(data.tactics).filter((t) => level === 'all' || t.level === level);
   function next() {
     if (!running) return;
     if (!queue.length) queue = shuffle(pool());
     const t = queue.pop();
     const p = createPuzzle(t, { compact: true, failOnMistake: true,
-      onSolved: ({ clean }) => { if (clean) { score++; scoreEl.textContent = score; markSolved(t.id); } setTimeout(next, 700); },
+      onSolved: ({ clean }) => { if (clean) { score++; scoreEl.textContent = score; markSolved(t.pid); } setTimeout(next, 700); },
       onFailed: () => next() });
     stage.replaceChildren(h('p.rush-name', t.name, ' ', levelTag(t.level)), p.el);
   }
@@ -168,7 +168,7 @@ function candidates(data) {
   });
   const isCandidate = (m) => /[+#]/.test(m.san) || !!m.captured;
   function load() {
-    t = shuffle(data.tactics)[0];
+    t = shuffle(allPuzzles(data.tactics))[0];
     chess = new Chess(startFenOf(t));
     found = new Map();
     board.setOrientation(chess.turn() === 'w' ? 'white' : 'black');
@@ -217,7 +217,7 @@ function candidates(data) {
 
 // ------------------------------------------------------------------ calculation
 function calculate(data) {
-  const pool = data.tactics.filter((t) => t.solution.length >= 3);
+  const pool = allPuzzles(data.tactics).filter((t) => t.solution.length >= 3);
   let t, chess, entered;
   const boardBox = h('div.study-board');
   const board = new Board(boardBox, { label: 'Calculation board' });

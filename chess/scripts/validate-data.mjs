@@ -53,6 +53,10 @@ for (const t of tactics) {
   checkMarks(w, t);
   if (t.solution.length % 2 === 0 && !/Win/.test(t.goal)) fail(w, 'solution should end with the solver\'s move');
   line(w, { fen: t.fen, setup: t.setup, moves: t.solution }, { mate: t.goal === 'Checkmate' });
+  (t.extra || []).forEach((x, i) => {
+    checkMarks(`${w} extra ${i + 1}`, x);
+    line(`${w} extra ${i + 1}`, { fen: x.fen, setup: x.setup, moves: x.solution }, { mate: x.goal === 'Checkmate' });
+  });
 }
 
 // ---- strategy: static positions (fen or setup) + optional demo lines
