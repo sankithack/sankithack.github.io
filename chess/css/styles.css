@@ -710,3 +710,22 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .today-list a:hover { transform: translateY(-2px); background: var(--brass-soft); color: var(--ink); }
 .today-kind { font-size: 0.78rem; font-weight: 600; color: var(--brass-ink); }
 .today-more { font: 600 0.9rem var(--display); }
+
+/* game review */
+.pgn-box { margin-bottom: 2rem; display: grid; gap: 0.75rem; }
+.pgn-input { width: 100%; padding: 0.8rem 1rem; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 0.92rem/1.5 ui-monospace, "SF Mono", Menlo, monospace; resize: vertical; }
+.pgn-input:focus { outline: none; border-color: var(--brass); box-shadow: 0 0 0 3px var(--brass-soft); }
+.form-error:not(:empty) { color: var(--bad); font: 600 0.95rem var(--display); }
+.ply.flag-bad { box-shadow: inset 3px 0 0 var(--bad); }
+.ply.flag-warn { box-shadow: inset 3px 0 0 var(--brass); }
+.moments { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+.moments li { margin: 0; }
+.moment { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto auto 1fr; gap: 0.3rem 0.7rem; align-items: center; padding: 0.7rem 0.9rem; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); cursor: pointer; font: 500 0.95rem/1.4 var(--text); transition: border-color 150ms, transform 150ms var(--ease); }
+.moment:hover { transform: translateX(3px); }
+.moment:focus-visible { outline: 2px solid var(--brass); }
+.moment-bad { border-left: 3px solid var(--bad); }
+.moment-warn { border-left: 3px solid var(--brass); }
+.moment-move { font: 700 0.95rem var(--display); }
+@media (max-width: 560px) { .moment { grid-template-columns: auto 1fr; } .moment > span:last-child { grid-column: 1 / -1; } }
+.ply.flag-good { box-shadow: inset 3px 0 0 var(--good); } .moment-good { border-left: 3px solid var(--good); }
+.analysing { display: flex; gap: 0.5rem; align-items: center; font: 600 1rem var(--display); color: var(--ink-2); } .analysing .icon { animation: spin-pulse 1s ease-in-out infinite; } @keyframes spin-pulse { 50% { transform: scale(1.25); opacity: 0.6; } }

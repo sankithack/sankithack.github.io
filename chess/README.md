@@ -2,13 +2,15 @@
 
 Live: https://sankithack.github.io/chess/
 
-An interactive chess course that explains **why** moves are played, across all three phases:
+An interactive chess course that explains **why** moves are played, with practice for everything:
 
-- **Openings**: 10 openings (Italian, Ruy López, Sicilian, French, Caro-Kann, Queen's Gambit, King's Indian, London, English, Scandinavian). Each has an annotated main line, named variations tagged beginner/intermediate/advanced, traps, common mistakes, the best counter-systems and an **Advanced** section (move orders, structures, typical sacrifices). Search and filter by name, colour, style and level.
-- **Tactics**: 14 motifs (fork, pin, skewer, discovered attack, double check, deflection, decoy, overloading, interference, zwischenzug, removing the defender, X-ray, windmill, back-rank mate), each a puzzle you solve on the board.
-- **Strategy**: pawn structure, weak squares, outposts, open files, piece activity, king safety, space, good vs bad bishop, initiative.
-- **Endgames**: K+Q, K+R and two-bishop mates; king activation, opposition, triangulation, passed pawns, rule of the square; key squares, Lucena, Philidor, rook behind the passed pawn.
-- **Train**: timed square trainer, quizzes (name the opening / variation, spot the tactic, endgame ideas) and flashcards. Progress is saved in `localStorage`.
+- **Openings**: 21 openings (Italian, Ruy López, Sicilian, French, Caro-Kann, Queen's Gambit, Slav, Nimzo-Indian, Queen's Indian, King's Indian, Grünfeld, Catalan, London, English, Réti, Scotch, Petrov, Vienna, Scandinavian, Pirc, Dutch). Annotated main lines, levelled variations, traps, "how to beat it" lines, advanced notes and sourced 2000+ statistics.
+- **Tactics**: 25 motifs and mating patterns with extra puzzle positions; solve on the board by drag, tap or typing.
+- **Strategy**: 20 concepts with example positions and find-the-square exercises.
+- **Endgames**: 12 lessons; play them against the computer (a king-and-pawn solver runs in a Web Worker and defends perfectly).
+- **Practice**: opening drills for every line, puzzle rush, candidate moves, 3+ move calculation, attack drills, position memory, follow-the-moves, square colours, quiz and flashcards.
+- **Review a game**: paste a PGN; a quick (non-engine) scan flags mates in one/two, loose pieces and sound sacrifices.
+- **Guides**: a 500 → 2000+ roadmap with self-ticking checklists, how to think, memory techniques and animated attacking lessons. Progress is saved in `localStorage`.
 
 Plain HTML, CSS and ES modules. No build step, so GitHub Pages serves this folder as-is.
 
