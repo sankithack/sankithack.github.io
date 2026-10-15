@@ -10,6 +10,7 @@ import * as train from './pages/train.js';
 import * as practice from './pages/practice.js';
 import * as guide from './pages/guide.js';
 import * as review from './pages/review.js';
+import { initSearch, openSearch } from './lib/search.js';
 
 // [path, label, icon, shown in the phone tab bar]
 const NAV = [
@@ -59,6 +60,7 @@ function renderRail() {
   const rail = $('#rail');
   rail.append(
     h('a.brand', { href: '#/' }, h('span.brand-mark', { 'aria-hidden': 'true' }), h('span.brand-name', 'Chess', h('br'), 'Strategy Academy')),
+    h('button.search-btn', { type: 'button', onclick: () => openSearch(), 'aria-label': 'Search (Ctrl+K)' }, icon('search', 18), h('span', 'Search'), h('kbd', '/')),
     h('nav.nav', { 'aria-label': 'Sections' },
       NAV.map(([path, label, ic, tab]) => h('a.nav-link' + (tab ? '' : '.nav-secondary'), { href: '#/' + path, 'data-path': path }, icon(ic), h('span.nav-label', label))),
       h('button.nav-link.nav-more', { type: 'button', 'aria-expanded': 'false', 'aria-controls': 'more-sheet', onclick: () => toggleMore() }, icon('menu'), h('span.nav-label', 'More'))),
@@ -69,6 +71,7 @@ function renderRail() {
     h('div.more-backdrop', { onclick: () => toggleMore(false) }),
     h('div.more-panel',
       h('div.more-grip'),
+      h('button.btn.more-search', { type: 'button', onclick: () => { toggleMore(false); openSearch(); } }, icon('search', 18), 'Search everything'),
       h('div.more-grid', NAV.filter((n) => !n[3]).map(([path, label, ic]) => h('a.more-link', { href: '#/' + path, onclick: () => toggleMore(false) }, icon(ic, 24), label)),
         h('a.more-link', { href: '#/guide/think', onclick: () => toggleMore(false) }, icon('target', 24), 'How to think'),
         h('a.more-link', { href: '#/guide/attack', onclick: () => toggleMore(false) }, icon('flag', 24), 'Attack'),
@@ -76,6 +79,8 @@ function renderRail() {
         h('a.more-link', { href: '#/review', onclick: () => toggleMore(false) }, icon('search', 24), 'Review a game')),
       themeButton()));
   document.body.append(sheet);
+  // phones: a floating search button (the tab bar has no room)
+  document.body.append(h('button.search-fab', { type: 'button', 'aria-label': 'Search', onclick: () => openSearch() }, icon('search', 20)));
 }
 function toggleMore(force) {
   const sheet = $('#more-sheet'), btn = $('.nav-more');
@@ -135,7 +140,7 @@ renderRail();
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#more-sheet').hidden) toggleMore(false); });
 $('#skip').addEventListener('click', (e) => { e.preventDefault(); $('#view').focus(); });
 loadAll()
-  .then((d) => { data = d; window.addEventListener('hashchange', route); route(); })
+  .then((d) => { data = d; initSearch(d); window.addEventListener('hashchange', route); route(); })
   .catch((err) => {
     $('#view').replaceChildren(h('section.page', h('h1', 'Lesson data didn\'t load'), h('p', err.message),
       h('p', 'If you opened index.html straight from disk, serve the folder instead: ', h('code', 'npm start'), ' or ', h('code', 'python3 -m http.server'), '.')));
