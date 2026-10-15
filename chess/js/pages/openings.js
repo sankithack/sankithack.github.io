@@ -1,11 +1,11 @@
 import { h, icon, cap } from '../lib/dom.js';
 import { LineViewer } from '../lib/viewer.js';
-import { lineText } from '../lib/line.js';
-import { markSeen, isSeen } from '../lib/store.js';
+import { lineText, normMove } from '../lib/line.js';
+import { markSeen, isSeen, isMastered } from '../lib/store.js';
 import { page, pageHead, tag, levelTag, chips, lazyBoard } from './common.js';
 
 const FILTER_KEY = 'chess-academy-opening-filter';
-const loadFilter = () => { try { return { q: '', side: 'all', style: 'all', level: 'all', ...JSON.parse(sessionStorage.getItem(FILTER_KEY) || '{}') }; } catch { return { q: '', side: 'all', style: 'all', level: 'all' }; } };
+const loadFilter = () => { try { return { q: '', side: 'all', style: 'all', level: 'all', sort: 'course', ...JSON.parse(sessionStorage.getItem(FILTER_KEY) || '{}') }; } catch { return { q: '', side: 'all', style: 'all', level: 'all' }; } };
 const saveFilter = (f) => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify(f)); } catch { /* ignore */ } };
 
 export function render(data) {
@@ -13,20 +13,33 @@ export function render(data) {
   const grid = h('div.opening-grid');
   const count = h('p.result-count', { 'aria-live': 'polite' });
 
+  // every line of every opening as a plain SAN string, so "1.e4 c5" finds the Sicilian
+  const bare = (san) => san.replace(/[+#!?]/g, '');
+  const lines = new Map(data.openings.map((o) => [o, [o.mainLine, ...o.variations.map((v) => v.moves), ...o.counters.map((c) => c.moves), ...o.traps.map((t) => t.moves)]
+    .map((l) => l.map((m) => bare(normMove(m).san)).join(' ') + ' ')]));
+  const SAN = /^(O-O(-O)?|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?)$/;
+  const moveQuery = (q) => {
+    const toks = q.replace(/0-0-0/g, 'O-O-O').replace(/0-0/g, 'O-O').replace(/\d+\.(\.\.)?/g, ' ').trim().split(/\s+/).map(bare).filter(Boolean);
+    return toks.length && toks.every((t) => SAN.test(t)) ? toks.join(' ') + ' ' : null;
+  };
   const matches = (o) => {
     const q = f.q.trim().toLowerCase();
     const hay = [o.name, o.eco, o.summary, ...o.variations.map((v) => v.name)].join(' ').toLowerCase();
-    return (!q || hay.includes(q)) && (f.side === 'all' || o.side === f.side) &&
+    const mq = moveQuery(f.q.trim());
+    const hit = !q || hay.includes(q) || (mq && lines.get(o).some((l) => l.startsWith(mq)));
+    return hit && (f.side === 'all' || o.side === f.side) &&
       (f.style === 'all' || o.styles.includes(f.style)) && (f.level === 'all' || o.difficulty === f.level);
   };
   const paint = () => {
     saveFilter(f);
+    const pop = data.popularity?.openings || {};
     const list = data.openings.filter(matches);
+    if (f.sort === 'popular') list.sort((a, b) => (pop[b.id]?.share ?? -1) - (pop[a.id]?.share ?? -1));
     count.textContent = list.length === data.openings.length ? `All ${list.length} openings` : `${list.length} of ${data.openings.length} openings`;
     grid.replaceChildren(...list.map(card));
     if (!list.length) grid.append(h('div.empty', h('p', 'No opening matches those filters.'), h('button.btn', { type: 'button', onclick: () => { Object.assign(f, { q: '', side: 'all', style: 'all', level: 'all' }); saveFilter(f); location.reload(); } }, 'Clear filters')));
   };
-  const search = h('input.search-input', { type: 'search', placeholder: 'Search openings or variations (e.g. Najdorf, Marshall)', value: f.q, 'aria-label': 'Search openings', oninput: (e) => { f.q = e.target.value; paint(); } });
+  const search = h('input.search-input', { type: 'search', placeholder: 'Search by name or moves (Najdorf, 1.e4 c5)', value: f.q, 'aria-label': 'Search openings', oninput: (e) => { f.q = e.target.value; paint(); } });
 
   const card = (o) => h('a.opening-card', { href: `#/openings/${o.id}` },
     lazyBoard({ moves: o.mainLine }, { orientation: o.side, label: `${o.name} after the main line` }),
@@ -34,7 +47,8 @@ export function render(data) {
       h('h2.opening-name', o.name, isSeen('opening', o.id) ? h('span.seen', { title: 'Studied' }, icon('check', 16)) : null),
       h('p.opening-moves', lineText(o.mainLine.slice(0, 6))),
       h('p.opening-summary', o.summary),
-      h('div.tags', tag(o.side === 'white' ? 'White' : 'Black', 'side-' + o.side), ...o.styles.map((s) => tag(cap(s))), levelTag(o.difficulty), tag(`${o.variations.length} variations`, 'quiet'))));
+      h('div.tags', tag(o.side === 'white' ? 'White' : 'Black', 'side-' + o.side), ...o.styles.map((s) => tag(cap(s))), levelTag(o.difficulty), tag(`${o.variations.length} variations`, 'quiet'),
+        data.popularity?.openings?.[o.id] ? tag(`${data.popularity.openings[o.id].share}% of 2000+ games`, 'good') : null)));
 
   const filters = h('div.filters',
     h('label.search', icon('search', 18), search),
@@ -43,13 +57,15 @@ export function render(data) {
     h('div.filter-row',
       h('span.filter-label', 'Style'), chips('Style', [['all', 'Any'], ['aggressive', 'Aggressive'], ['solid', 'Solid'], ['positional', 'Positional']], f.style, (v) => { f.style = v; paint(); })),
     h('div.filter-row',
-      h('span.filter-label', 'Level'), chips('Level', [['all', 'Any'], ['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']], f.level, (v) => { f.level = v; paint(); })));
+      h('span.filter-label', 'Level'), chips('Level', [['all', 'Any'], ['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['advanced', 'Advanced']], f.level, (v) => { f.level = v; paint(); })),
+    Object.keys(data.popularity?.openings || {}).length ? h('div.filter-row',
+      h('span.filter-label', 'Order'), chips('Order', [['course', 'Course order'], ['popular', 'Most played at 2000+']], f.sort, (v) => { f.sort = v; paint(); })) : null);
 
   paint();
   return page('Openings', pageHead('Openings', 'Each opening comes with the reason it exists, an annotated main line, its named variations, the traps to know and the best replies.'), filters, count, grid);
 }
 
-export function renderDetail(data, id) {
+export function renderDetail(data, id, sub) {
   const o = data.openings.find((x) => x.id === id);
   if (!o) return page('Not found', h('h1', 'Unknown opening'), h('p', h('a', { href: '#/openings' }, 'See all openings')));
   markSeen('opening', o.id);
@@ -72,43 +88,57 @@ export function renderDetail(data, id) {
   };
 
   // --- tab panels
-  const lineItem = (title, moves, body, extra, intro, outro) => {
+  const lineItem = (title, moves, body, extra, intro, outro, drill) => {
     const el = h('article.line-item', { tabindex: 0 },
       h('div.line-item-head', h('h3', title), extra),
       h('p.line-moves', lineText(moves)),
       body ? h('p', body) : null,
-      h('button.btn.btn-small', { type: 'button', onclick: (e) => { e.stopPropagation(); play(title, moves, intro, el, outro); } }, icon('play', 16), 'Play on board'));
+      h('div.line-actions',
+        h('button.btn.btn-small', { type: 'button', onclick: (e) => { e.stopPropagation(); play(title, moves, intro, el, outro); } }, icon('play', 16), 'Watch'),
+        drill ? h('a.btn.btn-small', { href: `#/practice/opening/${o.id}/${drill}`, onclick: (e) => e.stopPropagation() }, isMastered(`o:${o.id}:${drill.replace('/', ':')}`) ? icon('check', 16) : icon('target', 16), 'Practise') : null));
     el.addEventListener('click', (e) => { if (!e.target.closest('button')) play(title, moves, intro, el, outro); });
     el.addEventListener('keydown', (e) => { if (e.key === 'Enter') play(title, moves, intro, el, outro); });
     return el;
   };
 
+  const pop = data.popularity?.openings?.[o.id];
   const overview = h('div.tab-panel',
     h('p.mnemonic', o.mnemonic),
+    o.stats || pop ? h('aside.stats-box',
+      h('h3', 'At 2000+ level'),
+      pop ? h('p', `${pop.share}% of Lichess games between players rated 2000+ reach this opening (${data.popularity.speeds}, fetched ${data.popularity.fetched}).`) : null,
+      (o.stats || []).map((t) => h('p', t)),
+      o.stats ? h('p.small.muted', 'Source: ', h('a', { href: 'https://chessiverse.com/resources/openings/move-trends', target: '_blank', rel: 'noopener' }, 'Chessiverse move trends'), ' (Lichess blitz and rapid games, compared at 400 and 2500 rating).') : null) : null,
     h('h3', 'What it aims for'), h('p', o.purpose),
     h('div.two-col',
       h('div', h('h3', 'Ideas for White'), h('ul.ticks', o.ideas.white.map((t) => h('li', t)))),
       h('div', h('h3', 'Ideas for Black'), h('ul.ticks', o.ideas.black.map((t) => h('li', t))))),
     h('h3', 'Typical plans'), h('ul', o.plans.map((t) => h('li', t))),
     h('h3', 'Common mistakes'), h('ul.crosses', o.mistakes.map((t) => h('li', t))),
-    h('button.btn', { type: 'button', onclick: () => play('Main line', o.mainLine, o.purpose) }, icon('play', 16), 'Replay the main line'));
+    h('div.line-actions',
+      h('button.btn', { type: 'button', onclick: () => play('Main line', o.mainLine, o.purpose) }, icon('play', 16), 'Replay the main line'),
+      h('a.btn.btn-primary', { href: `#/practice/opening/${o.id}/main/0` }, icon('target', 16), 'Practise the main line')));
 
   let level = 'all';
   const varList = h('div.line-list');
   const paintVars = () => varList.replaceChildren(...o.variations.filter((v) => level === 'all' || v.level === level)
-    .map((v) => lineItem(v.name, v.moves, v.idea, levelTag(v.level), v.idea, v.idea)));
+    .map((v) => lineItem(v.name, v.moves, v.idea, levelTag(v.level), v.idea, v.idea, `variation/${o.variations.indexOf(v)}`)));
   paintVars();
   const levels = ['beginner', 'intermediate', 'advanced'].filter((l) => o.variations.some((v) => v.level === l));
   const variations = h('div.tab-panel',
     h('div.panel-tools', chips('Variation level', [['all', `All ${o.variations.length}`], ...levels.map((l) => [l, cap(l)])], 'all', (v) => { level = v; paintVars(); })),
     varList);
 
-  const traps = h('div.tab-panel', h('div.line-list', o.traps.map((t) =>
-    lineItem(t.name, t.moves, t.explanation, tag(t.side === o.side ? 'For you' : 'Against you', t.side === o.side ? 'good' : 'warn'), 'Watch for the moment the trap is sprung.', t.explanation))));
+  const traps = h('div.tab-panel', h('div.line-list', o.traps.map((t, i) =>
+    lineItem(t.name, t.moves, t.explanation, tag(t.kind === 'pattern' ? 'Key pattern' : t.side === o.side ? 'For you' : 'Against you', t.kind === 'pattern' ? 'quiet' : t.side === o.side ? 'good' : 'warn'), 'Watch for the moment the trap is sprung.', t.explanation, `trap/${i}`))));
 
+  const opp = o.side === 'white' ? 'Black' : 'White';
   const counters = h('div.tab-panel',
-    h('p.muted', o.side === 'white' ? `How Black can meet the ${o.name}, and why each reply works.` : `How White can meet the ${o.name}, and why each system works.`),
-    h('div.line-list', o.counters.map((c) => lineItem(c.name, c.moves, c.why, null, c.why, c.why))));
+    h('div.beat-intro',
+      h('h3', `How to beat the ${o.name}`),
+      h('p', `Playing ${opp} against it? These are the most reliable answers. Watch each line animate, then practise it as ${opp}.`),
+      o.traps.some((t) => t.side !== o.side && t.kind !== 'pattern') ? h('p.muted', `Also see the Traps tab — some of them are tricks ${opp} can set.`) : null),
+    h('div.line-list', o.counters.map((c, i) => lineItem(c.name, c.moves, c.why, tag(`Play as ${opp}`, 'quiet'), c.why, c.why, `counter/${i}`))));
 
   const advanced = h('div.tab-panel',
     h('p.muted', 'Deeper ideas for stronger players: move orders, structures and typical sacrifices.'),
@@ -119,20 +149,21 @@ export function renderDetail(data, id) {
   const tabs = [
     ['overview', 'Overview', overview],
     ['variations', `Variations (${o.variations.length})`, variations],
-    ['traps', `Traps (${o.traps.length})`, traps],
-    ['counters', o.side === 'white' ? 'Black\'s replies' : 'White\'s replies', counters],
+    ['traps', `Traps & tricks (${o.traps.length})`, traps],
+    ['counters', 'How to beat it', counters],
     ['advanced', 'Advanced', advanced],
   ];
   const tabBar = h('div.tabs', { role: 'tablist', 'aria-label': `${o.name} sections` });
   const panelWrap = h('div.tab-panels');
-  const showTab = (key) => {
+  const showTab = (key, fromUser) => {
+    if (fromUser) history.replaceState(null, '', `#/openings/${o.id}/${key}`); // shareable link to this tab
     tabs.forEach(([k, , panel]) => { panel.hidden = k !== key; });
     [...tabBar.children].forEach((b) => { const on = b.dataset.k === key; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; });
     try { sessionStorage.setItem('chess-academy-tab-' + o.id, key); } catch { /* ignore */ }
   };
   tabs.forEach(([k, label, panel]) => {
     panel.setAttribute('role', 'tabpanel');
-    tabBar.append(h('button.tab', { type: 'button', role: 'tab', 'data-k': k, onclick: () => showTab(k) }, label));
+    tabBar.append(h('button.tab', { type: 'button', role: 'tab', 'data-k': k, onclick: () => showTab(k, true) }, label));
     panelWrap.append(panel);
   });
   tabBar.addEventListener('keydown', (e) => {
@@ -140,11 +171,12 @@ export function renderDetail(data, id) {
     const keys = tabs.map((t) => t[0]);
     const cur = keys.indexOf(tabBar.querySelector('.on').dataset.k);
     const nk = keys[(cur + (e.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length];
-    showTab(nk); tabBar.querySelector(`[data-k="${nk}"]`).focus();
+    showTab(nk, true); tabBar.querySelector(`[data-k="${nk}"]`).focus();
     e.stopPropagation();
   });
-  let startTab = 'overview';
-  try { startTab = sessionStorage.getItem('chess-academy-tab-' + o.id) || 'overview'; } catch { /* ignore */ }
+  let startTab = sub || 'overview';
+  if (startTab === 'beat') startTab = 'counters';
+  if (!sub) try { startTab = sessionStorage.getItem('chess-academy-tab-' + o.id) || 'overview'; } catch { /* ignore */ }
   showTab(tabs.some((t) => t[0] === startTab) ? startTab : 'overview');
 
   play('Main line', o.mainLine, o.purpose);

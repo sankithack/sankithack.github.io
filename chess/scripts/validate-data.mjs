@@ -62,6 +62,8 @@ for (const s of strategy) {
   const w = `strategy ${s.id}`;
   checkMarks(w, s);
   line(w, { fen: s.fen, setup: s.setup, moves: s.moves || [] });
+  if (!s.practice) fail(w, 'missing practice exercise');
+  else for (const a of s.practice.answers || []) if (!isSquare(a)) fail(w, `practice answer "${a}" is not a square`);
 }
 
 // ---- endgames
@@ -90,6 +92,19 @@ for (const e of endgames) {
       });
     } catch (err) { fail(w, 'solver: ' + err.message); }
   }
+}
+
+// ---- attack lessons
+const attack = load('attack.json');
+uniq(attack, 'attack');
+for (const a of attack) line(`attack ${a.id}`, { fen: a.fen, moves: a.moves }, { mate: /#$/.test(normMove(a.moves.at(-1)).san) });
+
+// ---- endgame practice positions
+for (const e of endgames) {
+  const pr = e.practice;
+  if (!pr) { fail(`endgame ${e.id}`, 'missing practice'); continue; }
+  if (pr.fen) line(`endgame ${e.id} practice`, { fen: pr.fen, moves: [] });
+  if (pr.mode === 'solver' && !e.lines[pr.line]?.expect) fail(`endgame ${e.id}`, 'solver practice needs an expect claim on its line');
 }
 
 // ---- featured games

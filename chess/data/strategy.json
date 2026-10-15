@@ -4,28 +4,81 @@
     "name": "Pawn structure",
     "mnemonic": "Pawns are the skeleton; pieces are the muscles. Attack a chain at its base.",
     "summary": "Pawns can't move backwards, so their placement decides which squares are strong, which are weak, and where each side should play.",
-    "setup": ["e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3"],
-    "arrows": ["c5d4", "f7f6", "~f2f4"],
-    "squares": ["d4", "e5"],
+    "setup": [
+      "e4",
+      "e6",
+      "d4",
+      "d5",
+      "e5",
+      "c5",
+      "c3",
+      "Nc6",
+      "Nf3"
+    ],
+    "arrows": [
+      "c5d4",
+      "f7f6",
+      "~f2f4"
+    ],
+    "squares": [
+      "d4",
+      "e5"
+    ],
     "points": [
       "A pawn chain (here d4–e5) is strongest at its head and weakest at its base: Black attacks d4 with ...c5 and the head with ...f6.",
       "Pawns point to where you should attack: White's chain points to the kingside, Black's to the queenside.",
       "Isolated, doubled and backward pawns are long-term weaknesses; passed pawns are long-term strengths."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click the base of White's pawn chain — the square Black should attack.",
+      "answers": [
+        "d4"
+      ],
+      "explain": "d4 is the base of the d4–e5 chain; ...c5 hits it."
+    },
+    "level": "intermediate"
   },
   {
     "id": "weak-squares",
     "name": "Weak squares",
     "mnemonic": "A hole is a square no pawn can ever guard again.",
     "summary": "A square that can no longer be defended by a pawn is a permanent home for enemy pieces.",
-    "setup": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3", "e5", "Nb3", "Be6"],
-    "arrows": ["c3d5", "~f1c4"],
-    "squares": ["d5"],
+    "setup": [
+      "e4",
+      "c5",
+      "Nf3",
+      "d6",
+      "d4",
+      "cxd4",
+      "Nxd4",
+      "Nf6",
+      "Nc3",
+      "a6",
+      "Be3",
+      "e5",
+      "Nb3",
+      "Be6"
+    ],
+    "arrows": [
+      "c3d5",
+      "~f1c4"
+    ],
+    "squares": [
+      "d5"
+    ],
     "points": [
       "After ...e5 in the Najdorf, d5 can't be covered by a black pawn any more — it's a hole.",
       "Black compensates by controlling d5 with pieces (...Be6, ...Nbd7–b6) or by forcing the ...d5 break.",
       "Every pawn move creates a potential weakness behind it — move pawns with a purpose."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click the hole in Black's position.",
+      "answers": [
+        "d5"
+      ],
+      "explain": "After ...e5 no black pawn can ever control d5."
+    },
+    "level": "intermediate"
   },
   {
     "id": "outposts",
@@ -33,13 +86,28 @@
     "mnemonic": "A knight on an outpost is like a tooth in the opponent's jaw.",
     "summary": "An outpost is a square in enemy territory, protected by your pawn, that no enemy pawn can attack. Knights love them.",
     "fen": "r4rk1/pp2bppp/3p4/3Np3/2P1P3/8/PP3PPP/R4RK1 w - - 0 1",
-    "arrows": ["c4d5", "e4d5", "d5e7", "d5b6"],
-    "squares": ["d5"],
+    "arrows": [
+      "c4d5",
+      "e4d5",
+      "d5e7",
+      "d5b6"
+    ],
+    "squares": [
+      "d5"
+    ],
     "points": [
       "The d5-knight is supported by two pawns and can never be chased by a black pawn (no c- or e-pawn can reach c6/e6).",
       "From d5 it hits c7, e7, b6 and f6 — it controls Black's whole position.",
       "The only way to remove it is to trade a piece for it; often Black has no suitable piece."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click White's outpost square.",
+      "answers": [
+        "d5"
+      ],
+      "explain": "d5 is protected by White's pawns and can't be attacked by a black pawn."
+    },
+    "level": "intermediate"
   },
   {
     "id": "open-files",
@@ -47,13 +115,26 @@
     "mnemonic": "Rooks belong on open files — and then on the 7th rank.",
     "summary": "A file with no pawns is a highway for rooks. Controlling it lets your rooks invade the enemy position.",
     "fen": "r4rk1/ppp2ppp/4pn2/8/8/4PN2/PPPR1PPP/3R2K1 w - - 0 1",
-    "arrows": ["d2d7", "d1d8"],
-    "squares": ["d7"],
+    "arrows": [
+      "d2d7",
+      "d1d8"
+    ],
+    "squares": [
+      "d7"
+    ],
     "points": [
       "Doubling rooks (here on d1 and d2) wins control of the file — a single rook can be challenged.",
       "The goal is to invade: a rook on the 7th rank attacks pawns and confines the king.",
       "Contest open files early; once the enemy doubles, you may never get in."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click the square where White's rooks want to invade.",
+      "answers": [
+        "d7"
+      ],
+      "explain": "The 7th rank: a rook on d7 attacks pawns and cramps the king."
+    },
+    "level": "beginner"
   },
   {
     "id": "piece-activity",
@@ -61,68 +142,602 @@
     "mnemonic": "Improve your worst piece.",
     "summary": "A piece is only as good as the squares it controls. Active pieces win games even without extra material.",
     "fen": "rn4k1/p1R2ppp/1p2p3/8/3N4/4P3/PP3PPP/6K1 w - - 0 1",
-    "arrows": ["c7a7", "c7f7", "d4c6", "~d4b5"],
-    "squares": ["c7", "b8", "a8"],
+    "arrows": [
+      "c7a7",
+      "c7f7",
+      "d4c6",
+      "~d4b5"
+    ],
+    "squares": [
+      "c7",
+      "b8",
+      "a8"
+    ],
     "points": [
       "Material is equal, but White's rook on the 7th and centralised knight dominate Black's undeveloped rook and knight.",
       "Ask every move: which piece is doing least? Move that one.",
       "Trade your bad pieces; keep your good ones."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click White's most active piece.",
+      "answers": [
+        "c7"
+      ],
+      "explain": "The rook on c7 attacks a7 and f7 and ties Black down."
+    },
+    "level": "beginner"
   },
   {
     "id": "king-safety",
     "name": "King safety",
     "mnemonic": "Pawns in front of your king are walls — every pawn move is a brick removed.",
     "summary": "Castle early, keep the pawn shield intact, and don't open lines towards your own king.",
-    "setup": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "O-O", "Nf6", "d3", "O-O", "Bg5", "h6", "Bh4", "g5", "Bg3"],
-    "arrows": ["f3h4", "h4f5", "!c4f7"],
-    "squares": ["f5", "h5", "g8"],
+    "setup": [
+      "e4",
+      "e5",
+      "Nf3",
+      "Nc6",
+      "Bc4",
+      "Bc5",
+      "O-O",
+      "Nf6",
+      "d3",
+      "O-O",
+      "Bg5",
+      "h6",
+      "Bh4",
+      "g5",
+      "Bg3"
+    ],
+    "arrows": [
+      "f3h4",
+      "h4f5",
+      "!c4f7"
+    ],
+    "squares": [
+      "f5",
+      "h5",
+      "g8"
+    ],
     "points": [
       "...h6 and ...g5 gained time against the bishop but tore holes on f5 and h5 next to Black's king.",
       "White's knight heads for f5 via h4; the queen can follow to h5.",
       "Count attackers vs defenders around the king; if the attackers outnumber defenders, a sacrifice may work."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click the hole next to Black's king that White's knight is heading for.",
+      "answers": [
+        "f5"
+      ],
+      "explain": "...g5 gave up control of f5; Nh4–f5 lands there."
+    },
+    "level": "beginner"
   },
   {
     "id": "space",
     "name": "Space advantage",
     "mnemonic": "More space, more room to manoeuvre — but more ground to defend.",
     "summary": "Pawns further up the board give your pieces more squares behind them and restrict the opponent's pieces.",
-    "setup": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "O-O", "Nc6", "d5", "Ne7"],
-    "arrows": ["c4c5", "~f7f5"],
-    "squares": ["c4", "d5", "e4"],
+    "setup": [
+      "d4",
+      "Nf6",
+      "c4",
+      "g6",
+      "Nc3",
+      "Bg7",
+      "e4",
+      "d6",
+      "Nf3",
+      "O-O",
+      "Be2",
+      "e5",
+      "O-O",
+      "Nc6",
+      "d5",
+      "Ne7"
+    ],
+    "arrows": [
+      "c4c5",
+      "~f7f5"
+    ],
+    "squares": [
+      "c4",
+      "d5",
+      "e4"
+    ],
     "points": [
       "White's pawns on c4, d5 and e4 claim the queenside and centre; Black claims the kingside with ...f5.",
       "The side with less space should trade pieces — cramped positions suffocate when crowded.",
       "The side with more space should avoid trades and prepare a pawn break to open lines."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click White's most advanced pawn — the spearhead of the space advantage.",
+      "answers": [
+        "d5"
+      ],
+      "explain": "The d5-pawn cramps Black's pieces and supports c4–c5."
+    },
+    "level": "intermediate"
   },
   {
     "id": "good-bad-bishop",
     "name": "Good vs bad bishop",
     "mnemonic": "A bishop is bad when its own pawns stand on its colour.",
     "summary": "A bishop that is blocked by its own pawns is 'bad'; one whose pawns are on the other colour is 'good'.",
-    "setup": ["e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3", "Qb6"],
-    "arrows": ["~c8d7", "f1d3"],
-    "squares": ["c8", "d5", "e6"],
+    "setup": [
+      "e4",
+      "e6",
+      "d4",
+      "d5",
+      "e5",
+      "c5",
+      "c3",
+      "Nc6",
+      "Nf3",
+      "Qb6"
+    ],
+    "arrows": [
+      "~c8d7",
+      "f1d3"
+    ],
+    "squares": [
+      "c8",
+      "d5",
+      "e6"
+    ],
     "points": [
       "Black's pawns on d5 and e6 sit on light squares, so the c8-bishop is hemmed in — a classic French bad bishop.",
       "White's f1-bishop is good: his pawns on d4 and e5 are on dark squares, leaving its diagonals open.",
       "Plans: trade your bad bishop (...b6 and ...Ba6), or put your pawns on the other colour."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click Black's bad bishop.",
+      "answers": [
+        "c8"
+      ],
+      "explain": "The c8-bishop is hemmed in by its own pawns on d5 and e6."
+    },
+    "level": "intermediate"
   },
   {
     "id": "initiative",
     "name": "Initiative",
     "mnemonic": "Make threats; force your opponent to react instead of plan.",
     "summary": "The player who makes the threats dictates the game. The initiative can be worth a pawn or more.",
-    "setup": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "Ng5", "d5", "exd5", "Na5", "Bb5+", "c6", "dxc6", "bxc6", "Be2", "h6", "Nf3", "e4"],
-    "arrows": ["!e4f3", "~d8d4", "f8c5"],
-    "squares": ["f3"],
+    "setup": [
+      "e4",
+      "e5",
+      "Nf3",
+      "Nc6",
+      "Bc4",
+      "Nf6",
+      "Ng5",
+      "d5",
+      "exd5",
+      "Na5",
+      "Bb5+",
+      "c6",
+      "dxc6",
+      "bxc6",
+      "Be2",
+      "h6",
+      "Nf3",
+      "e4"
+    ],
+    "arrows": [
+      "!e4f3",
+      "~d8d4",
+      "f8c5"
+    ],
+    "squares": [
+      "f3"
+    ],
     "points": [
       "Black is a pawn down, but every move came with a threat: ...Na5 hit the bishop, ...h6 the knight, ...e4 the knight again.",
       "While White retreats, Black develops; soon ...Bc5/...Bd6, ...O-O and ...Qc7 follow with an attack.",
       "To keep the initiative, keep creating threats — one quiet move can hand it back."
-    ]
+    ],
+    "practice": {
+      "prompt": "Click the pawn that is making Black's threat.",
+      "answers": [
+        "e4"
+      ],
+      "explain": "...e4 hits the f3-knight; White must react instead of developing."
+    },
+    "level": "advanced"
+  },
+  {
+    "id": "opening-principles",
+    "name": "Opening principles",
+    "level": "beginner",
+    "mnemonic": "Centre, develop, castle — and don't move a piece twice without a reason.",
+    "summary": "Most games below 1500 are decided by opening principles, not memorised lines.",
+    "setup": [
+      "e4",
+      "e5",
+      "Nf3",
+      "Nc6",
+      "Bc4",
+      "Bc5",
+      "O-O",
+      "Nf6",
+      "d3",
+      "d6"
+    ],
+    "arrows": [
+      "b1c3",
+      "c1g5",
+      "f1e1"
+    ],
+    "squares": [
+      "d4",
+      "d5",
+      "e4",
+      "e5"
+    ],
+    "points": [
+      "Fight for the centre (e4, d4, e5, d5) with pawns and pieces.",
+      "Develop knights and bishops before moving the queen or rooks.",
+      "Castle early — usually within the first ten moves.",
+      "Connect your rooks; then start a plan."
+    ],
+    "practice": {
+      "prompt": "Click the square where White's c1-bishop develops with a pin.",
+      "answers": [
+        "g5"
+      ],
+      "explain": "Bg5 develops with a pin on the f6-knight."
+    }
+  },
+  {
+    "id": "iqp",
+    "name": "Isolated queen's pawn",
+    "level": "advanced",
+    "mnemonic": "Active pieces with it, blockade and endgame against it.",
+    "summary": "A d-pawn with no neighbours: weak in the endgame, but it gives space and open files for an attack.",
+    "setup": [
+      "d4",
+      "d5",
+      "c4",
+      "e6",
+      "Nc3",
+      "c5",
+      "cxd5",
+      "exd5",
+      "Nf3",
+      "Nc6",
+      "g3",
+      "Nf6",
+      "Bg2",
+      "Be7",
+      "O-O",
+      "O-O"
+    ],
+    "arrows": [
+      "f3d4",
+      "~c1g5"
+    ],
+    "squares": [
+      "d5",
+      "d4"
+    ],
+    "points": [
+      "Black's d5-pawn has no c- or e-pawn to protect it.",
+      "White blockades on d4 and piles up on d5; trading pieces helps White.",
+      "Black wants active pieces, a kingside attack, or the ...d4 break."
+    ],
+    "practice": {
+      "prompt": "Click Black's isolated pawn.",
+      "answers": [
+        "d5"
+      ],
+      "explain": "d5 has no pawns on the c- or e-file to support it."
+    }
+  },
+  {
+    "id": "minority-attack",
+    "name": "Minority attack",
+    "level": "advanced",
+    "mnemonic": "Two pawns attack three to leave one weak.",
+    "summary": "In the Carlsbad structure White pushes the b-pawn (two pawns vs three) to create a weak black c-pawn.",
+    "setup": [
+      "d4",
+      "d5",
+      "c4",
+      "e6",
+      "Nc3",
+      "Nf6",
+      "cxd5",
+      "exd5",
+      "Bg5",
+      "Be7",
+      "e3",
+      "c6",
+      "Bd3",
+      "Nbd7",
+      "Qc2",
+      "O-O",
+      "Nf3",
+      "Re8",
+      "O-O",
+      "Nf8",
+      "Rab1"
+    ],
+    "arrows": [
+      "b2b4",
+      "b4b5"
+    ],
+    "squares": [
+      "c6"
+    ],
+    "points": [
+      "b4–b5 and bxc6 leave Black with a backward c-pawn or an isolated d-pawn.",
+      "The rooks then attack the weakness on the half-open c-file.",
+      "Black's counterplay is on the kingside (...Ne4, ...Ng6, ...f5)."
+    ],
+    "practice": {
+      "prompt": "Click the pawn White's minority attack is aiming at.",
+      "answers": [
+        "c6"
+      ],
+      "explain": "b5xc6 turns c6 into a weak, backward pawn."
+    }
+  },
+  {
+    "id": "prophylaxis",
+    "name": "Prophylaxis",
+    "level": "advanced",
+    "mnemonic": "Ask what your opponent wants — then stop it.",
+    "summary": "A prophylactic move prevents the opponent's plan before it happens.",
+    "setup": [
+      "e4",
+      "e5",
+      "Nf3",
+      "Nc6",
+      "Bb5",
+      "a6",
+      "Ba4",
+      "Nf6",
+      "O-O",
+      "Be7",
+      "Re1",
+      "b5",
+      "Bb3",
+      "d6",
+      "c3",
+      "O-O",
+      "h3"
+    ],
+    "arrows": [
+      "!c8g4"
+    ],
+    "squares": [
+      "g4"
+    ],
+    "points": [
+      "h3 stops ...Bg4, which would pin the f3-knight and pressure d4.",
+      "After h3, White can play d4 without the centre being undermined.",
+      "Before each move ask: 'What is my opponent's best idea?'"
+    ],
+    "practice": {
+      "prompt": "Click the square h3 takes away from Black.",
+      "answers": [
+        "g4"
+      ],
+      "explain": "...Bg4 (or ...Ng4) is no longer possible."
+    }
+  },
+  {
+    "id": "bishop-pair",
+    "name": "The bishop pair",
+    "level": "intermediate",
+    "mnemonic": "Two bishops cover every colour — open the position for them.",
+    "summary": "Two bishops together control both colour complexes and are usually worth more than bishop + knight in open positions.",
+    "fen": "r4rk1/pp1b1ppp/4pn2/8/2B5/1P2P3/PB3PPP/R4RK1 w - - 0 1",
+    "arrows": [
+      "b2g7",
+      "c4e6"
+    ],
+    "squares": [
+      "f6"
+    ],
+    "points": [
+      "White's bishops rake both long diagonals; Black's knight has no outposts.",
+      "Open the position with pawn breaks to give the bishops scope.",
+      "The side with the knight wants a closed position and fixed pawns."
+    ],
+    "practice": {
+      "prompt": "Click Black's minor piece that is weaker than a bishop in this open position.",
+      "answers": [
+        "f6"
+      ],
+      "explain": "The f6-knight has no stable outpost; in open positions bishops outrange it."
+    }
+  },
+  {
+    "id": "opposite-bishops",
+    "name": "Opposite-coloured bishops",
+    "level": "advanced",
+    "mnemonic": "Drawish in the endgame, deadly in an attack.",
+    "summary": "Bishops of different colours can never fight each other: in attack the attacker effectively has an extra piece; in a pure endgame they are very drawish.",
+    "fen": "r4rk1/pp3ppp/2p5/4b3/2B5/8/PPP2PPP/3R1RK1 w - - 0 1",
+    "arrows": [
+      "c4f7",
+      "~d1d7"
+    ],
+    "squares": [
+      "f7"
+    ],
+    "points": [
+      "White's light bishop hits f7; Black's dark bishop can never defend that square.",
+      "With queens on, attack the squares the enemy bishop can't cover.",
+      "In a pawn endgame with opposite bishops, even two extra pawns may not win."
+    ],
+    "practice": {
+      "prompt": "Click the target White's bishop attacks that Black's bishop can never defend.",
+      "answers": [
+        "f7"
+      ],
+      "explain": "f7 is a light square; Black's bishop is dark-squared."
+    }
+  },
+  {
+    "id": "pawn-breaks",
+    "name": "Pawn breaks",
+    "level": "intermediate",
+    "mnemonic": "Know your break before the position closes.",
+    "summary": "A pawn break challenges the opponent's chain to open lines for your pieces. In closed positions it is the whole plan.",
+    "setup": [
+      "d4",
+      "Nf6",
+      "c4",
+      "g6",
+      "Nc3",
+      "Bg7",
+      "e4",
+      "d6",
+      "Nf3",
+      "O-O",
+      "Be2",
+      "e5",
+      "O-O",
+      "Nc6",
+      "d5",
+      "Ne7",
+      "Ne1",
+      "Nd7",
+      "Nd3"
+    ],
+    "arrows": [
+      "f7f5",
+      "~c4c5"
+    ],
+    "squares": [
+      "f5",
+      "c5"
+    ],
+    "points": [
+      "In the King's Indian Black breaks with ...f5, White with c5.",
+      "Prepare the break: support the square and get pieces behind it.",
+      "Once a break is played, open lines appear — make sure your pieces are ready."
+    ],
+    "practice": {
+      "prompt": "Click the square where Black's key pawn break lands.",
+      "answers": [
+        "f5"
+      ],
+      "explain": "...f5 attacks e4 and opens the f-file for Black's rook."
+    }
+  },
+  {
+    "id": "pawn-majority",
+    "name": "Pawn majority",
+    "level": "intermediate",
+    "mnemonic": "Push the candidate first — the pawn with no opponent in front.",
+    "summary": "Where you have more pawns than the opponent, you can create a passed pawn. Lead with the pawn that has no opposing pawn on its file.",
+    "fen": "6k1/pp3ppp/4p3/8/8/8/PPP2PPP/6K1 w - - 0 1",
+    "arrows": [
+      "c2c4",
+      "b2b4"
+    ],
+    "squares": [
+      "a2",
+      "b2",
+      "c2"
+    ],
+    "points": [
+      "White has 3 pawns vs 2 on the queenside; Black has 4 vs 3 in the centre/kingside.",
+      "The c-pawn is the 'candidate': no black pawn stands on its file.",
+      "A queenside majority far from the kings is especially strong in endgames."
+    ],
+    "practice": {
+      "prompt": "Click the pawn White should push first to make a passed pawn.",
+      "answers": [
+        "c2"
+      ],
+      "explain": "The c-pawn has no opposing pawn in front of it — it becomes the passer."
+    }
+  },
+  {
+    "id": "trading-when-ahead",
+    "name": "Trade when ahead",
+    "level": "beginner",
+    "mnemonic": "Ahead in material? Trade pieces, not pawns.",
+    "summary": "Every trade makes an extra piece count for more. When ahead, offer exchanges; when behind, avoid them.",
+    "fen": "r5k1/pp3ppp/8/8/8/2N5/PP3PPP/3R2K1 w - - 0 1",
+    "arrows": [
+      "d1d8"
+    ],
+    "squares": [
+      "d8"
+    ],
+    "points": [
+      "White is a knight up. After the rooks come off, the win is trivial.",
+      "Rd8+ offers the trade with tempo.",
+      "When behind, keep pieces on and create complications."
+    ],
+    "practice": {
+      "prompt": "Click the square where White offers the rook trade.",
+      "answers": [
+        "d8"
+      ],
+      "explain": "Rd8+ forces ...Rxd8 or a passive retreat; either way White's extra knight dominates."
+    }
+  },
+  {
+    "id": "blockade",
+    "name": "Blockade",
+    "level": "advanced",
+    "mnemonic": "Stop a passed pawn by sitting on the square in front of it.",
+    "summary": "A passed pawn is stopped most reliably by a piece placed directly in front of it — ideally a knight, which loses no activity there.",
+    "fen": "3r2k1/pp3ppp/8/8/3p4/3N4/PP3PPP/3R2K1 w - - 0 1",
+    "arrows": [
+      "d3c5",
+      "d3e5"
+    ],
+    "squares": [
+      "d3"
+    ],
+    "points": [
+      "The d3-knight blockades the d4-pawn and still controls c5, e5, b4 and f4.",
+      "A blockaded passed pawn often becomes a weakness.",
+      "Rooks belong behind passed pawns; knights in front of enemy ones."
+    ],
+    "practice": {
+      "prompt": "Click White's blockading piece.",
+      "answers": [
+        "d3"
+      ],
+      "explain": "The knight on d3 stops the d-pawn dead."
+    }
+  },
+  {
+    "id": "knight-vs-bishop",
+    "name": "Knight vs bad bishop",
+    "level": "advanced",
+    "mnemonic": "Closed position + fixed pawns = knight's paradise.",
+    "summary": "In closed positions with fixed pawns, a knight that reaches a strong square can beat a bishop blocked by its own pawns.",
+    "fen": "2b3k1/5ppp/p2p4/1p1Pp3/1P2P3/P4N2/5PPP/6K1 w - - 0 1",
+    "arrows": [
+      "f3d2",
+      "d2b3",
+      "b3a5",
+      "a5c6"
+    ],
+    "squares": [
+      "c6"
+    ],
+    "points": [
+      "Black's light-squared bishop is hemmed in by its own pawns on a6 and b5 and has no good diagonal.",
+      "White's knight travels d2–b3–a5–c6 to an outpost no pawn can attack.",
+      "Plan the knight's route several moves ahead — in closed positions knights have time."
+    ],
+    "practice": {
+      "prompt": "Click the outpost White's knight is heading for.",
+      "answers": [
+        "c6"
+      ],
+      "explain": "From c6 the knight hits a7/b8/d8/e7 and can never be chased by a pawn."
+    }
   }
 ]

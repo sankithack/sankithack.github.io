@@ -41,8 +41,19 @@ export class LineViewer {
     if (this.o.showNotes) this.el.append(this.note);
     if (this.o.showSheet) this.el.append(this.sheet);
     mount.append(this.el);
-    this.el.addEventListener('pointerdown', () => (activeViewer = this));
-    activeViewer = this;
+    // swipe left/right on the board to step through the moves (phones)
+    let sx = null, sy = 0;
+    boardWrap.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') { sx = e.clientX; sy = e.clientY; } });
+    boardWrap.addEventListener('pointerup', (e) => {
+      if (sx === null) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      sx = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) dx < 0 ? this.next() : this.prev();
+    });
+    if (this.o.keys !== false) {
+      this.el.addEventListener('pointerdown', () => (activeViewer = this));
+      activeViewer = this;
+    }
   }
 
   /** spec: { fen, setup, moves, title, intro, arrows, squares, orientation, startAt } */
@@ -54,7 +65,7 @@ export class LineViewer {
     if (spec.orientation) this.board.setOrientation(spec.orientation);
     this.renderSheet();
     this.show(spec.startAt ?? 0, false);
-    activeViewer = this;
+    if (this.o.keys !== false) activeViewer = this;
     if (this.o.autoplay) this.play();
     return this;
   }
@@ -128,6 +139,8 @@ export class LineViewer {
     this.el.classList.add('playing');
     const tick = () => {
       if (!this.el.isConnected) return this.stop();
+      const r = this.el.getBoundingClientRect();
+      if (document.hidden || r.bottom < 0 || r.top > innerHeight) { this.timer = setTimeout(tick, 700); return; } // don't play to an empty room
       if (this.i >= this.frames.length - 1) {
         if (this.o.loop) { this.timer = setTimeout(() => { this.show(0); this.timer = setTimeout(tick, this.o.speed); }, 2600); return; }
         return this.stop();

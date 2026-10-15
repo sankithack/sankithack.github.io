@@ -117,7 +117,7 @@ function quiz(data) {
   };
   let deck = 'openings', qs = [], i = 0, score = 0, answered = false;
   const boardBox = h('div.quiz-board');
-  const viewer = new LineViewer(boardBox, { showSheet: false, showNotes: false, speed: 650, label: 'Quiz position' });
+  const viewer = new LineViewer(boardBox, { showSheet: false, showNotes: false, speed: 650, keys: false, label: 'Quiz position' });
   const promptEl = h('h2.quiz-prompt');
   const opts = h('div.quiz-options');
   const feedback = h('div.quiz-feedback', { 'aria-live': 'polite' });
@@ -134,7 +134,7 @@ function quiz(data) {
     promptEl.textContent = `${i + 1}. ${q.prompt}`;
     viewer.o.autoplay = !!q.moves;
     viewer.load({ fen: q.fen, setup: q.setup, moves: q.moves || [], orientation: q.orientation || 'white' });
-    opts.replaceChildren(...q.options.map((o) => h('button.quiz-option', { type: 'button', onclick: (e) => answer(o, e.currentTarget) }, o)));
+    opts.replaceChildren(...q.options.map((o, k) => h('button.quiz-option', { type: 'button', onclick: (e) => answer(o, e.currentTarget) }, h('kbd', String(k + 1)), h('span', o))));
   }
   function answer(choice, btn) {
     if (answered) return;
@@ -142,7 +142,7 @@ function quiz(data) {
     const q = qs[i];
     const right = choice === q.answer;
     if (right) score++;
-    [...opts.children].forEach((b) => { b.disabled = true; if (b.textContent === q.answer) b.classList.add('right'); });
+    [...opts.children].forEach((b) => { b.disabled = true; if (b.lastChild.textContent === q.answer) b.classList.add('right'); });
     if (!right) btn.classList.add('wrong');
     meter.children[i].classList.add(right ? 'right' : 'wrong');
     feedback.replaceChildren(h('p.quiz-verdict.' + (right ? 'good' : 'bad'), icon(right ? 'check' : 'x', 18), right ? 'Correct.' : `It's the ${q.answer}.`),
@@ -158,6 +158,16 @@ function quiz(data) {
     feedback.replaceChildren(h('p', record ? 'New personal best for this quiz!' : `Your best is ${best('quiz-' + deck)} of 10.`),
       h('button.btn.btn-primary', { type: 'button', onclick: begin }, 'Play again'));
   }
+
+  // keys 1–4 answer, Enter moves on
+  const onKey = (e) => {
+    if (!opts.isConnected) return document.removeEventListener('keydown', onKey);
+    if (e.target.closest('input, textarea')) return;
+    const n = Number(e.key);
+    if (!answered && n >= 1 && n <= opts.children.length) opts.children[n - 1].click();
+    else if (answered && e.key === 'Enter' && document.activeElement !== nextBtn && !nextBtn.hidden) nextBtn.click();
+  };
+  document.addEventListener('keydown', onKey);
 
   begin();
   return page('Quiz',

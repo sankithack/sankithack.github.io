@@ -1,0 +1,60 @@
+[
+  {
+    "id": "king-in-centre", "name": "Attack the king in the centre", "level": "beginner",
+    "mnemonic": "Uncastled king + open centre = open lines straight at it.",
+    "principle": "When the enemy king hasn't castled, open the centre — even at the cost of material — and bring every piece into play before it can escape.",
+    "side": "w",
+    "moves": ["e4", "e5", "Nf3", "d6", "d4", "Bg4", "dxe5", "Bxf3", "Qxf3", "dxe5", "Bc4", "Nf6",
+      { "san": "Qb3", "note": "Double attack on f7 and b7: the king is still on e8.", "arrows": ["!b3f7", "!b3b7"] },
+      "Qe7", { "san": "Nc3", "note": "Develop first — every new attacker counts." }, "c6", { "san": "Bg5", "note": "Pin the defender of d7/e5.", "arrows": ["g5f6"] }, "b5",
+      { "san": "Nxb5", "note": "Sacrifice to rip open lines to the king.", "squares": ["e8"] }, "cxb5", { "san": "Bxb5+", "arrows": ["b5e8"] }, "Nbd7",
+      { "san": "O-O-O", "note": "Castle with tempo: the rook hits the pinned knight.", "arrows": ["d1d7"] }, "Rd8", "Rxd7", "Rxd7", "Rd1", "Qe6", "Bxd7+", "Nxd7",
+      { "san": "Qb8+", "note": "The final sacrifice deflects the knight.", "arrows": ["b3b8"] }, "Nxb8", { "san": "Rd8#", "note": "Morphy, 1858: Black's kingside pieces never moved." }],
+    "points": ["Count developed pieces: if you have three more in play, sacrifices often work.", "Open files and diagonals towards the king (Nxb5, Bxb5+).", "Pins on the defenders paralyse the defence."]
+  },
+  {
+    "id": "greek-gift", "name": "The Greek gift (Bxh7+)", "level": "intermediate",
+    "mnemonic": "Bishop takes h7, knight to g5, queen to h5.",
+    "principle": "Against a castled king with no knight on f6, sacrifice the bishop on h7, then bring the knight and queen with tempo.",
+    "side": "w",
+    "fen": "r4rk1/pbqn1ppp/1p2p3/3pP3/3P4/2PB1N2/PP3PPP/R1BQ1RK1 w - - 0 1",
+    "moves": [{ "san": "Bxh7+", "note": "Conditions: pawn on e5 (no ...Nf6), knight can reach g5, queen can reach h5.", "squares": ["e5", "g5", "h5"] }, "Kxh7",
+      { "san": "Ng5+", "arrows": ["g5h7"] }, "Kg8", { "san": "Qh5", "note": "Threat: Qh7 mate. Black has no defender for h7.", "arrows": ["!h5h7"] }],
+    "points": ["Check the three conditions before you sacrifice.", "The knight on g5 and queen on h5 form the mating net.", "If the king runs to g6, h4–h5 or Qd3+ keep the attack going."]
+  },
+  {
+    "id": "pawn-storm", "name": "Opposite-side castling: pawn storm", "level": "advanced",
+    "mnemonic": "Kings on opposite wings? Throw your pawns at theirs — fast.",
+    "principle": "When kings castle on opposite sides, pawn advances don't weaken your own king. Push pawns to open files against the enemy king, and trade off its best defender.",
+    "side": "w",
+    "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "g6",
+      { "san": "Be3", "note": "The Yugoslav Attack set-up: Be3, f3, Qd2, O-O-O." }, "Bg7", "f3", "O-O", "Qd2", "Nc6", "Bc4", "Bd7",
+      { "san": "O-O-O", "note": "Kings on opposite sides: the race is on.", "squares": ["c1", "g8"] }, "Rc8", "Bb3", "Ne5",
+      { "san": "h4", "note": "Open the h-file with h4–h5.", "arrows": ["h4h5", "h5g6"] }, "h5",
+      { "san": "Bg5", "note": "Next: Bh6 or Bxf6 to remove the key defenders of the black king.", "arrows": ["g5f6", "~e3h6"] }],
+    "points": ["Pawn moves near your own king are dangerous; near the enemy king they are weapons.", "Trade the defender: Bh6 removes the g7-bishop.", "Count tempi: the side that opens a file first usually wins."]
+  },
+  {
+    "id": "trade-the-defender", "name": "Trade off the defender (Bh6)", "level": "intermediate",
+    "mnemonic": "No fianchetto bishop, no defence on the dark squares.",
+    "principle": "A fianchettoed bishop is the king's best guard. Exchange it, put your queen on h6 and open the h-file.",
+    "side": "w",
+    "moves": ["e4", "d6", "d4", "Nf6", "Nc3", "g6", "Be3", "Bg7", "Qd2", "O-O",
+      { "san": "Bh6", "note": "Offer to trade the g7-bishop — the guardian of the dark squares.", "arrows": ["h6g7"] }, "Bxh6",
+      { "san": "Qxh6", "note": "The queen lands next to the king.", "squares": ["h6", "g7"] }, "Nc6", "Nf3", "e5",
+      { "san": "h4", "note": "h4–h5 opens the h-file for the rook.", "arrows": ["h4h5", "h1h7"] }],
+    "points": ["Remove the defender before you attack.", "The h-file is the highway once h5 and hxg6 happen.", "Ng5 often joins with mate threats on h7."]
+  },
+  {
+    "id": "f7-sacrifice", "name": "Sacrifice on f7", "level": "beginner",
+    "mnemonic": "f7 is guarded only by the king — hit it early.",
+    "principle": "Early in the game f7 (f2 for Black) is the weakest square. A sacrifice there can drag the king into the open.",
+    "side": "w",
+    "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", { "san": "Ng5", "note": "Two attackers on f7.", "arrows": ["!g5f7", "!c4f7"] }, "d5", "exd5",
+      { "san": "Nxd5", "note": "Natural, but a mistake (5...Na5! is correct)." },
+      { "san": "Nxf7", "note": "The Fried Liver sacrifice.", "squares": ["f7"] }, "Kxf7",
+      { "san": "Qf3+", "note": "Check and pressure on the pinned d5-knight.", "arrows": ["f3d5"] }, "Ke6",
+      { "san": "Nc3", "note": "More attackers: the d5-knight is pinned and attacked three times.", "arrows": ["c3d5"] }],
+    "points": ["Attack the weakest square with more pieces than defend it.", "After the sacrifice, keep giving checks and bringing pieces.", "Defence: develop, castle, and don't open the centre with your king there."]
+  }
+]

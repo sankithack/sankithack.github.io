@@ -101,7 +101,7 @@ export class Board {
     }
     // match moved pieces: prefer the piece that made lastMove, then the nearest of the same type
     const dist = (a, b) => Math.abs(a.charCodeAt(0) - b.charCodeAt(0)) + Math.abs(+a[1] - +b[1]);
-    todo.sort(([sq]) => (lastMove && sq === lastMove.to ? -1 : 0));
+    if (lastMove) todo.sort((a, b) => (b[0] === lastMove.to) - (a[0] === lastMove.to));
     for (const [sq, code] of todo) {
       let cand = [...left].filter((p) => p.code === code);
       if (lastMove && sq === lastMove.to) {
