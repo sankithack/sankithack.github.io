@@ -67,6 +67,25 @@ function resolve(data, it) {
   }
 }
 
+/** Next steps for the home page: the first unfinished items of the current roadmap stage (then later stages). */
+export function todayPlan(data, n = 3) {
+  const stages = STAGES.map((s) => ({ ...s, rows: s.items.map((it) => resolve(data, it)) }));
+  let cur = stages.findIndex((s) => s.rows.filter((r) => r.done).length / s.rows.length < 0.8);
+  if (cur === -1) cur = stages.length - 1;
+  const todo = stages.slice(cur).flatMap((s) => s.rows.filter((r) => !r.done)).slice(0, n);
+  const st = stages[cur];
+  return { stage: st, index: cur, items: todo, done: st.rows.filter((r) => r.done).length, total: st.rows.length };
+}
+const WARMUPS = [
+  ['#/practice/rush', 'Puzzle rush — 3 minutes'], ['#/practice/candidates', 'Candidate moves — 3 positions'], ['#/train/squares', 'Square trainer — beat your best'],
+  ['#/practice/colors', 'Square colours — 30 seconds'], ['#/practice/visualize', 'Follow the moves — 5 rounds'], ['#/practice/calculate', 'Calculate one combination'], ['#/practice/memory', 'Position memory — 3 positions'],
+];
+/** One warm-up per day, the same all day. */
+export function warmupOfDay(date = new Date()) {
+  const day = Math.floor((date.getTime() - date.getTimezoneOffset() * 6e4) / 864e5);
+  return WARMUPS[day % WARMUPS.length];
+}
+
 function roadmap(data) {
   const stages = STAGES.map((s) => ({ ...s, rows: s.items.map((it) => resolve(data, it)) }));
   const current = stages.findIndex((s) => s.rows.filter((r) => r.done).length / s.rows.length < 0.8);
