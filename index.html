@@ -4,19 +4,166 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>sankithack</title>
+<meta name="description" content="Interactive explorers of graphics driver internals, plus training tools for chess and memory sports.">
+<meta property="og:title" content="sankithack">
+<meta property="og:description" content="Interactive explorers of graphics driver internals, plus training tools for chess and memory sports.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sankithack.github.io/">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f2328'/%3E%3Cpath d='M9 22l7-12 7 12' fill='none' stroke='%23fff' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:720px;margin:4rem auto;padding:0 1rem;line-height:1.6;color:#1f2328;background:#fff}
-  @media (prefers-color-scheme:dark){body{color:#e6edf3;background:#0d1117}a{color:#58a6ff}}
-  h1{margin-bottom:.25rem} .muted{opacity:.7} ul{padding-left:1.2rem} li{margin:.5rem 0}
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #59636e;
+    --border: #d8dee4;
+    --accent: #0969da;
+    --tag-bg: #eef1f4;
+    --shadow: 0 1px 2px rgba(31, 35, 40, .06), 0 4px 14px rgba(31, 35, 40, .05);
+    /* per-project icon tints */
+    --c-gralloc: #1a7f37;
+    --c-vulkan: #cf222e;
+    --c-chess: #6639ba;
+    --c-memory: #4f46e5;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --tag-bg: #21262d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+      --c-gralloc: #3fb950;
+      --c-vulkan: #ff7b72;
+      --c-chess: #bc8cff;
+      --c-memory: #8b85ff;
+      color-scheme: dark;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 64px 16px 48px; }
+  header { margin-bottom: 40px; }
+  h1 { font-size: clamp(2rem, 6vw, 2.75rem); line-height: 1.1; margin: 0 0 12px; letter-spacing: -.02em; }
+  .lede { color: var(--muted); font-size: 1.1rem; max-width: 40em; margin: 0; }
+  h2 {
+    font-size: .8rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); font-weight: 600; margin: 36px 0 14px;
+  }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+  .card {
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 20px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+    color: inherit; text-decoration: none;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
+  .icon {
+    flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px;
+    display: grid; place-items: center;
+    background: color-mix(in srgb, var(--tint) 14%, transparent);
+    color: var(--tint);
+  }
+  .icon svg { width: 26px; height: 26px; }
+  .body { min-width: 0; }
+  .title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 2px 0 6px; }
+  .title h3 { font-size: 1.12rem; margin: 0; }
+  .new {
+    font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--tint); border: 1px solid currentColor; border-radius: 999px; padding: 0 7px;
+  }
+  .desc { color: var(--muted); margin: 0 0 12px; font-size: .95rem; }
+  .desc code { font-size: .88em; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .tags li { font-size: .78rem; background: var(--tag-bg); border-radius: 999px; padding: 2px 9px; color: var(--muted); }
+  .go { color: var(--accent); font-weight: 600; font-size: .92rem; margin-top: 12px; display: inline-block; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: .9rem; }
+  footer a { color: var(--accent); }
+  @media (max-width: 480px) {
+    .wrap { padding-top: 40px; }
+    .card { padding: 16px; gap: 14px; }
+    .icon { width: 42px; height: 42px; }
+  }
 </style>
 </head>
 <body>
-<h1>sankithack</h1>
-<p class="muted">Projects and explorers</p>
-<ul>
-  <li><a href="gralloc/"><b>gchips gralloc explorer</b></a> — how Google gchips gralloc describes and allocates buffers (formats, pixel storage, code flow, usage flags), generated from AOSP <code>platform/hardware/google/gchips</code>.</li>
-  <li><a href="vulkan/"><b>AMDVLK Driver Atlas</b></a> — interactive walkthrough of AMD's open-source Vulkan driver stack (XGL → PAL → libdrm → amdgpu, with LLPC/LGC/LLVM shader compilation), built from the real source.</li>
-  <li><a href="chess/"><b>Chess Strategy Academy</b></a> — interactive chess course: openings with variations, tactics puzzles, middlegame plans, essential endgames and memory trainers, every move explained.</li>
-</ul>
+<div class="wrap">
+  <header>
+    <h1>sankithack</h1>
+    <p class="lede">Interactive explorers built from real driver source code, and training tools for the mind: chess strategy and competitive memory.</p>
+  </header>
+
+  <main>
+    <h2>Graphics internals</h2>
+    <div class="grid">
+      <a class="card" href="gralloc/" style="--tint: var(--c-gralloc)">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+        </span>
+        <div class="body">
+          <div class="title"><h3>gchips gralloc explorer</h3></div>
+          <p class="desc">How Google gchips gralloc describes and allocates buffers: formats, pixel storage, code flow and usage flags, generated from AOSP <code>platform/hardware/google/gchips</code>.</p>
+          <ul class="tags"><li>Android</li><li>Buffers</li><li>AOSP</li></ul>
+          <span class="go">Explore →</span>
+        </div>
+      </a>
+      <a class="card" href="vulkan/" style="--tint: var(--c-vulkan)">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
+        </span>
+        <div class="body">
+          <div class="title"><h3>AMDVLK Driver Atlas</h3></div>
+          <p class="desc">An interactive walkthrough of AMD's open-source Vulkan driver stack, XGL → PAL → libdrm → amdgpu, with LLPC/LGC/LLVM shader compilation, built from the real source.</p>
+          <ul class="tags"><li>Vulkan</li><li>GPU drivers</li><li>Shader compilers</li></ul>
+          <span class="go">Explore →</span>
+        </div>
+      </a>
+    </div>
+
+    <h2>Learning &amp; training</h2>
+    <div class="grid">
+      <a class="card" href="chess/" style="--tint: var(--c-chess)">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M12 3v3M8 21h8M7 21l1.5-5h7L17 21M8.5 16c-1-2-1.5-4 0-6 1-1.4 2-2 3.5-2s2.5.6 3.5 2c1.5 2 1 4 0 6"/></svg>
+        </span>
+        <div class="body">
+          <div class="title"><h3>Chess Strategy Academy</h3></div>
+          <p class="desc">An interactive chess course: openings with variations, tactics puzzles, middlegame plans, essential endgames and memory trainers, with every move explained.</p>
+          <ul class="tags"><li>Openings</li><li>Tactics</li><li>Endgames</li><li>Works offline</li></ul>
+          <span class="go">Start learning →</span>
+        </div>
+      </a>
+      <a class="card" href="memory/" style="--tint: var(--c-memory)">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10M19 21V10M9 21v-6h6v6M2 10l10-7 10 7z"/></svg>
+        </span>
+        <div class="body">
+          <div class="title"><h3>Loci: Memory Training</h3><span class="new">New</span></div>
+          <p class="desc">Learn the techniques memory champions use (memory palaces, the Major System, PAO, cards, names and faces), then train with eight timed championship-style events and a 4-week beginner plan.</p>
+          <ul class="tags"><li>Memory palace</li><li>Spaced repetition</li><li>Timed events</li><li>Works offline</li></ul>
+          <span class="go">Start training →</span>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    Static sites hosted on GitHub Pages · <a href="https://github.com/sankithack/sankithack.github.io">Source on GitHub</a>
+  </footer>
+</div>
 </body>
 </html>
