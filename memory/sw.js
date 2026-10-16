@@ -2,8 +2,8 @@
 // refreshing in the background (stale-while-revalidate).
 // Bump VERSION when you add or rename files.
 const PREFIX = 'loci-';
-const VERSION = `${PREFIX}v2`;
-const FACE_COUNT = 196; // keep in sync with js/data/faces.js
+const VERSION = `${PREFIX}v3`;
+const FACE_COUNT = 101; // keep in sync with js/data/faces.js
 
 const FILES = [
   './',
@@ -49,8 +49,8 @@ const FILES = [
   './js/lib/demo.js',
   './js/data/demos.js',
   './js/data/faces.js',
-  './faces/demo-rosa.jpg',
-  // Synthetic face photos 000.jpg … (FACE_COUNT - 1)
+  './faces/demo-kamala.jpg',
+  // Portrait photos 000.jpg … (FACE_COUNT - 1)
   ...Array.from({ length: FACE_COUNT }, (_, i) => `./faces/${String(i).padStart(3, '0')}.jpg`),
 ];
 

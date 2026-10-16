@@ -198,28 +198,28 @@ export const DEMOS = {
   },
 
   names: () => ({
-    title: 'Remembering “Rosa Fischer”',
+    title: 'Remembering “Kamala Bhatt”',
     stage: () => `
       <div class="d-face">
-        <img src="faces/demo-rosa.jpg" alt="Face of the person to remember">
+        <img src="faces/demo-kamala.jpg" alt="Face of the person to remember">
         <span class="d-ring d-fade"></span>
-        <span class="d-emo d-pop" style="left:30%;top:30%">🌹</span><span class="d-emo d-pop" style="left:50%;top:27%">🌹</span><span class="d-emo d-pop" style="left:70%;top:30%">🌹</span>
-        <span class="d-emo d-pop d-fishy" style="left:50%;top:26%">🐟</span>
+        <span class="d-emo d-pop" data-e="lotus" style="left:47%;top:15%">🪷</span>
+        <span class="d-emo d-pop d-fishy" style="left:47%;top:24%">🦇</span>
       </div>
       <div class="d-namecard">
-        <div class="d-nm d-drop">Rosa Fischer</div>
-        <div class="d-step d-drop" data-s="0"><b>Feature</b> bright red fringe</div>
-        <div class="d-step d-drop" data-s="1"><b>Rosa</b> → roses 🌹</div>
-        <div class="d-step d-drop" data-s="2"><b>Fischer</b> → fisher 🐟</div>
-        <div class="d-step d-drop" data-s="3"><b>Scene</b> roses sprout from her fringe; a fish leaps out</div>
+        <div class="d-nm d-drop">Kamala Bhatt</div>
+        <div class="d-step d-drop" data-s="0"><b>Feature</b> gold forehead jewel (maang tikka)</div>
+        <div class="d-step d-drop" data-s="1"><b>Kamala</b> → kamal, a lotus 🪷</div>
+        <div class="d-step d-drop" data-s="2"><b>Bhatt</b> → a bat 🦇</div>
+        <div class="d-step d-drop" data-s="3"><b>Scene</b> a lotus blooms from her forehead jewel; a bat swoops out of it</div>
       </div>`,
     steps: [
-      { caption: 'You meet <b>Rosa Fischer</b>. A name alone is just a sound…', apply: (s) => $in(s, '.d-nm'), ms: 2600 },
-      { caption: '<b>1. Pick a feature</b> that stands out: her bright red fringe.', apply: (s) => { $in(s, '.d-ring, [data-s="0"]'); }, ms: 2800 },
-      { caption: '<b>2. Turn the first name into an image:</b> Rosa sounds like <b>roses</b>.', apply: (s) => { $in(s, '[data-s="1"]'); }, ms: 2600 },
-      { caption: '<b>3. Link it to the feature:</b> red roses sprout out of her red fringe.', apply: (s) => { s.querySelectorAll('.d-face .d-pop:not(.d-fishy)').forEach((e) => e.classList.add('in')); }, ms: 3000 },
-      { caption: '<b>4. Add the surname:</b> Fischer → a <b>fisher</b>’s fish leaps out of the roses.', apply: (s) => { $in(s, '[data-s="2"], .d-fishy'); s.querySelector('.d-fishy').classList.add('leap'); }, ms: 3000 },
-      { caption: 'Next time you see that fringe, the roses and the fish bring back <b>Rosa Fischer</b>.', apply: (s) => { $in(s, '[data-s="3"]'); $anim(s, '.d-face .d-emo', 'd-bounce'); }, ms: 3400 },
+      { caption: 'You meet <b>Kamala Bhatt</b>. A name alone is just a sound…', apply: (s) => $in(s, '.d-nm'), ms: 2600 },
+      { caption: '<b>1. Pick a feature</b> that stands out: the gold jewel on her forehead.', apply: (s) => { $in(s, '.d-ring, [data-s="0"]'); }, ms: 2800 },
+      { caption: '<b>2. Turn the first name into an image:</b> Kamala comes from <i>kamal</i>, a <b>lotus</b>.', apply: (s) => { $in(s, '[data-s="1"]'); }, ms: 2600 },
+      { caption: '<b>3. Link it to the feature:</b> a pink lotus blooms right out of her forehead jewel.', apply: (s) => { $in(s, '[data-e="lotus"]'); $anim(s, '[data-e="lotus"]', 'd-bounce'); }, ms: 3000 },
+      { caption: '<b>4. Add the surname:</b> Bhatt sounds like <b>bat</b>, so a bat swoops out of the lotus.', apply: (s) => { $in(s, '[data-s="2"], .d-fishy'); s.querySelector('.d-fishy').classList.add('leap'); }, ms: 3000 },
+      { caption: 'Next time you see that forehead jewel, the lotus and the bat bring back <b>Kamala Bhatt</b>.', apply: (s) => { $in(s, '[data-s="3"]'); $anim(s, '.d-face .d-emo', 'd-bounce'); }, ms: 3400 },
     ],
   }),
 
@@ -296,21 +296,21 @@ export const DEMOS = {
   },
 
   phone: () => {
-    const num = '2124873051';
+    const num = '9820487305';
     const pairs = num.match(/../g);
     const imgs = pairs.map(majorImage);
     return {
-      title: 'Phone numbers: Leo Bell, (212) 487-3051',
+      title: 'Phone numbers: Sunil Mehta, +91 98204 87305',
       stage: () => `
-        <div class="d-row"><span class="d-event d-pop">🦁🔔 Leo Bell · <span class="mono">(212) 487-3051</span></span></div>
+        <div class="d-row"><span class="d-event d-pop">☀️🔩 Sunil Mehta · <span class="mono">+91 98204 87305</span></span></div>
         <div class="d-row d-num">${pairs.map((p, i) => `<span class="d-bgrp" data-g="${i}">${tiles(p)}</span>`).join('<span class="d-gap"></span>')}</div>
         <div class="d-row d-words small-chips">${imgs.map((w, i) => `<span class="d-word d-pop" data-w="${i}">${chip(w)}</span>`).join('')}</div>
-        <div class="d-scene d-pop"><p>A lion (Leo) ringing a bell (Bell) walks through his house: ${imgs.map(esc).join(' → ')}</p></div>`,
+        <div class="d-scene d-pop"><p>The sun (Sunil) made of metal (Mehta) rolls through his house: ${imgs.map(esc).join(' → ')}</p></div>`,
       steps: [
-        { caption: 'Start with the <b>person</b>: Leo → a lion 🦁, Bell → a bell 🔔. He becomes the star of the story.', apply: (s) => $in(s, '.d-event'), ms: 2800 },
-        { caption: 'Split the 10 digits into five pairs.', apply: (s) => { $in(s, '.d-tile'); $cls(s, '.d-num', 'split'); }, ms: 2200 },
+        { caption: 'Start with the <b>person</b>: Sunil → the sun ☀️, Mehta → metal 🔩. A shining metal sun becomes the star of the story.', apply: (s) => $in(s, '.d-event'), ms: 2800 },
+        { caption: 'Ignore the +91 (it never changes) and split the 10 digits into five pairs.', apply: (s) => { $in(s, '.d-tile'); $cls(s, '.d-num', 'split'); }, ms: 2200 },
         ...pairs.map((p, i) => ({ caption: `<b>${p}</b> → ${esc(imgs[i])}`, apply: (s) => { $cls(s, '.d-bgrp', 'hl', false); $cls(s, `[data-g="${i}"]`, 'hl'); $in(s, `[data-w="${i}"]`); }, ms: 1500 })),
-        { caption: 'The lion meets each image in order on a short walk through his house: one number, one mini journey.', apply: (s) => { $cls(s, '.d-bgrp', 'hl', false); $in(s, '.d-scene'); }, ms: 3600 },
+        { caption: 'The metal sun meets each image in order on a short walk through his house: one number, one mini journey.', apply: (s) => { $cls(s, '.d-bgrp', 'hl', false); $in(s, '.d-scene'); }, ms: 3600 },
       ],
     };
   },

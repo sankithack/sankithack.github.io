@@ -167,15 +167,15 @@ export const LESSONS = [
 <h2>The three-step method</h2>
 <ol>
   <li><b>Pick a feature.</b> Look at the face and choose the first thing that stands out: big glasses, curly hair, a beard, a wide smile, bright earrings.</li>
-  <li><b>Make the name into an image.</b> Use sound-alikes or associations: <i>Rosa</i> → roses; <i>Hector</i> → a tractor; <i>Bell</i> → a bell; <i>Kumar</i> → "cool mar(ble)"; <i>Nash</i> → gnashing teeth.</li>
-  <li><b>Link the image to the feature.</b> Make it interact and exaggerate: roses sprouting out of Rosa's curly hair; tiny tractors driving over Hector's eyebrows.</li>
+  <li><b>Make the name into an image.</b> Use meanings, sound-alikes or associations: <i>Kamala</i> → <i>kamal</i>, a lotus; <i>Arjun</i> → an archer's bow; <i>Sunita</i> → the sun; <i>Mehta</i> → metal; <i>Rao</i> → rowing a boat; <i>Shetty</i> → a bed sheet.</li>
+  <li><b>Link the image to the feature.</b> Make it interact and exaggerate: a lotus blooming out of Kamala's forehead jewel; Arjun's bushy eyebrows firing tiny arrows.</li>
 </ol>
 
 <h2>Surnames</h2>
-<p>Do the same for the last name and add it to the scene: <i>Rosa Fischer</i> → roses in her hair, and a fish jumping out of the bouquet.</p>
+<p>Do the same for the last name and add it to the scene: <i>Kamala Bhatt</i> → a lotus on her forehead jewel, and a <i>bat</i> hanging upside down from it.</p>
 
 <h2>Common name images</h2>
-<p>Build a personal dictionary of images for common names. Once <i>Daniel</i> is always a lion (Daniel in the lions' den) and <i>Taylor</i> is always a tailor's measuring tape, you'll get much faster.</p>
+<p>Build a personal dictionary of images for common names. Once <i>Lakshmi</i> is always gold coins, <i>Krishna</i> always a flute, <i>Ganesh</i> always an elephant, and <i>Sharma</i> always a <i>sharbat</i> glass, you'll get much faster.</p>
 
 <div class="callout"><p>In competition, faces appear in a different order at recall. Rely on the face and feature, not on the position.</p></div>`,
   },

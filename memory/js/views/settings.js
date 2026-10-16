@@ -60,7 +60,7 @@ export function render(el) {
       <section class="card soft small">
         <h3>About</h3>
         <p>Loci works offline once loaded. Install it on your phone with your browser's “Add to Home Screen”.</p>
-        <p class="mb0">Faces in Names &amp; Faces are synthetic (AI-generated people who don't exist) from the <a href="https://github.com/SelfishGene/SFHQ-dataset" rel="noopener">SFHQ dataset</a>, MIT licence © 2022 David Beniaguev (<a href="faces/LICENSE-SFHQ.txt">licence</a>).</p>
+        <p class="mb0">Face photos are portraits from <a href="https://unsplash.com" rel="noopener">Unsplash</a>, used under the <a href="https://unsplash.com/license" rel="noopener">Unsplash License</a> (<a href="faces/CREDITS.md">photo credits</a>). Names shown with them are random, not the names of the people photographed.</p>
       </section>
     </div>`;
 
