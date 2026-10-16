@@ -812,3 +812,12 @@ label.btn { cursor: pointer; }
 .net-off { background: var(--ink); color: var(--bg); }
 .net-on { background: var(--good); color: #fff; }
 @media (max-width: 860px) { .net-toast { bottom: calc(5rem + env(safe-area-inset-bottom)); } }
+
+/* sound + theme toggles */
+.rail-toggles { margin-top: auto; display: grid; gap: 0.4rem; }
+.rail-toggles .theme-toggle { margin-top: 0; }
+.sound-toggle[aria-pressed="true"] { color: var(--brass-ink); border-color: var(--brass); }
+.more-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.more-toggles .theme-toggle { justify-content: center; flex-direction: row; font-size: 0.92rem; border: 1px solid var(--line); }
+.more-toggles .theme-toggle .nav-label { display: inline; }
+@media (max-width: 860px) { .rail-toggles { display: none; } }

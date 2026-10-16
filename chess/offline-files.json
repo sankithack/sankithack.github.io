@@ -1,5 +1,5 @@
 {
- "version": "b3c2e99ed217",
+ "version": "2f4689bdcf92",
  "files": [
   "./",
   "css/styles.css",
@@ -30,6 +30,7 @@
   "js/lib/review-worker.js",
   "js/lib/review.js",
   "js/lib/search.js",
+  "js/lib/sound.js",
   "js/lib/sparring.js",
   "js/lib/store.js",
   "js/lib/tree.js",

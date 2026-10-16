@@ -5,6 +5,7 @@ import { Chess, START_FEN, normMove, buildLine, parseArrow } from './line.js';
 import { kingSquare } from './viewer.js';
 import { bare, findMove, moveForm } from './moves.js';
 import { h, icon } from './dom.js';
+import { play } from './sound.js';
 
 export class LineDrill {
   /** o: { fen, setup, moves, side: 'w'|'b', title, onDone({ mistakes, hints, userMoves, perfect }) } */
@@ -112,7 +113,7 @@ export class LineDrill {
     this.bar.firstChild.style.width = '100%';
     const perfect = this.mistakes === 0 && this.hints === 0;
     this.say('good', perfect ? 'Perfect run — line mastered!' : `Done with ${this.mistakes} mistake${this.mistakes === 1 ? '' : 's'} and ${this.hints} hint${this.hints === 1 ? '' : 's'}. Run it again for a perfect score.`);
-    this.el.classList.add('celebrate');
+    play('success'); this.el.classList.add('celebrate');
     setTimeout(() => this.el.classList.remove('celebrate'), 900);
     this.o.onDone?.({ mistakes: this.mistakes, hints: this.hints, userMoves: this.userMoves, perfect });
   }

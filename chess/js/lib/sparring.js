@@ -8,6 +8,7 @@ import { Chess } from './line.js';
 import { kingSquare } from './viewer.js';
 import { findMove, moveForm } from './moves.js';
 import { h, icon } from './dom.js';
+import { play } from './sound.js';
 
 let worker, seq = 0;
 const pending = new Map();
@@ -152,7 +153,7 @@ export class Sparring {
     if (!result) return false;
     this.over = true;
     this.say(result[0], result[1] + (result[2] && this.slips ? ` (${this.slips} move${this.slips === 1 ? '' : 's'} taken back)` : ''));
-    if (result[2]) { this.el.classList.add('celebrate'); setTimeout(() => this.el.classList.remove('celebrate'), 900); }
+    if (result[2]) { play('success'); this.el.classList.add('celebrate'); setTimeout(() => this.el.classList.remove('celebrate'), 900); }
     this.o.onDone?.({ success: result[2], clean: result[2] && !this.slips });
     return true;
   }

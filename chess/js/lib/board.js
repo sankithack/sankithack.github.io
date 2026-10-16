@@ -2,6 +2,7 @@
 // Pure DOM + SVG, no dependencies besides the piece set.
 import { PIECES } from '../vendor/pieces.js';
 import { h, reducedMotion } from './dom.js';
+import { play } from './sound.js';
 
 const FILES = 'abcdefgh';
 const KIND_COLORS = { plan: 'var(--arrow-plan)', threat: 'var(--arrow-threat)', alt: 'var(--arrow-alt)' };
@@ -131,6 +132,8 @@ export class Board {
       setTimeout(() => p.el.remove(), anim ? 260 : 0);
     }
     this.pieces = keep;
+    // a removed piece means a capture (promotions reuse the pawn's element, castling removes nothing)
+    if (lastMove && animate && !this.o.silent) play(left.size ? 'capture' : 'move');
     this.marks.last = lastMove ? [lastMove.from, lastMove.to] : [];
     this.marks.check = [];
     this.renderMarks();
@@ -139,7 +142,7 @@ export class Board {
 
   // ---------- marks & arrows
   setKeySquares(squares = []) { this.marks.key = squares; this.renderMarks(); }
-  setCheck(sq) { this.marks.check = sq ? [sq] : []; this.renderMarks(); }
+  setCheck(sq) { this.marks.check = sq ? [sq] : []; this.renderMarks(); if (sq && !this.o.silent) play('check'); }
   renderMarks() {
     this.markLayer.replaceChildren();
     const add = (sq, cls) => { const m = h('div.mark.' + cls); this.place(m, sq); this.markLayer.append(m); };
@@ -150,6 +153,7 @@ export class Board {
     this.marks.dots.forEach((s) => add(s, this.pieceAt(s) ? 'mark-capture' : 'mark-dot'));
   }
   flash(sq, kind) {
+    if (kind === 'bad' && !this.o.silent) play('error');
     const m = h('div.mark.mark-flash.flash-' + kind);
     this.place(m, sq);
     this.markLayer.append(m);

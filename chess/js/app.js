@@ -12,6 +12,7 @@ import * as guide from './pages/guide.js';
 import * as review from './pages/review.js';
 import * as progressPage from './pages/progress.js';
 import { initSearch, openSearch } from './lib/search.js';
+import { soundOn, setSound } from './lib/sound.js';
 
 // [path, label, icon, shown in the phone tab bar]
 const NAV = [
@@ -36,6 +37,19 @@ const ROUTES = {
   review: review.render,
   progress: progressPage.render,
 };
+
+// ---------- sound toggle
+function soundButton() {
+  const btn = h('button.theme-toggle.sound-toggle', { type: 'button', onclick: () => setSound(!soundOn()) });
+  const paint = () => {
+    btn.replaceChildren(icon(soundOn() ? 'sound' : 'mute'), h('span.nav-label', soundOn() ? 'Sound on' : 'Sound off'));
+    btn.setAttribute('aria-pressed', String(soundOn()));
+    btn.setAttribute('aria-label', soundOn() ? 'Turn move sounds off' : 'Turn move sounds on');
+  };
+  document.addEventListener('soundchange', paint);
+  paint();
+  return btn;
+}
 
 // ---------- theme
 const THEME_KEY = 'chess-academy-theme';
@@ -66,7 +80,7 @@ function renderRail() {
     h('nav.nav', { 'aria-label': 'Sections' },
       NAV.map(([path, label, ic, tab]) => h('a.nav-link' + (tab ? '' : '.nav-secondary'), { href: '#/' + path, 'data-path': path }, icon(ic), h('span.nav-label', label))),
       h('button.nav-link.nav-more', { type: 'button', 'aria-expanded': 'false', 'aria-controls': 'more-sheet', onclick: () => toggleMore() }, icon('menu'), h('span.nav-label', 'More'))),
-    themeButton(),
+    h('div.rail-toggles', soundButton(), themeButton()),
   );
   // phone "More" sheet: everything that doesn't fit in the tab bar
   const sheet = h('div.more-sheet#more-sheet', { hidden: true, role: 'dialog', 'aria-label': 'More sections' },
@@ -80,7 +94,7 @@ function renderRail() {
         h('a.more-link', { href: '#/guide/memory', onclick: () => toggleMore(false) }, icon('eye', 24), 'Memory'),
         h('a.more-link', { href: '#/review', onclick: () => toggleMore(false) }, icon('search', 24), 'Review a game'),
         h('a.more-link', { href: '#/progress', onclick: () => toggleMore(false) }, icon('check', 24), 'My progress')),
-      themeButton()));
+      h('div.more-toggles', soundButton(), themeButton())));
   document.body.append(sheet);
   // phones: a floating search button (the tab bar has no room)
   document.body.append(h('button.search-fab', { type: 'button', 'aria-label': 'Search', onclick: () => openSearch() }, icon('search', 20)));

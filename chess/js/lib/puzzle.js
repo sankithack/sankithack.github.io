@@ -4,6 +4,7 @@ import { Chess, buildLine, parseArrow } from './line.js';
 import { kingSquare } from './viewer.js';
 import { bare, findMove, moveForm } from './moves.js';
 import { h, icon } from './dom.js';
+import { play } from './sound.js';
 
 export const startFenOf = (t) => buildLine({ fen: t.fen, setup: t.setup })[0].fen;
 
@@ -83,7 +84,7 @@ export function createPuzzle(t, o = {}) {
     say('good', hintUsed ? 'Solved with help. Try it again later without hints.' : 'Solved!');
     board.setArrows((t.arrows || []).map(parseArrow));
     board.setKeySquares(t.squares || []);
-    el.classList.add('celebrate'); setTimeout(() => el.classList.remove('celebrate'), 900);
+    play('success'); el.classList.add('celebrate'); setTimeout(() => el.classList.remove('celebrate'), 900);
     o.onSolved?.({ clean: !hintUsed && mistakes === 0 });
     return true;
   }
