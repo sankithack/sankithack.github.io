@@ -117,7 +117,7 @@ function quiz(data) {
   };
   let deck = 'openings', qs = [], i = 0, score = 0, answered = false;
   const boardBox = h('div.quiz-board');
-  const viewer = new LineViewer(boardBox, { showSheet: false, showNotes: false, speed: 650, keys: false, label: 'Quiz position' });
+  const viewer = new LineViewer(boardBox, { showSheet: false, showNotes: false, speed: 650, keys: false, silent: true, label: 'Quiz position' });
   const promptEl = h('h2.quiz-prompt');
   const opts = h('div.quiz-options');
   const feedback = h('div.quiz-feedback', { 'aria-live': 'polite' });

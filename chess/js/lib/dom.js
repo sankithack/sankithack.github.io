@@ -40,7 +40,8 @@ const P = {
   home: 'M3 11l9-7 9 7M5 10v10h14V10', book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 5v16', bolt: 'M13 2 4 14h7l-1 8 9-12h-7z',
   compass: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM15.5 8.5l-2 5-5 2 2-5z', flag: 'M5 21V4M5 4h11l-2 4 2 4H5', target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11.5v1',
   arrow: 'M5 12h14M13 6l6 6-6 6',
-  map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14', menu: 'M4 7h16M4 12h16M4 17h16',
+  map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
+  sound: 'M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11', mute: 'M4 9v6h4l5 4V5L8 9zM17 9l4 6M21 9l-4 6', menu: 'M4 7h16M4 12h16M4 17h16',
 };
 export function icon(name, size = 20) {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

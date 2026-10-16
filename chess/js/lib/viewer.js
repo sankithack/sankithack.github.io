@@ -22,7 +22,7 @@ export class LineViewer {
     this.o = { showNotes: true, showSheet: true, speed: 1100, ...o };
     this.el = h('div.viewer');
     const boardWrap = h('div.viewer-board');
-    this.board = new Board(boardWrap, { orientation: o.orientation || 'white', size: o.size, label: o.label });
+    this.board = new Board(boardWrap, { orientation: o.orientation || 'white', size: o.size, label: o.label, silent: o.silent });
     this.btn = {};
     const b = (name, label, fn) => (this.btn[name] = h('button.icon-btn', { type: 'button', 'aria-label': label, title: label, onclick: fn }, icon(name)));
     this.counter = h('span.viewer-count', { 'aria-live': 'polite' });

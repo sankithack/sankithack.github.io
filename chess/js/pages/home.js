@@ -22,7 +22,7 @@ export function render(data) {
       h('p.hero-lesson', game.lesson)),
     h('figure.hero-figure', heroBoard, caption));
 
-  const viewer = new LineViewer(heroBoard, { autoplay: true, loop: true, speed: 1500, showSheet: false, keys: false, label: 'The Opera Game, playing automatically' });
+  const viewer = new LineViewer(heroBoard, { autoplay: true, loop: true, speed: 1500, showSheet: false, keys: false, silent: true, label: 'The Opera Game, playing automatically' });
   viewer.load({ moves: game.moves, intro: 'Morphy has White. Watch how quickly his pieces join the game.' });
 
   const phase = (roman, href, title, range, desc, meta) =>
