@@ -10,6 +10,8 @@
 import { db, update, settings, addResult, unlockedLevel, checkUnlock, bestResult, uid, UNLOCK_ACCURACY } from '../../storage.js';
 import { scoreRows, comparisonHTML } from '../../lib/compare.js';
 import { esc, countdown, fmtClock, fmtDuration, pct, toast, $, $$ } from '../../utils.js';
+import { DEMOS } from '../../data/demos.js';
+import { demoPlayer } from '../../lib/demo.js';
 
 const TIME_FIELDS = [
   { key: 'memTime', label: 'Memorize time', hint: 'seconds', type: 'number', min: 10, max: 3600, step: 5 },
@@ -50,7 +52,8 @@ export function runEvent(el, ev, query) {
           <p id="customNote" class="small" style="margin:10px 0 0"></p>
           <p class="small muted mb0" style="margin-top:6px">Scoring: ${settings().strict ? '<b>championship (strict)</b>' : 'standard (every correct item counts)'} · <a href="#/settings">change</a></p>
         </section>
-        ${ev.tips ? `<details class="card"><summary><b>How to approach this event</b></summary><div class="lesson" style="margin-top:10px">${ev.tips}</div></details>` : ''}
+        ${ev.tips || DEMOS[ev.id] ? `<details class="card" id="howto"><summary><b>How to approach this event</b> <span class="muted small">with an animated example</span></summary>
+          <div style="margin-top:12px">${DEMOS[ev.id] ? '<div id="evDemo"></div>' : ''}<div class="lesson">${ev.tips || ''}</div></div></details>` : ''}
         <button class="btn primary big block" id="start">Start memorizing</button>
       </div>`;
 
@@ -99,6 +102,14 @@ export function runEvent(el, ev, query) {
       fill();
     };
     fill();
+
+    const howto = $('#howto', el);
+    if (howto && DEMOS[ev.id]) {
+      howto.addEventListener('toggle', () => {
+        const slot = $('#evDemo', el);
+        if (howto.open && !slot.firstChild) demoPlayer(slot, DEMOS[ev.id]());
+      });
+    }
 
     $('#start', el).onclick = () => {
       const opts = {};
