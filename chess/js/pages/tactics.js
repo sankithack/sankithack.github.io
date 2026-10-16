@@ -42,10 +42,10 @@ export function renderDetail(data, id, n = '1') {
   const pz = positions[k];
   const nextHref = k + 1 < positions.length ? `#/tactics/${t.id}/${k + 2}` : `#/tactics/${next.id}`;
   const reveal = h('div.puzzle-reveal', { hidden: true },
-    h('h3', 'Why it works'), h('p', pz.explanation),
+    h('h2.h3', 'Why it works'), h('p', pz.explanation),
     h('a.btn.btn-primary', { href: nextHref }, k + 1 < positions.length ? `Next ${t.name.toLowerCase()} puzzle` : 'Next: ' + next.name));
   const puzzle = createPuzzle(pz, { onSolved: () => { markSolved(pz.pid); markSolved(t.id); reveal.hidden = false; } });
-  const switcher = positions.length > 1 ? h('div.chips.puzzle-switch', { role: 'tablist', 'aria-label': 'Puzzles for this motif' },
+  const switcher = positions.length > 1 ? h('nav.chips.puzzle-switch', { 'aria-label': 'Puzzles for this motif' },
     positions.map((p, i) => h('a.chip' + (i === k ? '.on' : ''), { href: `#/tactics/${t.id}/${i + 1}`, 'aria-current': i === k ? 'page' : null }, isSolved(p.pid) ? '✓ ' : '', `Puzzle ${i + 1}`))) : null;
   return page(t.name,
     h('nav.crumbs', { 'aria-label': 'Breadcrumb' }, h('a', { href: '#/tactics' }, 'Tactics'), h('span', t.name)),
@@ -54,7 +54,7 @@ export function renderDetail(data, id, n = '1') {
       h('div.study-text',
         h('header.study-head', h('h1', t.name), h('div.tags', levelTag(t.level), tag(t.group, 'quiet')), h('p.mnemonic', t.mnemonic)),
         switcher,
-        h('h3', 'Definition'), h('p', t.definition),
+        h('h2.h3', 'Definition'), h('p', t.definition),
         h('p.muted', 'Drag a piece, tap it and then its destination, or type the move below the board.'),
         reveal)),
     h('nav.pager', h('a', { href: `#/tactics/${prev.id}` }, '← ' + prev.name), h('a', { href: `#/tactics/${next.id}` }, next.name + ' →')));
