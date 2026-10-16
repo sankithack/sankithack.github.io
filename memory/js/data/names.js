@@ -1,64 +1,43 @@
-// Name pools for Names & Faces and Phone Numbers. Mixed origins, as in real competitions.
+// Indian name pools for Names & Faces and Phone Numbers, drawn from many regions and communities.
 import { shuffle } from '../utils.js';
 
-export const FIRST_NAMES = [
-  'Aaliyah', 'Aaron', 'Abigail', 'Adam', 'Adrian', 'Aiden', 'Aisha', 'Alan', 'Alejandro', 'Alice',
-  'Amara', 'Amelia', 'Amir', 'Ana', 'Andre', 'Angela', 'Anika', 'Anton', 'Arjun', 'Asha',
-  'Astrid', 'Ava', 'Beatrice', 'Ben', 'Bianca', 'Boris', 'Brandon', 'Brianna', 'Bruno', 'Caleb',
-  'Camila', 'Carlos', 'Caroline', 'Cedric', 'Chen', 'Chloe', 'Claire', 'Colin', 'Dalia', 'Damian',
-  'Daniel', 'Daria', 'David', 'Deepak', 'Delia', 'Diego', 'Dmitri', 'Elena', 'Eli', 'Elif',
-  'Ella', 'Emeka', 'Emil', 'Emma', 'Enzo', 'Erik', 'Esme', 'Ethan', 'Eva', 'Farah',
-  'Felix', 'Fatima', 'Fiona', 'Florian', 'Gabriel', 'Gemma', 'George', 'Gianna', 'Grace', 'Hana',
-  'Hannah', 'Harper', 'Hassan', 'Hector', 'Helga', 'Henry', 'Hiro', 'Ian', 'Ibrahim', 'Ida',
-  'Imani', 'Ines', 'Ingrid', 'Isaac', 'Isabel', 'Ivan', 'Jack', 'Jada', 'Jamal', 'Jasmine',
-  'Javier', 'Jin', 'Joanna', 'Jonas', 'Jorge', 'Julia', 'Kai', 'Kamala', 'Karim', 'Kate',
-  'Keiko', 'Kenji', 'Kofi', 'Lars', 'Laura', 'Leah', 'Leila', 'Leo', 'Liam', 'Lina',
-  'Lucas', 'Lucia', 'Luis', 'Maeve', 'Malik', 'Maria', 'Marco', 'Maya', 'Mei', 'Miguel',
-  'Mila', 'Milo', 'Mira', 'Mohammed', 'Nadia', 'Naomi', 'Nathan', 'Nia', 'Nico', 'Nina',
-  'Noah', 'Nora', 'Olga', 'Oliver', 'Omar', 'Oscar', 'Paolo', 'Pablo', 'Petra', 'Pia',
-  'Priya', 'Quentin', 'Rafael', 'Rahul', 'Rania', 'Ravi', 'Rebecca', 'Rosa', 'Ruby', 'Rui',
-  'Ryan', 'Sakura', 'Samuel', 'Sana', 'Santiago', 'Sara', 'Sean', 'Sergei', 'Simone', 'Sofia',
-  'Stella', 'Sven', 'Tamar', 'Tariq', 'Tessa', 'Theo', 'Thomas', 'Tomas', 'Uma', 'Valentina',
-  'Victor', 'Vikram', 'Wanda', 'Wei', 'Willa', 'Xavier', 'Yara', 'Yasmin', 'Yuki', 'Yusuf',
-  'Zainab', 'Zara', 'Zoe', 'Zane', 'Bram', 'Carmen', 'Dev', 'Freya', 'Hugo', 'Ishaan',
-  'Kira', 'Lorenzo', 'Matteo', 'Odette', 'Rhea', 'Silas', 'Talia', 'Ulrich', 'Vera', 'Wyatt',
-];
+const words = (s) => s.trim().split(/\s+/);
 
-export const LAST_NAMES = [
-  'Abbott', 'Adeyemi', 'Agarwal', 'Alvarez', 'Andersen', 'Archer', 'Baker', 'Banerjee', 'Barnes', 'Becker',
-  'Bell', 'Bennett', 'Bianchi', 'Bishop', 'Blackwood', 'Bower', 'Brennan', 'Brooks', 'Burke', 'Byrne',
-  'Campbell', 'Carter', 'Castillo', 'Chandler', 'Chang', 'Chavez', 'Clarke', 'Coleman', 'Conti', 'Cooper',
-  'Costa', 'Cruz', 'Dalton', 'Das', 'Davies', 'Delgado', 'Dixon', 'Dubois', 'Duncan', 'Edwards',
-  'Ellis', 'Erikson', 'Evans', 'Farouk', 'Fernandez', 'Fischer', 'Fitzgerald', 'Fleming', 'Fontaine', 'Foster',
-  'Fraser', 'Fujita', 'Garcia', 'Gardner', 'Gill', 'Gomez', 'Gordon', 'Graham', 'Gupta', 'Haddad',
-  'Hale', 'Hansen', 'Harper', 'Hartley', 'Hayes', 'Henderson', 'Hoffman', 'Holland', 'Hughes', 'Hunter',
-  'Ibrahim', 'Ivanova', 'Jensen', 'Johansson', 'Jordan', 'Kaplan', 'Kato', 'Keller', 'Kennedy', 'Khan',
-  'Kim', 'Kowalski', 'Kumar', 'Lambert', 'Larsen', 'Lawson', 'Lee', 'Lindqvist', 'Lopez', 'Lucas',
-  'Lynch', 'Mackenzie', 'Maddox', 'Mahmoud', 'Marino', 'Marshall', 'Martel', 'Mason', 'Matsumoto', 'Mendoza',
-  'Meyer', 'Miller', 'Mitchell', 'Moreau', 'Morgan', 'Moretti', 'Murphy', 'Nakamura', 'Nash', 'Navarro',
-  'Nelson', 'Nguyen', 'Novak', 'Nowak', 'Obi', 'Okafor', 'Oliveira', 'Olsen', 'Ortega', 'Osei',
-  'Owens', 'Park', 'Parker', 'Patel', 'Pearson', 'Perez', 'Petrov', 'Pierce', 'Popescu', 'Porter',
-  'Price', 'Quinn', 'Ramirez', 'Rao', 'Reed', 'Reyes', 'Richter', 'Rivera', 'Roberts', 'Romano',
-  'Rossi', 'Russo', 'Saito', 'Salazar', 'Sanchez', 'Santos', 'Schmidt', 'Schneider', 'Shah', 'Sharma',
-  'Silva', 'Singh', 'Sokolov', 'Stone', 'Sullivan', 'Suzuki', 'Tanaka', 'Taylor', 'Thornton', 'Torres',
-  'Tran', 'Turner', 'Vargas', 'Vasquez', 'Vogel', 'Wagner', 'Walsh', 'Wang', 'Ward', 'Watanabe',
-  'Weber', 'Wells', 'Wheeler', 'Whitaker', 'Wolf', 'Wong', 'Wright', 'Wu', 'Yamamoto', 'Yilmaz',
-  'Young', 'Zhang', 'Zhou', 'Zimmerman', 'Ahmed', 'Bauer', 'Castro', 'Diaz', 'Eze', 'Ferreira',
-  'Greco', 'Holm', 'Iyer', 'Jovanovic', 'Klein', 'Mensah', 'Ng', 'Pham', 'Sato', 'Varga',
-];
+const FEMALE_FIRST = words(`
+  Aarti Aditi Aishwarya Akanksha Amrita Ananya Anjali Ankita Anushka Aparna Archana Arpita Ayesha Bhavana
+  Chandni Charu Deepa Deepika Devika Divya Durga Fatima Gauri Gayatri Geeta Harleen Hema Indira Isha Jasleen
+  Jaya Jyoti Kajal Kalpana Kamala Kavita Kavya Keerthi Lakshmi Lata Leela Madhuri Mahima Malini Mamta Manisha
+  Mariam Meena Meera Megha Monika Nandini Nazia Neha Nikita Nisha Padma Pallavi Pooja Prachi Preeti Priya
+  Radha Radhika Rani Rashmi Rekha Revathi Ritu Roshni Rupa Sakshi Sangeeta Sanjana Sapna Sarita Savitri Seema
+  Shalini Shanti Shilpa Shobha Shreya Shruti Simran Sneha Sonali Sudha Sujata Suman Sunita Swati Tanvi Tara
+  Uma Usha Vandana Varsha Vidya Yamini Zainab
+`);
 
-// Used only to pick a matching face style (no facial hair, etc.).
-export const FEMALE_NAMES = new Set(`
-Aaliyah Abigail Aisha Alice Amara Amelia Ana Angela Anika Asha Astrid Ava Beatrice Bianca Brianna Camila Caroline Chloe Claire Dalia
-Daria Delia Elena Elif Ella Emma Esme Eva Farah Fatima Fiona Gemma Gianna Grace Hana Hannah Harper Helga Ida Imani
-Ines Ingrid Isabel Jada Jasmine Joanna Julia Kamala Kate Keiko Laura Leah Leila Lina Lucia Maeve Maria Maya Mei Mila
-Mira Nadia Naomi Nia Nina Nora Olga Petra Pia Priya Rania Rebecca Rosa Ruby Sakura Sana Sara Simone Sofia Stella
-Tamar Tessa Uma Valentina Wanda Willa Yara Yasmin Yuki Zainab Zara Zoe Carmen Freya Kira Odette Rhea Talia Vera
-`.trim().split(/\s+/));
+const MALE_FIRST = words(`
+  Aakash Abhishek Aditya Ajay Akhil Alok Amit Anand Anil Ankit Anuj Arif Arjun Arun Ashok Balwinder Bharat
+  Chetan Deepak Dev Dhruv Dinesh Farhan Gaurav Girish Gopal Harish Hemant Imran Irfan Jaspal Jatin Joseph
+  Karan Kartik Kishore Krishna Kunal Lalit Mahesh Manish Manoj Mohan Mukesh Naveen Nikhil Nitin Pankaj Pradeep
+  Prakash Pranav Rahul Raj Rajesh Rakesh Ramesh Ranjit Ravi Rohan Rohit Sachin Salman Sameer Sandeep Sanjay
+  Santosh Satish Shankar Shiv Siddharth Sukhdev Sunil Suresh Tarun Uday Varun Venkat Vijay Vikram Vinay Vinod
+  Vishal Vivek Yash Yogesh Zubair
+`);
 
-/** Unique first names, one per face, female names for faces flagged femme. */
+export const FIRST_NAMES = [...FEMALE_FIRST, ...MALE_FIRST];
+export const FEMALE_NAMES = new Set(FEMALE_FIRST);
+
+export const LAST_NAMES = words(`
+  Agarwal Ahuja Ansari Arora Banerjee Bansal Baruah Bedi Bhat Bhatia Bose Chacko Chakraborty Chatterjee
+  Chaturvedi Chauhan Chopra D'Souza Das Desai Deshpande Dhillon Dubey Dutta Fernandes Gill Gogoi Gomes Gowda
+  Grewal Gupta Hegde Hussain Iyengar Iyer Jadhav Jha Joshi Kamath Kapoor Khan Khanna Krishnan Kulkarni Kurian
+  Lal Malhotra Mathew Mehta Menon Mirza Mishra Mitra Mukherjee Murthy Naidu Naik Nair Pai Pandey Pandya Parikh
+  Patel Patil Pawar Pereira Pillai Prasad Qureshi Raman Rao Rathore Reddy Roy Sandhu Saxena Sen Sethi Shah
+  Sharma Sheikh Shetty Shinde Shukla Siddiqui Sidhu Singh Sinha Srivastava Subramanian Syed Thakkar Thakur
+  Thomas Tiwari Trivedi Varghese Venkatesan Verma Yadav
+`);
+
+/** Unique first names, one per face: female names for faces flagged femme. */
 export function namesFor(femmeFlags) {
-  const female = shuffle(FIRST_NAMES.filter((n) => FEMALE_NAMES.has(n)));
-  const male = shuffle(FIRST_NAMES.filter((n) => !FEMALE_NAMES.has(n)));
+  const female = shuffle(FEMALE_FIRST);
+  const male = shuffle(MALE_FIRST);
   return femmeFlags.map((f) => (f ? female : male).pop());
 }

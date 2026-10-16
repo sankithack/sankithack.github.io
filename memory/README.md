@@ -8,7 +8,7 @@ A free, offline-capable website for learning memory techniques and training for 
 - **Animated examples:** every technique and event is demonstrated step by step (play, pause, step back and forth), using your own image lists. Find them in each lesson, under each event's "How to approach", and all together at *Learn → Watch animated examples*.
 - **Memory Palace Builder:** create palaces, list loci in walking order, and practise with walk-through, random-quiz and full-recall modes.
 - **Image trainers:** spaced-repetition flashcards for your 00–99 number images and 52 card images, plus a timed speed drill.
-- **Eight timed events:** Speed Numbers, Speed Cards, Random Words, Names & Faces, Phone Numbers, Binary Digits, Historic/Fictional Dates and Spoken Numbers. Each has levels, memorize and recall timers, automatic scoring and a side-by-side comparison of correct vs. your answers.
+- **Eight timed events:** Speed Numbers, Speed Cards, Random Words, Names & Faces (real photos, Indian names), Phone Numbers (Indian +91 mobiles), Binary Digits, Historic/Fictional Dates and Spoken Numbers. Each has levels, memorize and recall timers, automatic scoring and a side-by-side comparison of correct vs. your answers.
 - **4-week beginner plan:** a daily checklist on the dashboard, plus streaks, personal bests and recent scores.
 - **Progress charts:** score, accuracy, time and memorization rate over time for every event.
 - **Your data stays yours:** everything is saved in your browser (`localStorage`), with JSON export and import in Settings.
@@ -97,7 +97,7 @@ js/app.js               Hash router (#/learn, #/events/cards…) and start-up
 js/storage.js           localStorage state, export/import, streaks, levels
 js/utils.js             Helpers (random, dates, timers, DOM)
 js/lib/                 srs.js, demo.js (animated example player), chart.js, speech.js, compare.js (scoring), major.js (decoder)
-faces/                  196 synthetic face photos for Names & Faces (+ dataset licence)
+faces/                  101 portrait photos for Names & Faces (+ CREDITS.md)
 js/data/                Default image lists, names, words, dates, lessons, curriculum, demos, faces
 js/views/               One module per page
 js/views/events/        engine.js (shared event flow) + one module per event
@@ -111,4 +111,4 @@ Create `js/views/events/myevent.js` exporting `{ id, name, blurb, levels, fields
 ## Browser notes
 - Works in current Chrome, Edge, Firefox and Safari, on desktop and mobile.
 - **Spoken Numbers** uses the browser's built-in speech synthesis. If a browser has none, digits are flashed on screen instead. Pick a voice and speed in Settings.
-- Faces in Names & Faces are photorealistic but **synthetic**: AI-generated people who don't exist, cropped from the sample images of the [SFHQ dataset](https://github.com/SelfishGene/SFHQ-dataset) (MIT licence, © 2022 David Beniaguev; see `faces/LICENSE-SFHQ.txt`). No photos of real people are used.
+- Faces in Names & Faces are real portrait photographs from [Unsplash](https://unsplash.com), used under the [Unsplash License](https://unsplash.com/license) and cropped to the face; see `faces/CREDITS.md` for each photo's source. The names shown with them are random Indian names, not the names of the people photographed.

@@ -1,4 +1,4 @@
-// Names & Faces with photorealistic synthetic faces (see data/faces.js).
+// Names & Faces with real portrait photos (see data/faces.js) and Indian names.
 import { LAST_NAMES, namesFor } from '../../data/names.js';
 import { FACES } from '../../data/faces.js';
 import { esc, sample, shuffle, norm, $$ } from '../../utils.js';
@@ -17,7 +17,7 @@ export default {
   tips: `
     <ul>
       <li>Pick <b>one feature</b> per face (hair, glasses, ears, smile) and attach an image for the first name to it.</li>
-      <li>Add the last name as a second image in the same scene: <i>Rosa Fischer</i>, roses growing out of her curly hair with a fish flapping in them.</li>
+      <li>Add the last name as a second image in the same scene: <i>Kamala Bhatt</i>, a lotus (<i>kamal</i>) blooming from her forehead jewel with a bat hanging from it.</li>
       <li>Each first name and each last name scores one point, so if a surname won’t stick, secure the first name.</li>
       <li>Spelling counts, though capital letters don’t.</li>
     </ul>`,
