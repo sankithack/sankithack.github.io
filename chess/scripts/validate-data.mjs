@@ -3,7 +3,7 @@
 // Checks: legal moves, valid arrow/square names, mates that claim to be mates,
 // and (for king+pawn endgames) win/draw claims via scripts/kp-solver.mjs.
 import { readFileSync, existsSync } from 'node:fs';
-import { buildLine, parseArrow, isSquare, normMove } from '../js/lib/line.js';
+import { buildLine, parseArrow, isSquare, normMove, Chess } from '../js/lib/line.js';
 import { solveKP, RESULT } from './kp-solver.mjs';
 import { offlineList } from './build-offline.mjs';
 
@@ -79,6 +79,7 @@ for (const e of endgames) {
     const w = `endgame ${e.id} line ${i + 1}${l.title ? ` "${l.title}"` : ''}`;
     checkMarks(w, l);
     const frames = line(w, { fen: l.fen, moves: l.moves }, { mate: !!l.mate });
+    if (frames && l.stalemate) { const c = new Chess(frames.at(-1).fen); if (!c.isStalemate()) fail(w, 'line claims stalemate but the final position is not stalemate'); }
     if (!frames || !l.expect) continue;
     // expect: { result: "win"|"draw"|"loss" } for the side to move at the start; checked on every frame
     try {

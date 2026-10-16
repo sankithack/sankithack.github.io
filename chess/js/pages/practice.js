@@ -355,7 +355,7 @@ function endgamePractice(data, id) {
     const l = e.lines[pr.line];
     const stm = l.fen.split(' ')[1];
     const pawns = (c) => (l.fen.split(' ')[0].match(c === 'w' ? /P/g : /p/g) || []).length;
-    const userSide = l.expect === 'win' ? stm : l.expect === 'loss' ? (stm === 'w' ? 'b' : 'w') : (pawns('w') < pawns('b') ? 'w' : 'b');
+    const userSide = l.expect === 'win' ? stm : l.expect === 'loss' ? (stm === 'w' ? 'b' : 'w') : pawns('w') === pawns('b') ? stm : (pawns('w') < pawns('b') ? 'w' : 'b');
     const goal = l.expect === 'draw' ? 'draw' : 'win';
     new Sparring(mount, { fen: l.fen, mode: 'solver', userSide, goal, onDone: done });
     desc = `The computer knows this ending perfectly. Any move that keeps the ${goal} is accepted; a move that spoils it is taken back.`;

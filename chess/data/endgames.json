@@ -834,5 +834,293 @@
       "line": 0,
       "side": "w"
     }
+  },
+  {
+    "id": "reti-manoeuvre",
+    "group": "Key principles",
+    "name": "The Réti manoeuvre",
+    "mnemonic": "A king walking diagonally chases two goals at once.",
+    "summary": "Réti's famous study: White's king looks hopelessly far from both pawns, yet a diagonal walk threatens to support its own pawn and catch Black's at the same time.",
+    "points": [
+      "A diagonal king move gets as close to a far square as a straight move — but gets closer to two targets at once.",
+      "Walk towards your pawn and the enemy pawn's square simultaneously.",
+      "Count moves for both sides before giving up a 'lost' pawn ending."
+    ],
+    "lines": [
+      {
+        "title": "The study",
+        "fen": "7K/8/k1P5/7p/8/8/8/8 w - - 0 1",
+        "expect": "draw",
+        "moves": [
+          {
+            "san": "Kg7",
+            "note": "Towards both the c-pawn and the h-pawn's square.",
+            "arrows": [
+              "h8g7",
+              "g7f6",
+              "f6e5"
+            ]
+          },
+          {
+            "san": "h4"
+          },
+          {
+            "san": "Kf6",
+            "note": "Now ...h3 is met by Ke7, supporting c7 and promoting together with Black."
+          },
+          {
+            "san": "Kb6"
+          },
+          {
+            "san": "Ke5",
+            "note": "If ...Kxc6, the king has reached the square of the h-pawn.",
+            "squares": [
+              "e5",
+              "f4"
+            ]
+          },
+          {
+            "san": "Kxc6"
+          },
+          {
+            "san": "Kf4"
+          },
+          {
+            "san": "h3"
+          },
+          {
+            "san": "Kg3"
+          },
+          {
+            "san": "h2"
+          },
+          {
+            "san": "Kxh2",
+            "note": "Draw: the 'impossible' race was saved by the diagonal walk."
+          }
+        ]
+      },
+      {
+        "title": "If Black runs with the h-pawn",
+        "fen": "7K/8/k1P5/7p/8/8/8/8 w - - 0 1",
+        "expect": "draw",
+        "moves": [
+          {
+            "san": "Kg7"
+          },
+          {
+            "san": "h4"
+          },
+          {
+            "san": "Kf6"
+          },
+          {
+            "san": "h3"
+          },
+          {
+            "san": "Ke7",
+            "note": "Now the king supports the c-pawn instead."
+          },
+          {
+            "san": "h2"
+          },
+          {
+            "san": "c7"
+          },
+          {
+            "san": "Kb7"
+          },
+          {
+            "san": "Kd7"
+          },
+          {
+            "san": "h1=Q"
+          },
+          {
+            "san": "c8=Q+",
+            "note": "Both sides queen: a draw."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
+  },
+  {
+    "id": "rook-pawn-draw",
+    "group": "Essential positions",
+    "name": "King + rook pawn vs king",
+    "mnemonic": "An a- or h-pawn can't drive the king out of the corner.",
+    "summary": "With a rook's pawn, the defending king only needs to reach the queening corner. The attacking king can't shoulder it away, and the last push is stalemate.",
+    "points": [
+      "If the defending king gets to the corner in front of a rook's pawn, it is a draw.",
+      "The attacker's only hope is to keep the king out of the corner — in time.",
+      "Watch for stalemate when the pawn reaches the 7th rank."
+    ],
+    "lines": [
+      {
+        "title": "Stalemate in the corner",
+        "fen": "k7/8/8/PK6/8/8/8/8 w - - 0 1",
+        "expect": "draw",
+        "moves": [
+          {
+            "san": "Kb6",
+            "note": "White's king is as close as it can be, but the black king is already in the corner.",
+            "squares": [
+              "a8"
+            ]
+          },
+          {
+            "san": "Kb8"
+          },
+          {
+            "san": "a6"
+          },
+          {
+            "san": "Ka8"
+          },
+          {
+            "san": "a7",
+            "note": "Stalemate: Black has no legal move. Any other try just lets the king shuffle a8–b8."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
+  },
+  {
+    "id": "connected-passers",
+    "group": "Key principles",
+    "name": "Connected passed pawns",
+    "mnemonic": "Two pawns side by side defend each other — the king can't take either.",
+    "summary": "Connected passed pawns protect themselves: if the king captures the back pawn, the front one runs; it can't take the front pawn because it is defended. Split pawns are much weaker.",
+    "points": [
+      "Keep connected passers diagonal (d5 + e4): the rear pawn guards the front one.",
+      "If the enemy king takes the rear pawn, push the front pawn — it is now out of the king's square.",
+      "Two isolated pawns far apart can be caught one by one."
+    ],
+    "lines": [
+      {
+        "title": "Connected: they defend themselves",
+        "fen": "8/8/3k4/3P4/4P3/8/8/7K b - - 0 1",
+        "expect": "loss",
+        "moves": [
+          {
+            "san": "Ke5",
+            "note": "Black attacks e4. d5 can't be taken — e4 defends it.",
+            "squares": [
+              "d5",
+              "e4"
+            ]
+          },
+          {
+            "san": "Kg2"
+          },
+          {
+            "san": "Kxe4"
+          },
+          {
+            "san": "d6",
+            "note": "The d-pawn is outside the king's square now."
+          },
+          {
+            "san": "Ke5"
+          },
+          {
+            "san": "d7"
+          },
+          {
+            "san": "Ke6"
+          },
+          {
+            "san": "d8=Q"
+          }
+        ]
+      },
+      {
+        "title": "Split pawns: the king catches them",
+        "fen": "8/8/5k2/4P1P1/8/8/8/K7 b - - 0 1",
+        "expect": "draw",
+        "moves": [
+          {
+            "san": "Kxe5",
+            "note": "These pawns are not connected — the king takes one and catches the other."
+          },
+          {
+            "san": "g6"
+          },
+          {
+            "san": "Kf6"
+          },
+          {
+            "san": "g7"
+          },
+          {
+            "san": "Kxg7"
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "solver",
+      "line": 0
+    }
+  },
+  {
+    "id": "wrong-bishop",
+    "group": "Essential positions",
+    "name": "Wrong rook pawn and bishop",
+    "mnemonic": "Bishop of the wrong colour + rook pawn = draw if the king reaches the corner.",
+    "summary": "A bishop and a rook's pawn can't win if the bishop doesn't control the queening square and the defending king gets to the corner.",
+    "points": [
+      "Check the colour of the queening square (a8 and h1 are light; a1 and h8 are dark).",
+      "If your bishop can't cover it, keep the enemy king out of the corner at all costs.",
+      "As the defender, run for the corner — the stalemate draws."
+    ],
+    "lines": [
+      {
+        "title": "The fortress in the corner",
+        "fen": "1k6/8/8/PK6/8/8/8/2B5 w - - 0 1",
+        "stalemate": true,
+        "moves": [
+          {
+            "san": "Kb6",
+            "squares": [
+              "a8"
+            ]
+          },
+          {
+            "san": "Ka8",
+            "note": "The black king sits on a8 — a light square the dark bishop can never attack."
+          },
+          {
+            "san": "a6"
+          },
+          {
+            "san": "Kb8"
+          },
+          {
+            "san": "a7+"
+          },
+          {
+            "san": "Ka8"
+          },
+          {
+            "san": "Be3",
+            "note": "Stalemate: White can't drive the king out. A light-squared bishop would have won."
+          }
+        ]
+      }
+    ],
+    "practice": {
+      "mode": "drill",
+      "line": 0,
+      "side": "b"
+    }
   }
 ]
