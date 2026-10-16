@@ -1,7 +1,9 @@
-// Names & Faces with generated avatars.
-import { FIRST_NAMES, LAST_NAMES, FEMALE_NAMES } from '../../data/names.js';
-import { avatarSVG } from '../../lib/avatar.js';
-import { esc, randInt, sample, shuffle, norm, $$ } from '../../utils.js';
+// Names & Faces with photorealistic synthetic faces (see data/faces.js).
+import { LAST_NAMES, namesFor } from '../../data/names.js';
+import { FACES } from '../../data/faces.js';
+import { esc, sample, shuffle, norm, $$ } from '../../utils.js';
+
+export const faceImg = (p, cls = '') => `<img class="face-img ${cls}" src="${p.file}" alt="" width="224" height="224" decoding="async">`;
 
 const lv = (count, memTime, recallTime) => ({ label: `${count} faces`, cfg: { count, memTime, recallTime } });
 
@@ -21,23 +23,21 @@ export default {
     </ul>`,
 
   generate(cfg) {
-    const n = Math.min(cfg.count, FIRST_NAMES.length);
-    const firsts = sample(FIRST_NAMES, n);
-    const lasts = sample(LAST_NAMES, n);
-    const seeds = new Set();
-    while (seeds.size < n) seeds.add(randInt(2 ** 31));
-    return [...seeds].map((seed, i) => ({ seed, first: firsts[i], last: lasts[i], femme: FEMALE_NAMES.has(firsts[i]) }));
+    const faces = sample(FACES, Math.min(cfg.count, FACES.length));
+    const firsts = namesFor(faces.map((f) => f.femme));
+    const lasts = sample(LAST_NAMES, faces.length);
+    return faces.map((f, i) => ({ file: f.file, first: firsts[i], last: lasts[i] }));
   },
 
   memorize(box, people) {
     box.innerHTML = `<div class="card"><div class="faces">${people.map((p) => `
-      <div class="face">${avatarSVG(p.seed, p)}<div class="nm">${esc(p.first)}<br>${esc(p.last)}</div></div>`).join('')}</div></div>`;
+      <div class="face">${faceImg(p)}<div class="nm">${esc(p.first)}<br>${esc(p.last)}</div></div>`).join('')}</div></div>`;
   },
 
   recall(box, people) {
     const order = shuffle(people.map((_, i) => i));
     box.innerHTML = `<div class="card"><div class="faces">${order.map((i) => `
-      <div class="face">${avatarSVG(people[i].seed, people[i])}
+      <div class="face">${faceImg(people[i])}
         <input type="text" data-i="${i}" data-f="first" placeholder="First name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="First name">
         <input type="text" data-i="${i}" data-f="last" placeholder="Last name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Last name">
       </div>`).join('')}</div></div>`;
@@ -57,7 +57,7 @@ export default {
     return {
       mode: 'plain',
       rows: people.map((p, i) => ({
-        labelHTML: `<span style="display:inline-block;width:44px">${avatarSVG(p.seed, { size: 44, femme: p.femme })}</span>`,
+        labelHTML: faceImg(p, 'mini'),
         cells: ['first', 'last'].map((f) => {
           const g = answers[i][f];
           return { e: p[f], g, ok: norm(g) === norm(p[f]), text: true };

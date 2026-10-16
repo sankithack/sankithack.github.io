@@ -1,4 +1,5 @@
 // Name pools for Names & Faces and Phone Numbers. Mixed origins, as in real competitions.
+import { shuffle } from '../utils.js';
 
 export const FIRST_NAMES = [
   'Aaliyah', 'Aaron', 'Abigail', 'Adam', 'Adrian', 'Aiden', 'Aisha', 'Alan', 'Alejandro', 'Alice',
@@ -54,3 +55,10 @@ Ines Ingrid Isabel Jada Jasmine Joanna Julia Kamala Kate Keiko Laura Leah Leila 
 Mira Nadia Naomi Nia Nina Nora Olga Petra Pia Priya Rania Rebecca Rosa Ruby Sakura Sana Sara Simone Sofia Stella
 Tamar Tessa Uma Valentina Wanda Willa Yara Yasmin Yuki Zainab Zara Zoe Carmen Freya Kira Odette Rhea Talia Vera
 `.trim().split(/\s+/));
+
+/** Unique first names, one per face, female names for faces flagged femme. */
+export function namesFor(femmeFlags) {
+  const female = shuffle(FIRST_NAMES.filter((n) => FEMALE_NAMES.has(n)));
+  const male = shuffle(FIRST_NAMES.filter((n) => !FEMALE_NAMES.has(n)));
+  return femmeFlags.map((f) => (f ? female : male).pop());
+}

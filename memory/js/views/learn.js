@@ -3,16 +3,20 @@ import { MAJOR_RULES, NUMBERS, majorImage } from '../data/major.js';
 import { paoFor } from '../data/pao.js';
 import { DECK, cardHTML, cardImage, cardInfo } from '../data/cards.js';
 import { WORDS } from '../data/words.js';
-import { FIRST_NAMES, LAST_NAMES, FEMALE_NAMES } from '../data/names.js';
+import { LAST_NAMES, namesFor } from '../data/names.js';
+import { FACES } from '../data/faces.js';
+import { faceImg } from './events/names.js';
 import { majorDecode } from '../lib/major.js';
-import { avatarSVG } from '../lib/avatar.js';
 import { db, update, logActivity } from '../storage.js';
 import { esc, sample, shuffle, randInt, norm, $ } from '../utils.js';
 import { renderSystem, SYSTEMS } from './systems.js';
+import { DEMOS, DEMO_LIST } from '../data/demos.js';
+import { demoPlayer } from '../lib/demo.js';
 
 export function render(el, params) {
   if (!params.length) return renderIndex(el);
   if (params[0] === 'systems') return renderSystem(el, params[1]);
+  if (params[0] === 'examples') return renderExamples(el);
   return renderLesson(el, params[0]);
 }
 
@@ -29,6 +33,10 @@ function renderIndex(el) {
           <p class="muted mb0">${esc(l.summary)}</p>
         </a>`).join('')}
     </div>
+    <a class="card link" href="#/learn/examples" style="margin-top:16px;display:flex;gap:14px;align-items:center">
+      <span style="font-size:2rem" aria-hidden="true">▶</span>
+      <span><b>Watch animated examples</b><br><span class="small muted">Every technique shown step by step: palaces, images, Major, PAO, cards, faces and each event.</span></span>
+    </a>
     <h2 style="margin-top:32px">Your image systems</h2>
     <p class="muted">Customize the images you use. Changes are saved automatically and used everywhere.</p>
     <div class="grid cols-4">
@@ -49,7 +57,9 @@ function renderLesson(el, id) {
   const isDone = db().lessonsDone.includes(id);
   const body = lesson.body
     .replace('{{majorRules}}', majorRulesTable())
-    .replace('{{majorRef}}', majorRefGrid());
+    .replace('{{majorRef}}', majorRefGrid())
+    // Animated worked example right after the opening paragraph.
+    .replace('</p>', DEMOS[id] ? '</p><div class="demo-slot" data-demo="' + id + '"></div>' : '</p>');
 
   el.innerHTML = `
     <div class="crumbs"><a href="#/learn">← Learn</a></div>
@@ -70,8 +80,30 @@ function renderLesson(el, id) {
     b.classList.remove('primary');
   };
 
+  mountDemos(el);
   const ex = EXERCISES[lesson.exercise];
   if (ex) runExercise($('#exercise', el), ex);
+}
+
+export function mountDemos(root) {
+  root.querySelectorAll('.demo-slot[data-demo]').forEach((slot) => {
+    const make = DEMOS[slot.dataset.demo];
+    if (make) demoPlayer(slot, make());
+  });
+}
+
+function renderExamples(el) {
+  el.innerHTML = `
+    <div class="crumbs"><a href="#/learn">← Learn</a></div>
+    <div class="page-head"><h1>Animated examples</h1><p>Watch each technique in action. Examples use your own image lists, so customize them and the examples follow.</p></div>
+    <div class="grid charts">
+      ${DEMO_LIST.map(([id, name, link]) => `
+        <section>
+          <div class="demo-slot" data-demo="${id}"></div>
+          <a class="small" href="#/${link}">${link.startsWith('learn') ? 'Read the lesson' : 'Try the event'}: ${esc(name)} →</a>
+        </section>`).join('')}
+    </div>`;
+  mountDemos(el);
 }
 
 function majorRulesTable() {
@@ -150,16 +182,16 @@ const EXERCISES = {
     };
   },
   names() {
-    const people = Array.from({ length: 5 }, () => ({ seed: randInt(1e9), first: '', last: '' }));
-    const firsts = sample(FIRST_NAMES, 5);
+    const faces = sample(FACES, 5);
+    const firsts = namesFor(faces.map((f) => f.femme));
     const lasts = sample(LAST_NAMES, 5);
-    people.forEach((p, i) => { p.first = firsts[i]; p.last = lasts[i]; p.femme = FEMALE_NAMES.has(firsts[i]); });
+    const people = faces.map((f, i) => ({ file: f.file, first: firsts[i], last: lasts[i] }));
     return {
       title: 'Try it: 5 names and faces',
       intro: 'Pick a feature on each face, turn the name into an image, and link them. Then type the full names (the order will change).',
-      study: `<div class="faces">${people.map((p) => `<div class="face">${avatarSVG(p.seed, p)}<div class="nm">${esc(p.first)} ${esc(p.last)}</div></div>`).join('')}</div>`,
+      study: `<div class="faces">${people.map((p) => `<div class="face">${faceImg(p)}<div class="nm">${esc(p.first)} ${esc(p.last)}</div></div>`).join('')}</div>`,
       items: shuffle(people).map((p) => ({
-        cue: `<span style="display:inline-block;width:72px;vertical-align:middle">${avatarSVG(p.seed, p)}</span>`,
+        cue: faceImg(p, 'cue'),
         answer: `${p.first} ${p.last}`,
       })),
     };

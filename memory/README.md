@@ -5,6 +5,7 @@ Live: https://sankithack.github.io/memory/
 A free, offline-capable website for learning memory techniques and training for memory championships (USA Memory Championship style events). It is plain HTML, CSS and JavaScript with no build step, made to be hosted on **GitHub Pages**.
 
 - **Learn:** six beginner lessons (memory palace, vivid images, Major System, PAO, card system, names & faces), each with a mini-exercise.
+- **Animated examples:** every technique and event is demonstrated step by step (play, pause, step back and forth), using your own image lists. Find them in each lesson, under each event's "How to approach", and all together at *Learn → Watch animated examples*.
 - **Memory Palace Builder:** create palaces, list loci in walking order, and practise with walk-through, random-quiz and full-recall modes.
 - **Image trainers:** spaced-repetition flashcards for your 00–99 number images and 52 card images, plus a timed speed drill.
 - **Eight timed events:** Speed Numbers, Speed Cards, Random Words, Names & Faces, Phone Numbers, Binary Digits, Historic/Fictional Dates and Spoken Numbers. Each has levels, memorize and recall timers, automatic scoring and a side-by-side comparison of correct vs. your answers.
@@ -95,8 +96,9 @@ css/components.css      Buttons, cards, events, charts…
 js/app.js               Hash router (#/learn, #/events/cards…) and start-up
 js/storage.js           localStorage state, export/import, streaks, levels
 js/utils.js             Helpers (random, dates, timers, DOM)
-js/lib/                 srs.js, avatar.js (generated faces), chart.js, speech.js, compare.js (scoring), major.js (decoder)
-js/data/                Default image lists, names, words, dates, lessons, curriculum
+js/lib/                 srs.js, demo.js (animated example player), chart.js, speech.js, compare.js (scoring), major.js (decoder)
+faces/                  196 synthetic face photos for Names & Faces (+ dataset licence)
+js/data/                Default image lists, names, words, dates, lessons, curriculum, demos, faces
 js/views/               One module per page
 js/views/events/        engine.js (shared event flow) + one module per event
 ```
@@ -104,9 +106,9 @@ js/views/events/        engine.js (shared event flow) + one module per event
 All paths are relative, so the site works from any sub-path such as `username.github.io/repo-name/`.
 
 ### Adding a new event
-Create `js/views/events/myevent.js` exporting `{ id, name, blurb, levels, fields, defaults, generate, memorize, recall, check }` (the interface is documented at the top of `engine.js`; `words.js` is a short example), add it to `registry.js`, and add the file to `FILES` in `sw.js`.
+Create `js/views/events/myevent.js` exporting `{ id, name, blurb, levels, fields, defaults, generate, memorize, recall, check }` (the interface is documented at the top of `engine.js`; `words.js` is a short example), add it to `registry.js`, and add the file to `FILES` in `sw.js`. Add an animated example for it in `js/data/demos.js` under the same id and it appears automatically.
 
 ## Browser notes
 - Works in current Chrome, Edge, Firefox and Safari, on desktop and mobile.
 - **Spoken Numbers** uses the browser's built-in speech synthesis. If a browser has none, digits are flashed on screen instead. Pick a voice and speed in Settings.
-- Faces in Names & Faces are generated cartoon illustrations; no photos of real people are used.
+- Faces in Names & Faces are photorealistic but **synthetic**: AI-generated people who don't exist, cropped from the sample images of the [SFHQ dataset](https://github.com/SelfishGene/SFHQ-dataset) (MIT licence, © 2022 David Beniaguev; see `faces/LICENSE-SFHQ.txt`). No photos of real people are used.
