@@ -6,6 +6,8 @@
   "description": "Static chess strategy course: openings, middlegame, endgame, trainers. No build step.",
   "scripts": {
     "start": "node scripts/serve.mjs",
-    "validate": "node scripts/validate-data.mjs"
+    "validate": "node scripts/validate-data.mjs",
+    "precommit": "node scripts/precommit.mjs",
+    "offline": "node scripts/build-offline.mjs"
   }
 }
