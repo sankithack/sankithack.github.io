@@ -699,5 +699,575 @@
         "note": "Mate."
       }
     ]
+  },
+  {
+    "id": "game-of-the-century",
+    "title": "The Game of the Century",
+    "players": "Donald Byrne vs Bobby Fischer",
+    "event": "Rosenwald Memorial, New York, 1956",
+    "year": 1956,
+    "side": "b",
+    "themes": [
+      "Grünfeld",
+      "Queen sacrifice",
+      "Windmill",
+      "Mating net"
+    ],
+    "lesson": "Thirteen-year-old Fischer gives up his queen for a stream of discovered checks — then hunts the white king with rook, bishops and knight.",
+    "moves": [
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "c4"
+      },
+      {
+        "san": "g6"
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "Bg7"
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Bf4"
+      },
+      {
+        "san": "d5"
+      },
+      {
+        "san": "Qb3"
+      },
+      {
+        "san": "dxc4"
+      },
+      {
+        "san": "Qxc4"
+      },
+      {
+        "san": "c6"
+      },
+      {
+        "san": "e4"
+      },
+      {
+        "san": "Nbd7"
+      },
+      {
+        "san": "Rd1"
+      },
+      {
+        "san": "Nb6"
+      },
+      {
+        "san": "Qc5"
+      },
+      {
+        "san": "Bg4"
+      },
+      {
+        "san": "Bg5"
+      },
+      {
+        "san": "Na4",
+        "note": "A stunning knight move. If Nxa4, then ...Nxe4 and White's position falls apart.",
+        "arrows": [
+          "b6a4"
+        ]
+      },
+      {
+        "san": "Qa3"
+      },
+      {
+        "san": "Nxc3"
+      },
+      {
+        "san": "bxc3"
+      },
+      {
+        "san": "Nxe4"
+      },
+      {
+        "san": "Bxe7"
+      },
+      {
+        "san": "Qb6"
+      },
+      {
+        "san": "Bc4"
+      },
+      {
+        "san": "Nxc3"
+      },
+      {
+        "san": "Bc5"
+      },
+      {
+        "san": "Rfe8+"
+      },
+      {
+        "san": "Kf1"
+      },
+      {
+        "san": "Be6",
+        "note": "The famous queen sacrifice: Fischer leaves his queen to be taken and attacks the c4-bishop and the white king instead.",
+        "arrows": [
+          "!e6c4"
+        ]
+      },
+      {
+        "san": "Bxb6",
+        "note": "White takes the queen…"
+      },
+      {
+        "san": "Bxc4+",
+        "note": "…and the checks begin."
+      },
+      {
+        "san": "Kg1"
+      },
+      {
+        "san": "Ne2+"
+      },
+      {
+        "san": "Kf1"
+      },
+      {
+        "san": "Nxd4+",
+        "note": "A windmill: the knight gives discovered checks with the c4-bishop, collecting material on every second move."
+      },
+      {
+        "san": "Kg1"
+      },
+      {
+        "san": "Ne2+"
+      },
+      {
+        "san": "Kf1"
+      },
+      {
+        "san": "Nc3+"
+      },
+      {
+        "san": "Kg1"
+      },
+      {
+        "san": "axb6",
+        "note": "Black has a rook, two bishops and a knight for the queen — far too much."
+      },
+      {
+        "san": "Qb4"
+      },
+      {
+        "san": "Ra4"
+      },
+      {
+        "san": "Qxb6"
+      },
+      {
+        "san": "Nxd1"
+      },
+      {
+        "san": "h3"
+      },
+      {
+        "san": "Rxa2"
+      },
+      {
+        "san": "Kh2"
+      },
+      {
+        "san": "Nxf2"
+      },
+      {
+        "san": "Re1"
+      },
+      {
+        "san": "Rxe1"
+      },
+      {
+        "san": "Qd8+"
+      },
+      {
+        "san": "Bf8"
+      },
+      {
+        "san": "Nxe1"
+      },
+      {
+        "san": "Bd5"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "Ne4"
+      },
+      {
+        "san": "Qb8"
+      },
+      {
+        "san": "b5"
+      },
+      {
+        "san": "h4"
+      },
+      {
+        "san": "h5"
+      },
+      {
+        "san": "Ne5"
+      },
+      {
+        "san": "Kg7"
+      },
+      {
+        "san": "Kg1"
+      },
+      {
+        "san": "Bc5+"
+      },
+      {
+        "san": "Kf1"
+      },
+      {
+        "san": "Ng3+"
+      },
+      {
+        "san": "Ke1"
+      },
+      {
+        "san": "Bb4+"
+      },
+      {
+        "san": "Kd1"
+      },
+      {
+        "san": "Bb3+"
+      },
+      {
+        "san": "Kc1"
+      },
+      {
+        "san": "Ne2+"
+      },
+      {
+        "san": "Kb1"
+      },
+      {
+        "san": "Nc3+"
+      },
+      {
+        "san": "Kc1"
+      },
+      {
+        "san": "Rc2#",
+        "note": "Mate by rook, knight and bishops: a perfect coordination of the minor pieces."
+      }
+    ],
+    "source": "https://en.wikipedia.org/wiki/The_Game_of_the_Century_(chess)"
+  },
+  {
+    "id": "kasparov-immortal",
+    "title": "Kasparov's Immortal",
+    "players": "Garry Kasparov vs Veselin Topalov",
+    "event": "Wijk aan Zee, 1999",
+    "year": 1999,
+    "side": "w",
+    "themes": [
+      "Pirc Defence",
+      "Rook sacrifice",
+      "King hunt",
+      "Calculation"
+    ],
+    "lesson": "A rook sacrifice drags the black king from b6 across the whole board; Kasparov had to see more than 15 moves deep.",
+    "moves": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "d6"
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "g6"
+      },
+      {
+        "san": "Be3"
+      },
+      {
+        "san": "Bg7"
+      },
+      {
+        "san": "Qd2"
+      },
+      {
+        "san": "c6"
+      },
+      {
+        "san": "f3"
+      },
+      {
+        "san": "b5"
+      },
+      {
+        "san": "Nge2"
+      },
+      {
+        "san": "Nbd7"
+      },
+      {
+        "san": "Bh6",
+        "note": "The Pirc plan from the attacking lessons: trade off the g7-bishop, Black's best defender.",
+        "arrows": [
+          "h6g7"
+        ]
+      },
+      {
+        "san": "Bxh6"
+      },
+      {
+        "san": "Qxh6"
+      },
+      {
+        "san": "Bb7"
+      },
+      {
+        "san": "a3"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "O-O-O"
+      },
+      {
+        "san": "Qe7"
+      },
+      {
+        "san": "Kb1"
+      },
+      {
+        "san": "a6"
+      },
+      {
+        "san": "Nc1"
+      },
+      {
+        "san": "O-O-O"
+      },
+      {
+        "san": "Nb3"
+      },
+      {
+        "san": "exd4"
+      },
+      {
+        "san": "Rxd4",
+        "note": "A routine recapture — the real sacrifice on d4 comes nine moves later."
+      },
+      {
+        "san": "c5"
+      },
+      {
+        "san": "Rd1"
+      },
+      {
+        "san": "Nb6"
+      },
+      {
+        "san": "g3"
+      },
+      {
+        "san": "Kb8"
+      },
+      {
+        "san": "Na5"
+      },
+      {
+        "san": "Ba8"
+      },
+      {
+        "san": "Bh3"
+      },
+      {
+        "san": "d5"
+      },
+      {
+        "san": "Qf4+"
+      },
+      {
+        "san": "Ka7"
+      },
+      {
+        "san": "Rhe1"
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "Nd5"
+      },
+      {
+        "san": "Nbxd5"
+      },
+      {
+        "san": "exd5"
+      },
+      {
+        "san": "Qd6"
+      },
+      {
+        "san": "Rxd4",
+        "note": "The rook sacrifice. If ...cxd4, the queen and rook hunt the king into the open.",
+        "arrows": [
+          "d1d4"
+        ]
+      },
+      {
+        "san": "cxd4"
+      },
+      {
+        "san": "Re7+",
+        "note": "Every white move from here is a check or a threat; Black's king is forced up the board."
+      },
+      {
+        "san": "Kb6"
+      },
+      {
+        "san": "Qxd4+"
+      },
+      {
+        "san": "Kxa5"
+      },
+      {
+        "san": "b4+"
+      },
+      {
+        "san": "Ka4"
+      },
+      {
+        "san": "Qc3"
+      },
+      {
+        "san": "Qxd5"
+      },
+      {
+        "san": "Ra7"
+      },
+      {
+        "san": "Bb7"
+      },
+      {
+        "san": "Rxb7"
+      },
+      {
+        "san": "Qc4"
+      },
+      {
+        "san": "Qxf6",
+        "note": "A quiet capture in the middle of the hunt — the king can't escape the net anyway."
+      },
+      {
+        "san": "Kxa3"
+      },
+      {
+        "san": "Qxa6+"
+      },
+      {
+        "san": "Kxb4"
+      },
+      {
+        "san": "c3+"
+      },
+      {
+        "san": "Kxc3"
+      },
+      {
+        "san": "Qa1+"
+      },
+      {
+        "san": "Kd2"
+      },
+      {
+        "san": "Qb2+"
+      },
+      {
+        "san": "Kd1"
+      },
+      {
+        "san": "Bf1",
+        "note": "With the king on d1, White calmly brings the last piece into the attack."
+      },
+      {
+        "san": "Rd2"
+      },
+      {
+        "san": "Rd7",
+        "note": "Deflecting the rook from defending the queen."
+      },
+      {
+        "san": "Rxd7"
+      },
+      {
+        "san": "Bxc4"
+      },
+      {
+        "san": "bxc4"
+      },
+      {
+        "san": "Qxh8"
+      },
+      {
+        "san": "Rd3"
+      },
+      {
+        "san": "Qa8"
+      },
+      {
+        "san": "c3"
+      },
+      {
+        "san": "Qa4+"
+      },
+      {
+        "san": "Ke1"
+      },
+      {
+        "san": "f4"
+      },
+      {
+        "san": "f5"
+      },
+      {
+        "san": "Kc1"
+      },
+      {
+        "san": "Rd2"
+      },
+      {
+        "san": "Qa7",
+        "note": "The attack is decisive and Black resigned: the a-pawn and queen will win more material."
+      }
+    ],
+    "source": "https://en.wikipedia.org/wiki/Kasparov%27s_Immortal"
   }
 ]
