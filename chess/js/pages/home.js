@@ -11,7 +11,7 @@ export function render(data) {
   const variationCount = data.openings.reduce((n, o) => n + o.variations.length, 0);
 
   const heroBoard = h('div.hero-board');
-  const caption = h('figcaption.hero-caption', h('strong', game.title), ' — ', game.players + ', ' + game.event);
+  const caption = h('figcaption.hero-caption', h('strong', game.title), ' — ', game.players + ', ' + game.event + '. ', h('a', { href: '#/games' }, 'More classic games'));
   const hero = h('div.hero',
     h('div.hero-copy',
       h('h1.hero-title', 'Understand every move.'),

@@ -6,20 +6,698 @@
     "event": "Paris Opera, 1858",
     "lesson": "Development beats material: Morphy gives pieces away to open lines while his opponents' pieces sit at home.",
     "moves": [
-      { "san": "e4" }, { "san": "e5" }, { "san": "Nf3" }, { "san": "d6", "note": "Philidor's Defence — solid but passive." },
-      { "san": "d4" }, { "san": "Bg4", "note": "Pins the knight, but Black will have to give up this bishop." },
-      { "san": "dxe5" }, { "san": "Bxf3" }, { "san": "Qxf3", "note": "White's queen comes out with a developing gain of tempo." },
-      { "san": "dxe5" }, { "san": "Bc4", "note": "Threatening Qxf7#.", "arrows": ["!f3f7", "!c4f7"] },
-      { "san": "Nf6" }, { "san": "Qb3", "note": "A double attack on f7 and b7.", "arrows": ["!b3f7", "!b3b7"] },
-      { "san": "Qe7" }, { "san": "Nc3", "note": "Morphy develops instead of grabbing b7." },
-      { "san": "c6" }, { "san": "Bg5", "note": "Pins the f6-knight. Every white piece is active.", "arrows": ["g5f6"] },
-      { "san": "b5" }, { "san": "Nxb5", "note": "A sacrifice to open lines against the uncastled king." },
-      { "san": "cxb5" }, { "san": "Bxb5+" }, { "san": "Nbd7" },
-      { "san": "O-O-O", "note": "The rook joins with tempo on the pinned d7-knight.", "arrows": ["d1d7"] },
-      { "san": "Rd8" }, { "san": "Rxd7" }, { "san": "Rxd7" }, { "san": "Rd1", "note": "Another rook to the d-file — pile up on the pin." },
-      { "san": "Qe6" }, { "san": "Bxd7+" }, { "san": "Nxd7" },
-      { "san": "Qb8+", "note": "The queen sacrifice: deflecting the d7-knight.", "arrows": ["b3b8"] },
-      { "san": "Nxb8" }, { "san": "Rd8#", "note": "Checkmate with the last two pieces. Black's h8-rook and f8-bishop never moved." }
+      {
+        "san": "e4"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "d6",
+        "note": "Philidor's Defence — solid but passive."
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "Bg4",
+        "note": "Pins the knight, but Black will have to give up this bishop."
+      },
+      {
+        "san": "dxe5"
+      },
+      {
+        "san": "Bxf3"
+      },
+      {
+        "san": "Qxf3",
+        "note": "White's queen comes out with a developing gain of tempo."
+      },
+      {
+        "san": "dxe5"
+      },
+      {
+        "san": "Bc4",
+        "note": "Threatening Qxf7#.",
+        "arrows": [
+          "!f3f7",
+          "!c4f7"
+        ]
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Qb3",
+        "note": "A double attack on f7 and b7.",
+        "arrows": [
+          "!b3f7",
+          "!b3b7"
+        ]
+      },
+      {
+        "san": "Qe7"
+      },
+      {
+        "san": "Nc3",
+        "note": "Morphy develops instead of grabbing b7."
+      },
+      {
+        "san": "c6"
+      },
+      {
+        "san": "Bg5",
+        "note": "Pins the f6-knight. Every white piece is active.",
+        "arrows": [
+          "g5f6"
+        ]
+      },
+      {
+        "san": "b5"
+      },
+      {
+        "san": "Nxb5",
+        "note": "A sacrifice to open lines against the uncastled king."
+      },
+      {
+        "san": "cxb5"
+      },
+      {
+        "san": "Bxb5+"
+      },
+      {
+        "san": "Nbd7"
+      },
+      {
+        "san": "O-O-O",
+        "note": "The rook joins with tempo on the pinned d7-knight.",
+        "arrows": [
+          "d1d7"
+        ]
+      },
+      {
+        "san": "Rd8"
+      },
+      {
+        "san": "Rxd7"
+      },
+      {
+        "san": "Rxd7"
+      },
+      {
+        "san": "Rd1",
+        "note": "Another rook to the d-file — pile up on the pin."
+      },
+      {
+        "san": "Qe6"
+      },
+      {
+        "san": "Bxd7+"
+      },
+      {
+        "san": "Nxd7"
+      },
+      {
+        "san": "Qb8+",
+        "note": "The queen sacrifice: deflecting the d7-knight.",
+        "arrows": [
+          "b3b8"
+        ]
+      },
+      {
+        "san": "Nxb8"
+      },
+      {
+        "san": "Rd8#",
+        "note": "Checkmate with the last two pieces. Black's h8-rook and f8-bishop never moved."
+      }
+    ],
+    "year": 1858,
+    "side": "w",
+    "themes": [
+      "Development",
+      "Open lines",
+      "Sacrifice",
+      "Back-rank mate"
+    ]
+  },
+  {
+    "id": "immortal",
+    "title": "The Immortal Game",
+    "players": "Adolf Anderssen vs Lionel Kieseritzky",
+    "event": "London, 1851",
+    "year": 1851,
+    "side": "w",
+    "themes": [
+      "King's Gambit",
+      "Sacrifice",
+      "Development",
+      "Mating net"
+    ],
+    "lesson": "Material means nothing if the enemy king is caught: Anderssen gives a bishop, both rooks and the queen — and mates with his last three minor pieces.",
+    "moves": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "f4",
+        "note": "The King's Gambit: a pawn for open lines and a quick attack."
+      },
+      {
+        "san": "exf4"
+      },
+      {
+        "san": "Bc4"
+      },
+      {
+        "san": "Qh4+",
+        "note": "Black's queen comes out early to harass the king.",
+        "arrows": [
+          "!h4e1"
+        ]
+      },
+      {
+        "san": "Kf1"
+      },
+      {
+        "san": "b5"
+      },
+      {
+        "san": "Bxb5"
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "Qh6"
+      },
+      {
+        "san": "d3"
+      },
+      {
+        "san": "Nh5"
+      },
+      {
+        "san": "Nh4"
+      },
+      {
+        "san": "Qg5"
+      },
+      {
+        "san": "Nf5"
+      },
+      {
+        "san": "c6"
+      },
+      {
+        "san": "g4"
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Rg1",
+        "note": "A rook sacrifice! Anderssen ignores material to chase the queen and build his attack."
+      },
+      {
+        "san": "cxb5"
+      },
+      {
+        "san": "h4"
+      },
+      {
+        "san": "Qg6"
+      },
+      {
+        "san": "h5"
+      },
+      {
+        "san": "Qg5"
+      },
+      {
+        "san": "Qf3"
+      },
+      {
+        "san": "Ng8"
+      },
+      {
+        "san": "Bxf4"
+      },
+      {
+        "san": "Qf6"
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "Bc5"
+      },
+      {
+        "san": "Nd5",
+        "note": "The knight jumps into the heart of Black's position.",
+        "arrows": [
+          "d5c7",
+          "d5f6"
+        ]
+      },
+      {
+        "san": "Qxb2"
+      },
+      {
+        "san": "Bd6",
+        "note": "Offering the second rook. Black's queen takes both rooks, but every white piece now points at the king.",
+        "arrows": [
+          "d6f8"
+        ]
+      },
+      {
+        "san": "Bxg1"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "Qxa1+"
+      },
+      {
+        "san": "Ke2"
+      },
+      {
+        "san": "Na6"
+      },
+      {
+        "san": "Nxg7+"
+      },
+      {
+        "san": "Kd8"
+      },
+      {
+        "san": "Qf6+",
+        "note": "The queen sacrifice that finishes it: the knight must take, and the f6 square is opened for the bishop's mate."
+      },
+      {
+        "san": "Nxf6"
+      },
+      {
+        "san": "Be7#",
+        "note": "Mate by three minor pieces while Black has two extra rooks and an extra queen on the board."
+      }
+    ]
+  },
+  {
+    "id": "evergreen",
+    "title": "The Evergreen Game",
+    "players": "Adolf Anderssen vs Jean Dufresne",
+    "event": "Berlin, 1852",
+    "year": 1852,
+    "side": "w",
+    "themes": [
+      "Evans Gambit",
+      "Open centre",
+      "Queen sacrifice",
+      "Discovered check"
+    ],
+    "lesson": "Open the centre while the enemy king is still there, then sacrifice to keep the lines open.",
+    "moves": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "Nc6"
+      },
+      {
+        "san": "Bc4"
+      },
+      {
+        "san": "Bc5"
+      },
+      {
+        "san": "b4",
+        "note": "The Evans Gambit: a pawn for time to build a big centre with c3 and d4."
+      },
+      {
+        "san": "Bxb4"
+      },
+      {
+        "san": "c3"
+      },
+      {
+        "san": "Ba5"
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "exd4"
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "d3"
+      },
+      {
+        "san": "Qb3"
+      },
+      {
+        "san": "Qf6"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "Qg6"
+      },
+      {
+        "san": "Re1"
+      },
+      {
+        "san": "Nge7"
+      },
+      {
+        "san": "Ba3",
+        "note": "The bishop stops Black from castling.",
+        "arrows": [
+          "a3f8"
+        ]
+      },
+      {
+        "san": "b5"
+      },
+      {
+        "san": "Qxb5"
+      },
+      {
+        "san": "Rb8"
+      },
+      {
+        "san": "Qa4"
+      },
+      {
+        "san": "Bb6"
+      },
+      {
+        "san": "Nbd2"
+      },
+      {
+        "san": "Bb7"
+      },
+      {
+        "san": "Ne4"
+      },
+      {
+        "san": "Qf5"
+      },
+      {
+        "san": "Bxd3"
+      },
+      {
+        "san": "Qh5"
+      },
+      {
+        "san": "Nf6+",
+        "note": "A knight sacrifice to open the e-file and the long diagonal towards the black king."
+      },
+      {
+        "san": "gxf6"
+      },
+      {
+        "san": "exf6"
+      },
+      {
+        "san": "Rg8"
+      },
+      {
+        "san": "Rad1",
+        "note": "The quiet killer: every white piece joins the attack, even though Black is threatening mate himself."
+      },
+      {
+        "san": "Qxf3"
+      },
+      {
+        "san": "Rxe7+",
+        "note": "Rook sacrifice — the e-file must stay open."
+      },
+      {
+        "san": "Nxe7"
+      },
+      {
+        "san": "Qxd7+",
+        "note": "The queen sacrifice: the king is dragged into a double check.",
+        "arrows": [
+          "a4d7"
+        ]
+      },
+      {
+        "san": "Kxd7"
+      },
+      {
+        "san": "Bf5+",
+        "note": "A double check from bishop and rook; the king must walk into the final net."
+      },
+      {
+        "san": "Ke8"
+      },
+      {
+        "san": "Bd7+"
+      },
+      {
+        "san": "Kf8"
+      },
+      {
+        "san": "Bxe7#",
+        "note": "Checkmate — bishop and rook combine down the d- and e-files."
+      }
+    ]
+  },
+  {
+    "id": "lasker-thomas",
+    "title": "The great king hunt",
+    "players": "Edward Lasker vs George Alan Thomas",
+    "event": "London, 1912",
+    "year": 1912,
+    "side": "w",
+    "themes": [
+      "Queen sacrifice",
+      "King hunt",
+      "Checks",
+      "Mating net"
+    ],
+    "lesson": "A queen sacrifice on h7 drags the king all the way from g8 to g1 with checks — keep checking, and the king walks into the mating net.",
+    "moves": [
+      {
+        "san": "d4"
+      },
+      {
+        "san": "e6"
+      },
+      {
+        "san": "Nf3"
+      },
+      {
+        "san": "f5"
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Bg5"
+      },
+      {
+        "san": "Be7"
+      },
+      {
+        "san": "Bxf6"
+      },
+      {
+        "san": "Bxf6"
+      },
+      {
+        "san": "e4"
+      },
+      {
+        "san": "fxe4"
+      },
+      {
+        "san": "Nxe4"
+      },
+      {
+        "san": "b6"
+      },
+      {
+        "san": "Ne5"
+      },
+      {
+        "san": "O-O"
+      },
+      {
+        "san": "Bd3"
+      },
+      {
+        "san": "Bb7"
+      },
+      {
+        "san": "Qh5",
+        "note": "Threatening Qxh7 mate is not the point — White wants the king to come out.",
+        "arrows": [
+          "h5h7"
+        ]
+      },
+      {
+        "san": "Qe7"
+      },
+      {
+        "san": "Qxh7+",
+        "note": "The queen sacrifice. Black must take, and the king is in the open."
+      },
+      {
+        "san": "Kxh7"
+      },
+      {
+        "san": "Nxf6+",
+        "note": "Double check: the king can't go back."
+      },
+      {
+        "san": "Kh6"
+      },
+      {
+        "san": "Neg4+"
+      },
+      {
+        "san": "Kg5"
+      },
+      {
+        "san": "h4+",
+        "note": "Every move is a check: the king is driven up the board."
+      },
+      {
+        "san": "Kf4"
+      },
+      {
+        "san": "g3+"
+      },
+      {
+        "san": "Kf3"
+      },
+      {
+        "san": "Be2+"
+      },
+      {
+        "san": "Kg2"
+      },
+      {
+        "san": "Rh2+"
+      },
+      {
+        "san": "Kg1"
+      },
+      {
+        "san": "Kd2#",
+        "note": "The king hunt ends on g1 — mated by a quiet king move that uncovers the a1-rook's check along the first rank."
+      }
+    ]
+  },
+  {
+    "id": "reti-tartakower",
+    "title": "Double check in the Caro-Kann",
+    "players": "Richard Réti vs Savielly Tartakower",
+    "event": "Vienna, 1910",
+    "year": 1910,
+    "side": "w",
+    "themes": [
+      "Caro-Kann",
+      "Queen sacrifice",
+      "Double check"
+    ],
+    "lesson": "After castling queenside, the d-file rook and a bishop create a double check that no defence can stop.",
+    "moves": [
+      {
+        "san": "e4"
+      },
+      {
+        "san": "c6"
+      },
+      {
+        "san": "d4"
+      },
+      {
+        "san": "d5"
+      },
+      {
+        "san": "Nc3"
+      },
+      {
+        "san": "dxe4"
+      },
+      {
+        "san": "Nxe4",
+        "note": "Black grabs a knight — but walks into a famous combination."
+      },
+      {
+        "san": "Nf6"
+      },
+      {
+        "san": "Qd3"
+      },
+      {
+        "san": "e5"
+      },
+      {
+        "san": "dxe5"
+      },
+      {
+        "san": "Qa5+"
+      },
+      {
+        "san": "Bd2"
+      },
+      {
+        "san": "Qxe5"
+      },
+      {
+        "san": "O-O-O",
+        "note": "White castles long, putting the rook on the open d-file."
+      },
+      {
+        "san": "Nxe4",
+        "note": "Black grabs a knight — but walks into a famous combination."
+      },
+      {
+        "san": "Qd8+",
+        "note": "The queen sacrifice: the king must take."
+      },
+      {
+        "san": "Kxd8"
+      },
+      {
+        "san": "Bg5+",
+        "note": "Double check from the bishop and the d1-rook."
+      },
+      {
+        "san": "Kc7"
+      },
+      {
+        "san": "Bd8#",
+        "note": "Mate."
+      }
     ]
   }
 ]

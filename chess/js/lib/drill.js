@@ -48,6 +48,7 @@ export class LineDrill {
     const start = buildLine({ fen: this.o.fen, setup: this.o.setup })[0].fen;
     this.chess = new Chess(start || START_FEN);
     this.i = 0; this.mistakes = 0; this.hints = 0; this.userMoves = 0; this.finished = false; this.busy = false; this.hintLevel = 0;
+    this.firstTry = 0; this.revealed = 0; this.moveMistakes = 0;
     this.board.setArrows([]); this.board.setKeySquares([]);
     this.board.setPosition(this.chess.fen(), { animate: false });
     this.note.replaceChildren(h('p', this.o.intro || `You play ${this.o.side === 'w' ? 'White' : 'Black'}. Find each move of the line.`));
@@ -77,7 +78,8 @@ export class LineDrill {
       const mv = this.play(this.moves[this.i].san);
       this.busy = false;
       if (this.i >= this.moves.length) return this.finish();
-      this.say('turn', `${mv.san}. Your move.`);
+      this.say('turn', `${this.pending || ''}${mv.san} — your move.`);
+      this.pending = '';
     }, 550);
   }
   attempt(m) {
@@ -85,12 +87,25 @@ export class LineDrill {
     const want = this.moves[this.i];
     if (bare(m.san) !== bare(want.san)) {
       this.mistakes++;
+      this.moveMistakes++;
+      if (this.o.revealAfter && this.moveMistakes >= this.o.revealAfter) {
+        // guess-the-move mode: show the game move and carry on
+        this.board.flash(m.to, 'bad');
+        this.revealed++; this.moveMistakes = 0;
+        const shown = this.play(want.san);
+        this.say('hint', `The game move was ${shown.san}.`);
+        this.pending = `The game move was ${shown.san}. `;
+        this.auto();
+        return false;
+      }
       this.board.flash(m.to, 'bad');
       const legalBook = this.chess.moves().map(bare).includes(bare(want.san));
       this.say('bad', this.mistakes > 2 && legalBook ? `${m.san} is playable, but the line continues differently. Try a hint.` : `${m.san} isn't the move in this line. Think about the idea — or take a hint.`);
       return false;
     }
     this.userMoves++;
+    if (this.moveMistakes === 0 && this.hintLevel === 0) this.firstTry++;
+    this.moveMistakes = 0;
     this.play(want.san);
     this.board.flash(m.to, 'good');
     this.say('good', 'Correct.');
@@ -115,6 +130,6 @@ export class LineDrill {
     this.say('good', perfect ? 'Perfect run — line mastered!' : `Done with ${this.mistakes} mistake${this.mistakes === 1 ? '' : 's'} and ${this.hints} hint${this.hints === 1 ? '' : 's'}. Run it again for a perfect score.`);
     play('success'); this.el.classList.add('celebrate');
     setTimeout(() => this.el.classList.remove('celebrate'), 900);
-    this.o.onDone?.({ mistakes: this.mistakes, hints: this.hints, userMoves: this.userMoves, perfect });
+    this.o.onDone?.({ mistakes: this.mistakes, hints: this.hints, userMoves: this.userMoves + this.revealed, firstTry: this.firstTry, revealed: this.revealed, perfect });
   }
 }
