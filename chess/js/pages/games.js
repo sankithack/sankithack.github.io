@@ -42,7 +42,7 @@ function detail(data, id, mode = 'watch') {
     h('header.study-head', h('h1', g.title), h('p.study-sub', `${g.players}. ${g.event}.`), h('div.tags', (g.themes || []).map((t) => tag(t, 'quiet')))),
     h('div.study', col,
       h('div.study-text',
-        h('div.chips', { role: 'tablist', 'aria-label': 'Mode' },
+        h('nav.chips', { 'aria-label': 'Mode' },
           h('a.chip' + (mode !== 'guess' ? '.on' : ''), { href: `#/games/${g.id}` }, icon('play', 14), ' Watch with notes'),
           h('a.chip' + (mode === 'guess' ? '.on' : ''), { href: `#/games/${g.id}/guess` }, icon('target', 14), ` Guess ${sideName}'s moves`)),
         h('p.mnemonic', g.lesson), result,

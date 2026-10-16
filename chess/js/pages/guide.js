@@ -98,7 +98,7 @@ function roadmap(data) {
       h('details', { open: i === cur },
         h('summary.stage-head',
           h('span.stage-range', s.range),
-          h('span.stage-title', s.title),
+          h('h2.stage-title', s.title),
           h('span.stage-meter', h('span', { style: { '--pct': pct + '%' } })),
           h('span.stage-pct', `${d}/${s.rows.length}`)),
         h('div.stage-body',
@@ -254,7 +254,7 @@ function attackLesson(data, id) {
     h('div.study', col,
       h('div.study-text',
         h('p', a.principle),
-        h('h3', 'Key ideas'), h('ul.points', a.points.map((p) => h('li', p))),
+        h('h2.h3', 'Key ideas'), h('ul.points', a.points.map((p) => h('li', p))),
         h('div.puzzle-actions',
           h('a.btn.btn-primary', { href: `#/practice/attack/${a.id}` }, icon('play', 16), 'Practise as the attacker'),
           h('a.btn', { href: `#/guide/attack/${next.id}` }, 'Next: ' + next.name)))));

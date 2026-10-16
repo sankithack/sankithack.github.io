@@ -364,9 +364,9 @@ function endgamePractice(data, id) {
     h('div.study', mount,
       h('div.study-text',
         h('h1', e.name), h('p.mnemonic', e.mnemonic), h('p', desc), result,
-        h('h3', 'Remember'), h('ol.steps', e.points.map((p) => h('li', p))),
+        h('h2.h3', 'Remember'), h('ol.steps', e.points.map((p) => h('li', p))),
         h('p', h('a', { href: `#/endgames/${e.id}` }, 'Read the lesson')),
-        h('h3', 'More endgames'),
+        h('h2.h3', 'More endgames'),
         h('div.chips', data.endgames.map((x) => h('a.chip' + (x.id === e.id ? '.on' : ''), { href: `#/practice/endgame/${x.id}` }, isMastered(`e:${x.id}`) ? '✓ ' : '', x.name))))));
 }
 

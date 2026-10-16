@@ -20,6 +20,26 @@ export function parseFen(fen) {
   return map;
 }
 
+const NAMES = { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' };
+const PLURAL = { K: 'king', Q: 'queens', R: 'rooks', B: 'bishops', N: 'knights', P: 'pawns' };
+/** Plain-language position for screen readers: "White: king g1, queen d1, rooks a1 and f1, ... Black: ..." */
+export function describePosition(fen) {
+  const map = parseFen(fen);
+  if (!map.size) return 'Empty board.';
+  const side = (c) => {
+    const parts = [];
+    for (const t of 'KQRBNP') {
+      const sqs = [...map].filter(([, code]) => code === c + t).map(([sq]) => sq).sort();
+      if (!sqs.length) continue;
+      parts.push(`${sqs.length > 1 ? PLURAL[t] : NAMES[t]} ${sqs.length > 1 ? sqs.slice(0, -1).join(', ') + ' and ' + sqs.at(-1) : sqs[0]}`);
+    }
+    return parts.join('; ');
+  };
+  const toMove = fen.split(' ')[1] === 'b' ? 'Black' : 'White';
+  return `White: ${side('w') || 'nothing'}. Black: ${side('b') || 'nothing'}. ${toMove} to move.`;
+}
+let boardSeq = 0;
+
 export class Board {
   /**
    * @param {HTMLElement} mount
@@ -43,10 +63,13 @@ export class Board {
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.svg.setAttribute('viewBox', '0 0 800 800');
     this.svg.classList.add('board-arrows');
-    this.el.append(this.sqLayer, this.markLayer, this.pieceLayer, this.svg);
+    this.desc = h('p.visually-hidden', { id: `board-desc-${++boardSeq}`, 'aria-live': o.live ? 'polite' : null });
+    this.el.setAttribute('aria-describedby', this.desc.id);
+    this.el.append(this.sqLayer, this.markLayer, this.pieceLayer, this.svg, this.desc);
     mount.append(this.el);
     this.drawSquares();
     if (o.movable || o.onSquare) this.bindPointer();
+    if (o.onSquare) this.bindKeys();
   }
 
   // ---------- geometry
@@ -90,6 +113,7 @@ export class Board {
   /** Show a position. Pieces that stayed keep their element; moved pieces glide; captures fade. */
   setPosition(fen, { lastMove = null, animate = true } = {}) {
     this.fen = fen;
+    this.desc.textContent = describePosition(fen);
     const want = parseFen(fen);
     const anim = animate && !reducedMotion();
     this.el.classList.toggle('no-anim', !anim);
@@ -190,6 +214,24 @@ export class Board {
       if (animate && !reducedMotion()) requestAnimationFrame(() => requestAnimationFrame(() => { line.style.strokeDashoffset = 0; g.classList.add('shown'); }));
       else g.classList.add('shown');
     });
+  }
+
+  // ---------- keyboard: type a square name ("e4") on a focused board
+  bindKeys() {
+    const el = this.el;
+    el.tabIndex = 0;
+    el.setAttribute('role', 'application');
+    el.setAttribute('aria-label', (this.o.label || 'Chessboard') + '. Type a square name, for example e4, to choose it.');
+    let buf = '';
+    const typed = h('div.board-typed', { 'aria-hidden': 'true' });
+    el.append(typed);
+    el.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (/^[a-h]$/.test(k)) { buf = k; typed.textContent = k; e.preventDefault(); }
+      else if (/^[1-8]$/.test(k) && buf) { const sq = buf + k; buf = ''; typed.textContent = ''; e.preventDefault(); this.o.onSquare(sq); }
+      else if (k === 'escape' || k === 'backspace') { buf = ''; typed.textContent = ''; }
+    });
+    el.addEventListener('blur', () => { buf = ''; typed.textContent = ''; });
   }
 
   // ---------- interaction (click-click and drag, mouse + touch)

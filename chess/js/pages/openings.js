@@ -91,7 +91,7 @@ export function renderDetail(data, id, sub) {
   // --- tab panels
   const lineItem = (title, moves, body, extra, intro, outro, drill) => {
     const el = h('article.line-item', { tabindex: 0 },
-      h('div.line-item-head', h('h3', title), extra),
+      h('div.line-item-head', h('h2.h3', title), extra),
       h('p.line-moves', lineText(moves)),
       body ? h('p', body) : null,
       h('div.line-actions',
@@ -105,17 +105,17 @@ export function renderDetail(data, id, sub) {
   const pop = data.popularity?.openings?.[o.id];
   const overview = h('div.tab-panel',
     h('p.mnemonic', o.mnemonic),
-    o.stats || pop ? h('aside.stats-box',
-      h('h3', 'At 2000+ level'),
+    o.stats || pop ? h('section.stats-box', { 'aria-label': 'Statistics at 2000+ level' },
+      h('h2.h3', 'At 2000+ level'),
       pop ? h('p', `${pop.share}% of Lichess games between players rated 2000+ reach this opening (${data.popularity.speeds}, fetched ${data.popularity.fetched}).`) : null,
       (o.stats || []).map((t) => h('p', t)),
       o.stats ? h('p.small.muted', 'Source: ', h('a', { href: 'https://chessiverse.com/resources/openings/move-trends', target: '_blank', rel: 'noopener' }, 'Chessiverse move trends'), ' (Lichess blitz and rapid games, compared at 400 and 2500 rating).') : null) : null,
-    h('h3', 'What it aims for'), h('p', o.purpose),
+    h('h2.h3', 'What it aims for'), h('p', o.purpose),
     h('div.two-col',
-      h('div', h('h3', 'Ideas for White'), h('ul.ticks', o.ideas.white.map((t) => h('li', t)))),
-      h('div', h('h3', 'Ideas for Black'), h('ul.ticks', o.ideas.black.map((t) => h('li', t))))),
-    h('h3', 'Typical plans'), h('ul', o.plans.map((t) => h('li', t))),
-    h('h3', 'Common mistakes'), h('ul.crosses', o.mistakes.map((t) => h('li', t))),
+      h('div', h('h2.h3', 'Ideas for White'), h('ul.ticks', o.ideas.white.map((t) => h('li', t)))),
+      h('div', h('h2.h3', 'Ideas for Black'), h('ul.ticks', o.ideas.black.map((t) => h('li', t))))),
+    h('h2.h3', 'Typical plans'), h('ul', o.plans.map((t) => h('li', t))),
+    h('h2.h3', 'Common mistakes'), h('ul.crosses', o.mistakes.map((t) => h('li', t))),
     h('div.line-actions',
       h('button.btn', { type: 'button', onclick: () => play('Main line', o.mainLine, o.purpose) }, icon('play', 16), 'Replay the main line'),
       h('a.btn.btn-primary', { href: `#/practice/opening/${o.id}/main/0` }, icon('target', 16), 'Practise the main line')));
@@ -136,7 +136,7 @@ export function renderDetail(data, id, sub) {
   const opp = o.side === 'white' ? 'Black' : 'White';
   const counters = h('div.tab-panel',
     h('div.beat-intro',
-      h('h3', `How to beat the ${o.name}`),
+      h('h2.h3', `How to beat the ${o.name}`),
       h('p', `Playing ${opp} against it? These are the most reliable answers. Watch each line animate, then practise it as ${opp}.`),
       o.traps.some((t) => t.side !== o.side && t.kind !== 'pattern') ? h('p.muted', `Also see the Traps tab — some of them are tricks ${opp} can set.`) : null),
     h('div.line-list', o.counters.map((c, i) => lineItem(c.name, c.moves, c.why, tag(`Play as ${opp}`, 'quiet'), c.why, c.why, `counter/${i}`))));
@@ -145,7 +145,7 @@ export function renderDetail(data, id, sub) {
     h('p.muted', 'Deeper ideas for stronger players: move orders, structures and typical sacrifices.'),
     h('div.line-list', o.advanced.map((a) => a.moves
       ? lineItem(a.title, a.moves, a.text, levelTag('advanced'), a.text, a.text)
-      : h('article.line-item.line-item-text', h('div.line-item-head', h('h3', a.title), levelTag('advanced')), h('p', a.text)))));
+      : h('article.line-item.line-item-text', h('div.line-item-head', h('h2.h3', a.title), levelTag('advanced')), h('p', a.text)))));
 
   // ----- opening tree: every line merged into one branching explorer
   const KIND_NAME = { main: 'Main line', variation: 'Variation', trap: 'Trap', counter: 'How to beat it', advanced: 'Advanced' };
@@ -171,12 +171,12 @@ export function renderDetail(data, id, sub) {
         h('button.chip' + (path.length ? '' : '.on'), { type: 'button', onclick: () => goTo([]) }, 'Start'),
         path.map((san, i) => h('button.chip' + (i === path.length - 1 ? '.on' : ''), { type: 'button', onclick: () => goTo(path.slice(0, i + 1)) }, moveNo(i) + san))),
       node.note ? h('p.tree-note', node.note) : null,
-      kids.length ? h('h3', `Next moves (${node.lines.length} line${node.lines.length === 1 ? '' : 's'} pass through here)`) : h('h3', 'End of the book here'),
+      kids.length ? h('h2.h3', `Next moves (${node.lines.length} line${node.lines.length === 1 ? '' : 's'} pass through here)`) : h('h2.h3', 'End of the book here'),
       h('ul.tree-moves', kids.map((k) => h('li', h('button.tree-move', { type: 'button', onclick: () => goTo([...path, k.san]) },
         h('span.tree-san', moveNo(path.length) + k.san),
         h('span.tree-count', `${k.lines.length} line${k.lines.length === 1 ? '' : 's'}`),
         h('span.tree-names', k.lines.slice(0, 3).map((l) => l.name).join(', ') + (k.lines.length > 3 ? ` and ${k.lines.length - 3} more` : '')))))),
-      node.ends.length ? h('div.tree-ends', h('h3', 'Lines that end here'), h('ul', node.ends.map((l) => h('li', h('strong', l.name), l.name !== KIND_NAME[l.kind] ? [' ', h('span.tag', KIND_NAME[l.kind])] : null)))) : null,
+      node.ends.length ? h('div.tree-ends', h('h2.h3', 'Lines that end here'), h('ul', node.ends.map((l) => h('li', h('strong', l.name), l.name !== KIND_NAME[l.kind] ? [' ', h('span.tag', KIND_NAME[l.kind])] : null)))) : null,
       path.length ? h('button.btn.btn-small', { type: 'button', onclick: () => goTo(path.slice(0, -1)) }, icon('prev', 16), 'Take back') : null].filter(Boolean));
   }
   paintTree();
