@@ -821,3 +821,12 @@ label.btn { cursor: pointer; }
 .more-toggles .theme-toggle { justify-content: center; flex-direction: row; font-size: 0.92rem; border: 1px solid var(--line); }
 .more-toggles .theme-toggle .nav-label { display: inline; }
 @media (max-width: 860px) { .rail-toggles { display: none; } }
+
+/* classic games */
+.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.25rem; }
+.game-card { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 1rem; padding: 1rem; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); transition: border-color 160ms; }
+.game-card:hover { border-color: var(--ink-2); color: var(--ink); }
+.game-card:hover .board { transform: rotate(-1.5deg) scale(1.02); }
+.game-card h2 { font-size: 1.15rem; margin: 0 0 0.2rem; }
+.game-lesson { font-size: 0.95rem; line-height: 1.5; }
+@media (max-width: 420px) { .game-card { grid-template-columns: 90px minmax(0, 1fr); } }

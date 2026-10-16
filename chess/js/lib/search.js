@@ -20,6 +20,7 @@ export function buildIndex(data) {
   data.tactics.forEach((t) => add('Tactic', t.name, t.group, `#/tactics/${t.id}`, `${t.definition} ${t.mnemonic}`));
   data.strategy.forEach((s) => add('Strategy', s.name, 'Middlegame plan', `#/strategy/${s.id}`, `${s.summary} ${s.mnemonic}`));
   data.endgames.forEach((e) => add('Endgame', e.name, e.group, `#/endgames/${e.id}`, `${e.summary} ${e.mnemonic}`));
+  (data.games || []).forEach((g) => add('Game', g.title, g.players, `#/games/${g.id}`, `${g.lesson} ${g.event} ${(g.themes || []).join(' ')}`));
   data.attack.forEach((a) => add('Attack', a.name, 'Attacking lesson', `#/guide/attack/${a.id}`, `${a.principle} ${a.mnemonic}`));
   [
     ['Guide', 'Roadmap: 500 → 2000+', 'Study plan', '#/guide', 'rating plan improve beginner'],

@@ -1,5 +1,5 @@
 {
- "version": "2f4689bdcf92",
+ "version": "92edfb6e2e93",
  "files": [
   "./",
   "css/styles.css",
@@ -37,6 +37,7 @@
   "js/lib/viewer.js",
   "js/pages/common.js",
   "js/pages/endgames.js",
+  "js/pages/games.js",
   "js/pages/guide.js",
   "js/pages/home.js",
   "js/pages/openings.js",
