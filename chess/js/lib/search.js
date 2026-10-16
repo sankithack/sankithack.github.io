@@ -28,6 +28,7 @@ export function buildIndex(data) {
     ['Guide', 'How to remember positions', 'Memory techniques', '#/guide/memory', 'memory chunking visualization'],
     ['Guide', 'How to attack', 'Attacking chess', '#/guide/attack', 'attack king sacrifice'],
     ['Practice', 'Opening drills', 'Practice', '#/practice/openings', 'drill repertoire memorize'],
+    ['Practice', 'Daily puzzle', 'A new position every day', '#/daily', 'today daily puzzle share streak'],
     ['Practice', 'Puzzle rush', 'Practice', '#/practice/rush', 'tactics timer'],
     ['Practice', 'Candidate moves', 'Practice', '#/practice/candidates', 'checks captures threats cct'],
     ['Practice', 'Calculate 3+ moves', 'Practice', '#/practice/calculate', 'calculation visualize'],

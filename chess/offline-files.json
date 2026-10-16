@@ -1,5 +1,5 @@
 {
- "version": "870ae17faa76",
+ "version": "a56d03431382",
  "files": [
   "./",
   "css/styles.css",
@@ -36,6 +36,7 @@
   "js/lib/tree.js",
   "js/lib/viewer.js",
   "js/pages/common.js",
+  "js/pages/daily.js",
   "js/pages/endgames.js",
   "js/pages/games.js",
   "js/pages/guide.js",

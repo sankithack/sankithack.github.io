@@ -23,7 +23,7 @@ export function allPuzzles(tactics) {
 export function createPuzzle(t, o = {}) {
   const startFen = startFenOf(t);
   const me = startFen.split(' ')[1];
-  let chess, step, busy, done, hintUsed, mistakes;
+  let chess, step, busy, done, hintUsed, mistakes, revealed = false;
   const el = h('div.puzzle');
   const status = h('div.puzzle-status', { 'aria-live': 'polite' });
   const boardBox = h('div.puzzle-board');
@@ -40,7 +40,7 @@ export function createPuzzle(t, o = {}) {
     if (chess.inCheck()) board.setCheck(kingSquare(chess.fen(), chess.turn()));
   };
   function reset() {
-    chess = new Chess(startFen); step = 0; busy = false; done = false; hintUsed = false; mistakes = 0;
+    chess = new Chess(startFen); step = 0; busy = false; done = false; hintUsed = false; mistakes = 0; revealed = false;
     board.setArrows([]); board.setKeySquares([]);
     sync(null, false);
     say('turn', `${me === 'w' ? 'White' : 'Black'} to move. Goal: ${t.goal.toLowerCase()}.`);
@@ -85,7 +85,7 @@ export function createPuzzle(t, o = {}) {
     board.setArrows((t.arrows || []).map(parseArrow));
     board.setKeySquares(t.squares || []);
     play('success'); el.classList.add('celebrate'); setTimeout(() => el.classList.remove('celebrate'), 900);
-    o.onSolved?.({ clean: !hintUsed && mistakes === 0 });
+    o.onSolved?.({ clean: !hintUsed && mistakes === 0, revealed });
     return true;
   }
   function hint() {
@@ -99,7 +99,7 @@ export function createPuzzle(t, o = {}) {
   async function showSolution() {
     if (busy) return;
     reset();
-    busy = true; hintUsed = true;
+    busy = true; hintUsed = true; revealed = true;
     say('hint', 'Watch the solution.');
     for (const san of t.solution) {
       await new Promise((r) => setTimeout(r, 850));

@@ -3,6 +3,8 @@ import { LineViewer } from '../lib/viewer.js';
 import { page, ring } from './common.js';
 import { progress, best } from '../lib/store.js';
 import { todayPlan, warmupOfDay } from './guide.js';
+import { localDate } from './daily.js';
+import { isSolved } from '../lib/store.js';
 
 export function render(data) {
   const game = data.games[0];
@@ -42,8 +44,9 @@ export function render(data) {
       h('div', h('h2', "Today's training"), h('p.muted', `Stage ${plan.index + 1}: ${plan.stage.range} — ${plan.stage.title}. ${plan.done} of ${plan.total} done.`)),
       h('div.streak' + (streak ? '.on' : ''), { title: 'Days in a row with study or practice' }, h('span.streak-num', String(streak || alive)), h('span.streak-label', streak ? 'day streak' : 'study today to keep your streak'))),
     h('ol.today-list',
+      h('li', h('a', { href: '#/daily' }, h('span.today-kind', isSolved('daily:' + localDate()) ? 'Daily puzzle ✓' : 'Daily puzzle'), isSolved('daily:' + localDate()) ? 'Solved — see you tomorrow' : 'Today\'s position')),
       h('li', h('a', { href: warmHref }, h('span.today-kind', 'Warm-up'), warmLabel)),
-      plan.items.map((r) => h('li', h('a', { href: r.href }, h('span.today-kind', 'Next step'), r.label)))),
+      plan.items.slice(0, 2).map((r) => h('li', h('a', { href: r.href }, h('span.today-kind', 'Next step'), r.label)))),
     h('a.today-more', { href: '#/guide' }, 'See the whole roadmap'));
 
   return page('Home', hero, todayCard,
