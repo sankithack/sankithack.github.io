@@ -1,5 +1,5 @@
 {
- "version": "6e63bc68f355",
+ "version": "b971bfe44bbb",
  "files": [
   "./",
   "css/styles.css",
@@ -48,6 +48,7 @@
   "js/pages/strategy.js",
   "js/pages/tactics.js",
   "js/pages/train.js",
+  "js/pages/week.js",
   "js/vendor/chess.js",
   "js/vendor/pieces.js",
   "manifest.webmanifest"

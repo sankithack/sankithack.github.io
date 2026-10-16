@@ -24,6 +24,7 @@
   --good-ink: #0F5532;
   --bad-ink: #8E1F27;
   --flash-hook: #F0C063;
+  --chart-bar: #B07D12;
   --shadow: 0 1px 2px rgba(26, 36, 48, 0.08), 0 8px 24px -12px rgba(26, 36, 48, 0.22);
   --board-shadow: 0 2px 0 #5F7387, 0 18px 40px -18px rgba(26, 36, 48, 0.5);
   --radius: 10px;
@@ -38,7 +39,7 @@
     --bg: #141A22; --surface: #1B2330; --surface-2: #232D3B; --ink: #E6EBF0; --ink-2: #A5B1BD; --line: #2F3B4B;
     --brass: #E0A93A; --brass-ink: #E8B85A; --brass-soft: rgba(224, 169, 58, 0.14);
     --sq-light: #A9B8C6; --sq-dark: #56697D; --coord-light: #3E5064; --coord-dark: #C9D4DE;
-    --mark-last: rgba(224, 169, 58, 0.4); --good: #3DBB7A; --bad: #EF5B64; --good-ink: #7CDCA8; --bad-ink: #FF9AA0; --flash-hook: #6B4C08;
+    --mark-last: rgba(224, 169, 58, 0.4); --good: #3DBB7A; --bad: #EF5B64; --good-ink: #7CDCA8; --bad-ink: #FF9AA0; --flash-hook: #6B4C08; --chart-bar: #B8862A;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
     --board-shadow: 0 2px 0 #3B4A5B, 0 18px 40px -18px rgba(0, 0, 0, 0.8);
     color-scheme: dark;
@@ -48,7 +49,7 @@
   --bg: #141A22; --surface: #1B2330; --surface-2: #232D3B; --ink: #E6EBF0; --ink-2: #A5B1BD; --line: #2F3B4B;
   --brass: #E0A93A; --brass-ink: #E8B85A; --brass-soft: rgba(224, 169, 58, 0.14);
   --sq-light: #A9B8C6; --sq-dark: #56697D; --coord-light: #3E5064; --coord-dark: #C9D4DE;
-  --mark-last: rgba(224, 169, 58, 0.4); --good: #3DBB7A; --bad: #EF5B64; --good-ink: #7CDCA8; --bad-ink: #FF9AA0; --flash-hook: #6B4C08;
+  --mark-last: rgba(224, 169, 58, 0.4); --good: #3DBB7A; --bad: #EF5B64; --good-ink: #7CDCA8; --bad-ink: #FF9AA0; --flash-hook: #6B4C08; --chart-bar: #B8862A;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
   --board-shadow: 0 2px 0 #3B4A5B, 0 18px 40px -18px rgba(0, 0, 0, 0.8);
   color-scheme: dark;
@@ -846,3 +847,33 @@ h2.h3 { font-size: 1.08rem; margin-top: 1.4em; }
 .daily-date { font: 700 1.1rem var(--display); margin-bottom: 0.4rem; }
 .daily-streak { font: 600 0.95rem var(--display); color: var(--brass-ink); margin: 0.75rem 0; }
 .daily-pager { margin-top: 2rem; }
+
+/* your week (chart: one series, single hue validated per theme; tooltip + table carry the breakdown) */
+.week-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.stat { padding: 1rem 1.2rem; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; }
+.stat-num { font: 800 2.2rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.stat-label { font: 500 0.88rem var(--display); color: var(--ink-2); }
+.week-chart { margin-bottom: 2.5rem; max-width: 46rem; }
+.week-chart-box { position: relative; padding: 1rem 1rem 0.5rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.week-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; height: 180px; }
+.week-col { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; cursor: default; outline: none; border-radius: 6px; padding-top: 4px; }
+.week-col:hover, .week-col:focus-visible { background: var(--surface-2); }
+.week-col:focus-visible { box-shadow: 0 0 0 2px var(--brass); }
+.week-plot { position: relative; flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
+.week-bar { width: min(60%, 36px); height: var(--h); min-height: 0; background: var(--chart-bar); border-radius: 4px 4px 0 0; transition: height 600ms var(--ease); animation: grow-up 700ms var(--ease); }
+.week-bar.is-zero { height: 0; }
+@keyframes grow-up { from { height: 0; } }
+.week-bar { position: relative; }
+.week-val { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); font: 700 0.85rem var(--display); color: var(--ink); }
+.week-day { font: 600 0.8rem var(--display); color: var(--ink-2); }
+.week-day.is-today { color: var(--ink); }
+.chart-tip { position: absolute; top: 0.4rem; transform: translateX(-50%); display: grid; gap: 0.1rem; padding: 0.55rem 0.75rem; border-radius: 8px; background: var(--ink); color: var(--bg); font: 500 0.82rem var(--display); box-shadow: var(--shadow); pointer-events: none; white-space: nowrap; z-index: 3; }
+.chart-tip .muted { color: color-mix(in srgb, var(--bg) 75%, transparent); }
+.week-table { width: 100%; border-collapse: collapse; font: 500 0.88rem var(--display); margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.week-table th, .week-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); text-align: right; }
+.week-table th:first-child { text-align: left; }
+.week-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
+.week-groups h3 { margin: 0; }
+.week-list { padding-left: 1.1rem; margin: 0; }
+.week-done, .week-next { margin-bottom: 2.5rem; }
+@media (max-width: 560px) { .week-table { font-size: 0.75rem; } .week-table th, .week-table td { padding: 0.3rem 0.25rem; } .week-chart details { overflow-x: auto; } }
