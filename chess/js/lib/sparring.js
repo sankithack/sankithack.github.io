@@ -147,8 +147,12 @@ export class Sparring {
     else if (c.isStalemate()) result = this.o.goal === 'draw' ? ['good', 'Stalemate — you held the draw!', true] : ['bad', 'Stalemate! The win is gone — always leave the king a move.', false];
     else if (c.isInsufficientMaterial()) result = this.o.goal === 'draw' ? ['good', 'Only kings left — draw secured!', true] : ['bad', 'Not enough material left to win.', false];
     else if (mv.promotion && this.o.mode === 'solver') {
-      result = mine ? (this.o.goal === 'win' ? ['good', `${mv.san} — promoted. The rest is a K+Q mate you already know.`, true] : null)
-        : (this.o.goal === 'draw' && !c.moves({ verbose: true }).some((m) => m.to === mv.to) ? ['bad', 'The pawn promoted — the draw is lost.', false] : null);
+      const canTake = c.moves({ verbose: true }).some((m) => m.to === mv.to);
+      const userNearQueen = c.board().flat().some((p) => p && p.type === 'p' && p.color === this.o.userSide && p.square[1] === (this.o.userSide === 'w' ? '7' : '2'));
+      if (mine) result = this.o.goal === 'win' ? ['good', `${mv.san} — promoted. The rest is a K+Q mate you already know.`, true] : ['good', `${mv.san} — you queened too. Draw secured!`, true];
+      else if (canTake) result = null; // you can win the new queen back — play on
+      else if (userNearQueen) result = this.o.goal === 'draw' ? ['good', 'Both sides get a queen — a draw. Well held!', true] : ['bad', 'Both sides queen — that is only a draw.', false];
+      else result = ['bad', `The opponent queened — the ${this.o.goal} is lost.`, false];
     } else if (this.o.mode === 'mate' && this.plies >= 100) result = ['bad', '50 moves without mate — that is a draw. Push the king to the edge faster.', false];
     if (!result) return false;
     this.over = true;

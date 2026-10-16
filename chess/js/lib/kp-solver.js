@@ -1,7 +1,8 @@
 // Fast exhaustive solver for king + pawn endings (no other pieces).
 // Used in the browser (kp-worker.js, endgame practice) and by scripts/validate-data.mjs.
 // Simplifications: promotion = win for the promoting side, unless the new queen can be taken
-// at once by the enemy king (then the capture is played out) or the promotion stalemates.
+// at once by the enemy king (then the capture is played out), or the opponent has a pawn one
+// step from promoting (a queen race: scored as a draw), or the promotion stalemates.
 // En passant is ignored.
 const FILES = 'abcdefgh';
 const sq = (s) => FILES.indexOf(s[0]) + 8 * (Number(s[1]) - 1);
@@ -102,6 +103,9 @@ export function solveKP(rootFen, maxNodes = 3_000_000) {
           const after = clone(ns); after[after.stm].k = m.promo; after.stm = me;
           if (!adj(after.w.k, after.b.k)) { node.kids.push({ san: m.san, cap: keyOf(after), capSan: 'Kx' + name(m.promo) }); stack.push(after); continue; }
         }
+        // if the opponent can promote next move too, it's a queen race — not a known win: score it as a draw
+        const op = ns.stm;
+        if (ns[op].p.some((sq) => (sq >> 3) === (op === 'w' ? 6 : 1))) { node.kids.push({ san: m.san, term: 0 }); continue; }
         node.kids.push({ san: m.san, term: -1 });
       } else { node.kids.push({ san: m.san, k: keyOf(m.st) }); stack.push(m.st); }
     }

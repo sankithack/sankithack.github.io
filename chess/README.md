@@ -7,7 +7,7 @@ An interactive chess course that explains **why** moves are played, with practic
 - **Openings**: 21 openings (Italian, Ruy López, Sicilian, French, Caro-Kann, Queen's Gambit, Slav, Nimzo-Indian, Queen's Indian, King's Indian, Grünfeld, Catalan, London, English, Réti, Scotch, Petrov, Vienna, Scandinavian, Pirc, Dutch). Annotated main lines, levelled variations, traps, "how to beat it" lines, advanced notes and sourced 2000+ statistics.
 - **Tactics**: 25 motifs and mating patterns with extra puzzle positions; solve on the board by drag, tap or typing.
 - **Strategy**: 20 concepts with example positions and find-the-square exercises.
-- **Endgames**: 12 lessons; play them against the computer (a king-and-pawn solver runs in a Web Worker and defends perfectly).
+- **Endgames**: 16 lessons (incl. the Réti manoeuvre, rook-pawn and wrong-bishop draws); play them against the computer (a king-and-pawn solver runs in a Web Worker and defends perfectly).
 - **Practice**: opening drills for every line, puzzle rush, candidate moves, 3+ move calculation, attack drills, position memory, follow-the-moves, square colours, quiz and flashcards.
 - **Review a game**: paste a PGN; a quick (non-engine) scan flags mates in one/two, loose pieces and sound sacrifices.
 - **Guides**: a 500 → 2000+ roadmap with self-ticking checklists, how to think, memory techniques and animated attacking lessons. Progress is saved in `localStorage`.
