@@ -9,13 +9,23 @@
 (function () {
   'use strict';
   const G = window.GX;
-  const { esc, src, CF } = G;
-  const FJ = G.flowJourney;
+  const { esc, src } = G;
+  // Two implementations share the viewer: gchips (default) and the Arm r56p0 reference gralloc.
+  const IMPLS = { gchips: { CF: G.CF, FJ: G.flowJourney, name: 'gchips' } };
+  if (G.ARM && G.flowJourneyArm) IMPLS.arm = { CF: G.ARM.callflow, FJ: G.flowJourneyArm, name: 'Arm r56p0' };
+  let CF = G.CF, FJ = G.flowJourney;
+  const STATE_NAMES = ['handle', 'fds', 'ref_count', 'mapped', 'locked_ref_count', 'CPU flags'];
   const PHASES = [['allocate', 'Allocate'], ['import', 'Import'], ['lock', 'Lock'], ['unlock', 'Unlock'], ['free', 'Free']];
   const SPEEDS = { slow: 2300, normal: 1400, fast: 700 };
   const step = (id) => CF.steps.find((s) => s.id === id);
 
-  const fs = { phase: 'allocate', pos: 0, playing: null, speed: 'normal', shownStep: null, prevStack: [] };
+  const fs = { impl: 'gchips', phase: 'allocate', pos: 0, playing: null, speed: 'normal', shownStep: null, prevStack: [] };
+  function useImpl(k) {
+    const d = IMPLS[k] || IMPLS.gchips;
+    if (fs.impl !== (IMPLS[k] ? k : 'gchips')) { fs.phase = 'allocate'; fs.pos = 0; }
+    fs.impl = IMPLS[k] ? k : 'gchips';
+    CF = d.CF; FJ = d.FJ;
+  }
 
   // Execution plan for a phase: entry of each function (k = -1) then each of its stops.
   function plan(phase) {
@@ -69,6 +79,7 @@
   }
 
   G.views.flow = (params) => {
+    useImpl(params.get('impl') || 'gchips');
     const ph = params.get('p');
     if (ph && CF.paths[ph]) {
       fs.phase = ph;
@@ -79,7 +90,8 @@
     }
     fs.shownStep = null;
     return `<h1>Code flow</h1>
-      <p class="lede">Watch the real gralloc code run for one buffer: allocated by the allocator service, then imported, locked, unlocked and freed by an app. The red bar marks the line being executed; calls open the called function.</p>
+      <p class="lede">${esc(FJ.INTRO || 'Watch the real gralloc code run for one buffer: allocated by the allocator service, then imported, locked, unlocked and freed by an app.')} The red bar marks the line being executed; calls open the called function.</p>
+      ${IMPLS.arm ? `<div class="seg" role="tablist" aria-label="implementation" style="margin-bottom:8px">${Object.entries(IMPLS).map(([k, d]) => `<button role="tab" data-impl="${k}" aria-selected="${k === fs.impl}">${esc(d.name)}</button>`).join('')}</div>` : ''}
       <div class="flowbar">
         <div class="seg" role="tablist">${PHASES.map(([k, t]) => `<button role="tab" data-phase="${k}" aria-selected="${k === fs.phase}">${t}</button>`).join('')}</div>
         <div class="flowctl">
@@ -110,7 +122,7 @@
     fs.pos = Math.min(Math.max(0, fs.pos), pl.length - 1);
     const cur = pl[fs.pos], s = step(cur.id);
     const stack = stackAt(fs.phase, fs.pos);
-    history.replaceState(null, '', `#/flow?p=${fs.phase}&pos=${fs.pos}`);
+    history.replaceState(null, '', `#/flow?${fs.impl !== 'gchips' ? 'impl=' + fs.impl + '&' : ''}p=${fs.phase}&pos=${fs.pos}`);
     G.render.lastRoute = location.hash;
 
     // header + code (swap with a slide when the function changes)
@@ -165,7 +177,7 @@
     lanes.querySelectorAll('[data-lane]').forEach((d) => d.classList.toggle('on', Number(d.dataset.lane) === lane));
     const sidx = CF.paths[fs.phase].indexOf(s.id);
     const st = FJ.stateFor(fs.phase, sidx);
-    const names = ['handle', 'fds', 'ref_count', 'mapped', 'locked_ref_count', 'CPU flags'];
+    const names = FJ.STATE_NAMES || STATE_NAMES;
     const old = update.lastState;
     document.getElementById('xstate').innerHTML = st ? `<table class="statetab">${names.map((n, k) => `<tr class="${old && old[k] !== st.s[k] ? 'flash' : ''}"><td>${n}</td><td>${esc(st.s[k])}</td></tr>`).join('')}</table><div class="small muted">after ${esc(step(st.id).function || step(st.id).title)} ${src(st.s[6])}</div>` : '<div class="small muted">no state change yet</div>';
     update.lastState = st ? st.s : null;
@@ -204,6 +216,7 @@
     stop();
     fs.prevStack = [];
     update.lastState = null;
+    document.querySelectorAll('[data-impl]').forEach((b) => b.addEventListener('click', () => { stop(); location.hash = b.dataset.impl === 'gchips' ? '#/flow' : '#/flow?impl=' + b.dataset.impl; }));
     document.querySelectorAll('[data-phase]').forEach((b) => b.addEventListener('click', () => { stop(); fs.phase = b.dataset.phase; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; update(0); }));
     document.getElementById('fprev').addEventListener('click', () => { stop(); advance(-1); });
     document.getElementById('fnext').addEventListener('click', () => { stop(); advance(1); });
