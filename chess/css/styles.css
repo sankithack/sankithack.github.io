@@ -841,3 +841,8 @@ h2.h3 { font-size: 1.08rem; margin-top: 1.4em; }
 .stage-head h2.stage-title { font-size: 1.05rem; margin: 0; }
 .board[tabindex="0"]:focus-visible { outline: 3px solid var(--brass); outline-offset: 3px; }
 .board-typed:not(:empty) { position: absolute; z-index: 6; top: 8px; right: 8px; padding: 0.2rem 0.55rem; border-radius: 6px; background: var(--ink); color: var(--bg); font: 800 1.1rem var(--display); }
+
+/* daily puzzle */
+.daily-date { font: 700 1.1rem var(--display); margin-bottom: 0.4rem; }
+.daily-streak { font: 600 0.95rem var(--display); color: var(--brass-ink); margin: 0.75rem 0; }
+.daily-pager { margin-top: 2rem; }

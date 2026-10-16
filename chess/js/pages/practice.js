@@ -28,6 +28,7 @@ function hub(data) {
     section('Openings', 'Play your side of any line from memory. The app answers with the book moves and explains each one.',
       tile('#/practice/openings', 'Opening drills', `${lines.length} lines across ${data.openings.length} openings: main lines, variations, traps and how-to-beat-it lines.`, `${mastered} mastered`, 'book')),
     section('Tactics & thinking', 'Spot patterns fast, scan for candidate moves, and calculate several moves ahead.',
+      tile('#/daily', 'Daily puzzle', 'One new position every day, the same for everyone. Keep the streak going and share it.', null, 'bolt'),
       tile('#/practice/rush', 'Puzzle rush', 'Three minutes, as many puzzles as you can. One mistake ends the puzzle.', `Best ${best('rush')}`, 'bolt'),
       tile('#/practice/candidates', 'Candidate moves', 'Find every check and capture in the position before you choose — the habit that stops blunders.', `Best ${best('candidates')}%`, 'search'),
       tile('#/practice/calculate', 'Calculate 3+ moves', 'Work out the whole combination in your head and enter it before the board moves.', `${best('calculate')} solved`, 'target'),
