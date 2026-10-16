@@ -5,6 +5,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { buildLine, parseArrow, isSquare, normMove } from '../js/lib/line.js';
 import { solveKP, RESULT } from './kp-solver.mjs';
+import { offlineList } from './build-offline.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const load = (f) => (existsSync(root + 'data/' + f) ? JSON.parse(readFileSync(root + 'data/' + f, 'utf8')) : []);
@@ -115,6 +116,12 @@ for (const e of endgames) {
 const games = load('games.json');
 uniq(games, 'games');
 for (const g of games) line(`game ${g.id}`, { moves: g.moves }, { mate: /#$/.test(normMove(g.moves.at(-1)).san) });
+
+// ---- offline file list must match the files on disk
+try {
+  const want = offlineList(), have = JSON.parse(readFileSync(root + 'offline-files.json', 'utf8'));
+  if (want.version !== have.version || want.files.join() !== have.files.join()) fail('offline-files.json', 'out of date — run: node scripts/build-offline.mjs');
+} catch (e) { fail('offline-files.json', e.message); }
 
 console.log(`${errors ? '✗' : '✓'} ${checked} lines checked, ${errors} error(s) — ` +
   `${openings.length} openings, ${tactics.length} tactics, ${strategy.length} strategy, ${endgames.length} endgames`);

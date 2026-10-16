@@ -24,6 +24,16 @@ npm start              # zero-dependency static server on http://localhost:5173
 
 Opening `index.html` straight from disk won't work (browsers block `fetch` and modules on `file://`).
 
+## Offline and install
+
+The site is a small installable web app: `manifest.webmanifest`, icons in `icons/`, and `sw.js` (scoped to this folder; network first, cache fallback). The list of files to cache lives in `offline-files.json`. **After adding, removing or changing files, run:**
+
+```sh
+node scripts/build-offline.mjs
+```
+
+`npm run validate` fails if the list is out of date.
+
 ## Validate the data
 
 ```sh
