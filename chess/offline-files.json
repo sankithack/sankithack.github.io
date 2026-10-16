@@ -1,5 +1,5 @@
 {
- "version": "b971bfe44bbb",
+ "version": "b4edadc000ff",
  "files": [
   "./",
   "css/styles.css",
@@ -23,6 +23,7 @@
   "js/lib/drill.js",
   "js/lib/kp-solver.js",
   "js/lib/kp-worker.js",
+  "js/lib/lichess.js",
   "js/lib/line.js",
   "js/lib/moves.js",
   "js/lib/progress-io.js",

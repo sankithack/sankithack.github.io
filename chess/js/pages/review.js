@@ -4,6 +4,7 @@ import { LineViewer } from '../lib/viewer.js';
 import { Chess } from '../lib/line.js';
 import { parsePgn, forcingMoves } from '../lib/review.js';
 import { page, pageHead, chips } from './common.js';
+import { lichessGameId, fetchLichessPgn } from '../lib/lichess.js';
 
 const KEY = 'chess-academy-pgn';
 const EXAMPLES = {
@@ -19,15 +20,23 @@ const KIND = {
 export function render() {
   let saved = '';
   try { saved = localStorage.getItem(KEY) || ''; } catch { /* ignore */ }
-  const area = h('textarea.pgn-input', { rows: 7, spellcheck: false, placeholder: 'Paste a PGN here — export it from Lichess or Chess.com ("Share" → "PGN").', 'aria-label': 'PGN of your game' });
+  const area = h('textarea.pgn-input', { rows: 7, spellcheck: false, placeholder: 'Paste a Lichess game link (lichess.org/…) or a PGN — from Chess.com use "Share" → "PGN".', 'aria-label': 'Lichess game link or PGN of your game' });
   area.value = saved;
   const error = h('p.form-error', { role: 'alert' });
   const out = h('div.review-out');
   let cct = false, viewer, game;
 
   let worker;
+  async function importLichess(id) {
+    error.textContent = '';
+    out.replaceChildren(h('p.analysing', icon('search', 18), 'Fetching the game from Lichess…'));
+    try { area.value = await fetchLichessPgn(id); } catch (e) { out.replaceChildren(); error.textContent = e.message; return; }
+    load();
+  }
   function load() {
     error.textContent = '';
+    const id = lichessGameId(area.value);
+    if (id && !/\d+\.\s/.test(area.value)) return importLichess(id); // a link was pasted into the PGN box
     try { game = parsePgn(area.value); } catch (e) { error.textContent = e.message; return; }
     try { localStorage.setItem(KEY, area.value); } catch { /* ignore */ }
     out.replaceChildren(h('p.analysing', icon('search', 18), `Analysing ${game.sans.length} moves…`));
@@ -68,7 +77,7 @@ export function render() {
   if (saved) setTimeout(load, 0);
   return page('Review a game',
     h('nav.crumbs', h('a', { href: '#/practice' }, 'Practice'), h('span', 'Review a game')),
-    pageHead('Review your game', 'Paste a game you played. Step through it on the board, see every check and capture available at each move, and jump to the moments where a piece was left loose or a mate was missed.'),
+    pageHead('Review your game', 'Paste a Lichess game link or the PGN of a game you played. Step through it on the board, see every check and capture available at each move, and jump to the moments where a piece was left loose or a mate was missed.'),
     h('div.pgn-box', area,
       h('div.puzzle-actions',
         h('button.btn.btn-primary', { type: 'button', onclick: load }, icon('play', 16), 'Review this game'),
