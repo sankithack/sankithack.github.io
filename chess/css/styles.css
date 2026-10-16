@@ -806,3 +806,9 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .io-bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 label.btn { cursor: pointer; }
+
+/* connectivity notice */
+.net-toast { position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 80; padding: 0.65rem 1.1rem; border-radius: 999px; font: 600 0.9rem var(--display); box-shadow: var(--shadow); animation: vt-in 240ms var(--ease); max-width: calc(100vw - 32px); text-align: center; }
+.net-off { background: var(--ink); color: var(--bg); }
+.net-on { background: var(--good); color: #fff; }
+@media (max-width: 860px) { .net-toast { bottom: calc(5rem + env(safe-area-inset-bottom)); } }

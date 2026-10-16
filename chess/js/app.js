@@ -140,6 +140,20 @@ async function route() {
 const notFound = () => h('section.page', { 'data-title': 'Not found' }, h('h1', 'No such page'), h('p', 'That address doesn\'t match any lesson.'), h('p', h('a', { href: '#/' }, 'Go to the home page')));
 
 renderRail();
+// offline support: service worker scoped to this folder, plus a small connectivity notice
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode is optional */ }));
+}
+const netToast = h('div.net-toast', { role: 'status', hidden: true });
+document.body.append(netToast);
+const showNet = (online) => {
+  netToast.textContent = online ? 'Back online.' : 'You are offline — the whole course still works.';
+  netToast.className = 'net-toast ' + (online ? 'net-on' : 'net-off');
+  netToast.hidden = false;
+  clearTimeout(showNet.t); showNet.t = setTimeout(() => (netToast.hidden = true), online ? 2500 : 6000);
+};
+window.addEventListener('offline', () => showNet(false));
+window.addEventListener('online', () => showNet(true));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#more-sheet').hidden) toggleMore(false); });
 $('#skip').addEventListener('click', (e) => { e.preventDefault(); $('#view').focus(); });
 loadAll()
