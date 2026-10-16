@@ -262,7 +262,28 @@
       "d5"
     ],
     "level": "intermediate",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "2r3k1/5ppp/8/2q5/8/Q7/5PPP/4R1K1 w - - 0 1",
+        "solution": [
+          "Re8+",
+          "Rxe8",
+          "Qxc5"
+        ],
+        "goal": "Win the queen",
+        "hint": "The c8-rook guards the queen. Give it a reason to leave.",
+        "explanation": "Re8+ must be answered by Rxe8 — the king has no square. The rook leaves the c-file, and the a3-queen takes the undefended queen on c5.",
+        "arrows": [
+          "e1e8",
+          "a3c5"
+        ],
+        "squares": [
+          "c8",
+          "c5"
+        ]
+      }
+    ]
   },
   {
     "id": "decoy",
@@ -289,7 +310,31 @@
       "d6"
     ],
     "level": "intermediate",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "6k1/pp4pp/1q6/4N3/8/8/PPr3PP/5R1K w - - 0 1",
+        "solution": [
+          "Rf8+",
+          "Kxf8",
+          "Nd7+",
+          "Ke7",
+          "Nxb6"
+        ],
+        "goal": "Win the queen",
+        "hint": "Lure the king to f8, where a knight can check it and hit b6.",
+        "explanation": "Rf8+! forces Kxf8 (every other square is covered). Now Nd7+ forks the king on f8 and the queen on b6 — a rook for a queen.",
+        "arrows": [
+          "f1f8",
+          "e5d7",
+          "d7b6"
+        ],
+        "squares": [
+          "f8",
+          "b6"
+        ]
+      }
+    ]
   },
   {
     "id": "overloading",
@@ -314,7 +359,29 @@
       "d8"
     ],
     "level": "intermediate",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "r4rk1/pp1b1ppp/5n2/8/8/8/PPQ2PPP/1B1R2K1 w - - 0 1",
+        "solution": [
+          "Rxd7",
+          "Nxd7",
+          "Qxh7#"
+        ],
+        "goal": "Checkmate",
+        "hint": "The f6-knight guards both d7 and h7.",
+        "explanation": "The knight on f6 has two jobs: protect the d7-bishop and guard h7. Rxd7! — if Nxd7, the knight has left h7 and Qxh7 is mate (the b1-bishop backs up the queen).",
+        "arrows": [
+          "d1d7",
+          "c2h7"
+        ],
+        "squares": [
+          "f6",
+          "d7",
+          "h7"
+        ]
+      }
+    ]
   },
   {
     "id": "interference",
@@ -434,7 +501,27 @@
       "d8"
     ],
     "level": "advanced",
-    "group": "Tactical motifs"
+    "group": "Tactical motifs",
+    "extra": [
+      {
+        "fen": "4r1k1/3q1ppp/8/8/8/8/4RPPP/4R1K1 w - - 0 1",
+        "solution": [
+          "Rxe8+",
+          "Qxe8",
+          "Rxe8#"
+        ],
+        "goal": "Checkmate",
+        "hint": "Your two rooks work as one on the e-file.",
+        "explanation": "The e1-rook sees through the e2-rook. Rxe8+ Qxe8 and the back rook recaptures with mate — two attackers beat one defender.",
+        "arrows": [
+          "e2e8",
+          "e1e8"
+        ],
+        "squares": [
+          "e8"
+        ]
+      }
+    ]
   },
   {
     "id": "windmill",
