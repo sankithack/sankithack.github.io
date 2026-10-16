@@ -13,6 +13,7 @@ import * as review from './pages/review.js';
 import * as progressPage from './pages/progress.js';
 import * as games from './pages/games.js';
 import * as daily from './pages/daily.js';
+import * as week from './pages/week.js';
 import { initSearch, openSearch } from './lib/search.js';
 import { soundOn, setSound } from './lib/sound.js';
 
@@ -40,6 +41,7 @@ const ROUTES = {
   progress: progressPage.render,
   games: games.render,
   daily: daily.render,
+  week: week.render,
 };
 
 // ---------- sound toggle
@@ -99,6 +101,7 @@ function renderRail() {
         h('a.more-link', { href: '#/daily', onclick: () => toggleMore(false) }, icon('bolt', 24), 'Daily puzzle'),
         h('a.more-link', { href: '#/games', onclick: () => toggleMore(false) }, icon('book', 24), 'Classic games'),
         h('a.more-link', { href: '#/review', onclick: () => toggleMore(false) }, icon('search', 24), 'Review a game'),
+        h('a.more-link', { href: '#/week', onclick: () => toggleMore(false) }, icon('map', 24), 'Your week'),
         h('a.more-link', { href: '#/progress', onclick: () => toggleMore(false) }, icon('check', 24), 'My progress')),
       h('div.more-toggles', soundButton(), themeButton())));
   document.body.append(sheet);

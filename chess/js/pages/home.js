@@ -70,5 +70,5 @@ export function render(data) {
           ring(Object.keys(p.solved).length, data.tactics.length, 'Tactics solved'),
           ring(seen('strategy'), data.strategy.length, 'Plans read'),
           ring(seen('endgame'), data.endgames.length, 'Endgames studied')),
-        h('p.muted.small', p.streak.count > 1 ? `You've studied ${p.streak.count} days in a row. ` : 'Progress is saved in this browser. ', h('a', { href: '#/progress' }, 'Back up or move your progress')))));
+        h('p.muted.small', p.streak.count > 1 ? `You've studied ${p.streak.count} days in a row. ` : 'Progress is saved in this browser. ', h('a', { href: '#/week' }, 'See your week'), ' · ', h('a', { href: '#/progress' }, 'Back up or move your progress')))));
 }

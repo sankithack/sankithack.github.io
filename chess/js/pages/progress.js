@@ -43,7 +43,7 @@ export function render(data) {
   return page('Your progress',
     pageHead('Your progress', 'Progress lives in this browser. Back it up to keep it safe, or move it to another phone or computer.'),
     h('div.progress-grid',
-      h('section.io-card', h('h2', 'Summary'), statsEl, h('a', { href: '#/guide' }, 'See your roadmap')),
+      h('section.io-card', h('h2', 'Summary'), statsEl, h('p', h('a', { href: '#/week' }, 'See your week'), ' · ', h('a', { href: '#/guide' }, 'See your roadmap'))),
       h('section.io-card',
         h('h2', 'Back up'),
         h('p.muted', 'Download a small file with everything you have studied, solved and practised.'),
