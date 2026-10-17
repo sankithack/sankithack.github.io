@@ -273,6 +273,8 @@
     return `<h1>Google gchips gralloc — how buffers are described and allocated</h1>
     <p>This site is generated from <a href="${FD.meta.repo}">${esc(FD.meta.repo)}</a> at commit <code>${esc(FD.meta.commit)}</code> by <code>tools/extract.py</code>. Every value links to the line it came from. Items marked ${badge('manual — not in repo', 'b-manual')} come from AOSP headers outside this repository; items marked ${badge('not confirmed in source', 'b-unknown')} cannot be determined from it at all.</p>
 
+    ${startHere()}
+
     <h2>What gralloc is (in this repo)</h2>
     <div class="grid2">
       <div class="panel"><b>Allocator service</b> — a binder service (<code>pixel_gralloc_allocator</code>, ${src(L('gralloc4/service/aidl/service.cpp', 20))}) implementing AIDL <code>IAllocator</code> V1 or V2 (${src(step('aidl_allocate').def, 'GrallocAllocator.cpp')}, ${src(step('aidl_allocate2').def, 'GrallocAllocator2.cpp')}). It turns a request (width, height, format, usage, layers) into dma-buf file descriptors plus a <code>private_handle_t</code> describing the layout.</div>
@@ -280,7 +282,7 @@
     </div>
 
     <h2>Where it sits in the graphics stack</h2>
-    <p class="note small"><b>Android background (not from this repo):</b> app/framework components (SurfaceFlinger, HWC, camera HAL, codecs) request buffers through BufferQueue / <code>GraphicBuffer</code>, which call IAllocator and IMapper. The middle and right of the diagram is what this repo implements; the IP-block names on the left are the producers/consumers gralloc derives from usage flags (${src(L(P.FMTS, 42, 59))}).</p>
+    <p class="note small"><b>Android background:</b> app/framework components (SurfaceFlinger, HWC, camera HAL, codecs) request buffers through BufferQueue / <code>GraphicBuffer</code>, which call IAllocator and IMapper. ${window.GRALLOC_FW ? 'The libui part of that path (GraphicBuffer → Gralloc5) is parsed from AOSP on the <a href="#/framework">Framework</a> page.' : ''} The middle and right of the diagram is what this repo implements; the IP-block names on the left are the producers/consumers gralloc derives from usage flags (${src(L(P.FMTS, 42, 59))}).</p>
     ${archSVG()}
 
     <h2>Repository layout</h2>
@@ -327,6 +329,21 @@
       <li>AFBC YUV-transform enabling is compiled out with <code>#if 0</code> (${src(L(P.FMTS, 822, 833))}).</li>
     </ul>`;
   };
+
+  // Entry cards at the top of the overview; counts come from the loaded data.
+  function startHere() {
+    const FW = window.GRALLOC_FW, A = window.GRALLOC_ARM;
+    const nf = (FW ? FW.steps.length : 0), ng = CF.steps.length, na = A ? A.callflow.steps.length : 0;
+    const card = (href, t, d) => `<a class="startcard" href="${href}"><b>${t}</b><span>${d}</span></a>`;
+    return `<h2>Start here</h2><div class="startgrid">
+      ${card('#/learn', 'Learn', 'Pixels, planes, strides, AFBC and usage flags, step by step with live demos.')}
+      ${card('#/usecases', 'Use cases', 'Real buffers (camera, video, UI, screen record) and what gralloc allocates for them.')}
+      ${card('#/flow', 'Code flow', `Run the real code: ${nf} framework + ${ng} gchips${A ? ` (or ${na} Arm)` : ''} functions, from <code>GraphicBuffer</code> down to the dma-buf.`)}
+      ${FW ? card('#/framework', 'Framework → HAL', 'libui, Gralloc5, AIMapper v5 and IAllocator: who calls what, metadata support, parcel layout.') : ''}
+      ${card('#/formats', 'Formats', `${FD.formats.length} gchips formats${A ? ` and ${A.formats.length} Arm formats` : ''}, each with a size calculator.`)}
+      ${A ? card('#/arm', 'Arm r56p0', 'The Arm Mali reference gralloc: capability XML, AFBC/AFRC, libformat, diff vs gchips.') : ''}
+      </div><p class="small muted">Looking for something specific? Press <kbd>/</kbd> to search every format, function, flag, term and file.</p>`;
+  }
 
   function archSVG() {
     const box = (x, y, w, h, t, sub, cls) => `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${cls === 'bg' ? 'var(--code)' : 'var(--panel)'}" stroke="${cls === 'hi' ? 'var(--accent)' : 'var(--line)'}" stroke-width="${cls === 'hi' ? 2 : 1}"/><text x="${x + w / 2}" y="${y + 18}" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">${t}</text>${sub ? `<text x="${x + w / 2}" y="${y + 34}" text-anchor="middle" font-size="11" fill="var(--muted)">${sub}</text>` : ''}</g>`;
@@ -747,7 +764,13 @@
     const parts = path.split('/').map(decodeURIComponent);
     return { route: parts[0] || 'overview', arg: parts[1], params: new URLSearchParams(q || '') };
   }
-  const AFTER = { formats: formatsAfter, format: formatAfter, compare: compareAfter, usage: usageAfter, settings: settingsAfter };
+  // Glossary deep link (#/glossary?t=<term id>) used by search.
+  const glossaryAfter = (params) => {
+    const el = params.get('t') && document.getElementById('g-' + params.get('t'));
+    // after render() has reset the scroll position
+    if (el) setTimeout(() => { el.scrollIntoView({ block: 'center' }); el.classList.add('flash'); }, 0);
+  };
+  const AFTER = { formats: formatsAfter, format: formatAfter, compare: compareAfter, usage: usageAfter, settings: settingsAfter, glossary: glossaryAfter };
   function render() {
     const { route, arg, params } = parse();
     keyHandler = null;
@@ -781,7 +804,7 @@
     });
     sync();
   })();
-  document.getElementById('foot').innerHTML = `Data: <code>site/data/*.json</code> generated by <code>tools/extract.py</code> from gchips @ <code>${esc((FD.meta.commit || '').slice(0, 12))}</code>. Source links open android.googlesource.com at that commit. Arm r56p0 data: <code>tools/extract_arm.py</code>; <span class="mono">arm:</span> links open the locally extracted archive.`;
+  document.getElementById('foot').innerHTML = `Data: <code>site/data/*.json</code> generated by <code>tools/extract.py</code> from gchips @ <code>${esc((FD.meta.commit || '').slice(0, 12))}</code>. Source links open android.googlesource.com at that commit. Arm r56p0 data: <code>tools/extract_arm.py</code>; <span class="mono">arm:</span> links open the locally extracted archive. Framework (libui) data: <code>tools/extract_fw.py</code>; <span class="mono">fw:</span> links open AOSP frameworks/native at the pinned commit.`;
   // Extension point for additional views (site/js/storage.js).
   window.GX = { views, AFTER, esc, src, L, P, byName, shortName, badge, fmt, hex, state, saveCalc, render, dimsPicker, bindDims, E, U, V, FD, CF, store,
     usageValue, modelFromValue, calcRun, layoutSVG, planeTable, traceList, resultSummary, PRESETS, usagePicker, bindUsagePicker };

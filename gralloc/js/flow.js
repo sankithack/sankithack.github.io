@@ -283,6 +283,21 @@
     update(0);
   }
 
+  // Link that opens the viewer on a function (framework on): first phase whose path contains it.
+  G.flowLink = (impl, id) => {
+    const d = IMPLS[impl];
+    if (!d) return null;
+    const C = FW ? (merged[impl] = merged[impl] || withFramework(d.CF)) : d.CF;
+    for (const [ph] of C.phases || DEFAULT_PHASES) {
+      let pos = 0;
+      for (const x of C.paths[ph] || []) {
+        if (x === id) return `#/flow?${impl !== 'gchips' ? 'impl=' + impl + '&' : ''}p=${ph}&pos=${pos}`;
+        pos += 1 + C.steps.find((s) => s.id === x).stops.length;
+      }
+    }
+    return null;
+  };
+
   let keyBound = false;
   G.AFTER.flow = () => {
     stop();

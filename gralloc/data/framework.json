@@ -1839,5 +1839,1041 @@
   "get_std": "AIMapper v5 getStandardMetadata",
   "set_std": "AIMapper v5 setStandardMetadata",
   "free": "AIMapper v5 freeBuffer"
+ },
+ "reference": {
+  "aimapper": [
+   {
+    "name": "getStandardMetadata",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 146,
+       "repo": "fw"
+      },
+      "from": "getStandardMetadata"
+     },
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 155,
+       "repo": "fw"
+      },
+      "from": "getStandardMetadata"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 93
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 300,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "setStandardMetadata",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 184,
+       "repo": "fw"
+      },
+      "from": "setStandardMetadata"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 149
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 361,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "dumpBuffer",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 459,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::dumpBuffer"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 238
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 393,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "dumpAllBuffers",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 510,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::dumpBuffers"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 252
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 418,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "importBuffer",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 532,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::importBuffer"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 42
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 98,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "freeBuffer",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 536,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::freeBuffer"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 49
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 114,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "getTransportSize",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 602,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::getTransportSize"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 215
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 368,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "lock",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 611,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::lock"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 55
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 120,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "unlock",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 729,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::unlock"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 74
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 128,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "flushLockedBuffer",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 81
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 134,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "rereadLockedBuffer",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 88
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 140,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "getMetadata",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 107
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 280,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "setMetadata",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 202
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 351,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "listSupportedMetadataTypes",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 224
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 384,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "getReservedRegion",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 267
+    },
+    "arm": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 146,
+     "repo": "arm"
+    }
+   }
+  ],
+  "iallocator": [
+   {
+    "name": "getInterfaceVersion",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 78,
+       "repo": "fw"
+      },
+      "from": "waitForAllocator"
+     }
+    ],
+    "gchips": null,
+    "arm": null
+   },
+   {
+    "name": "getIMapperLibrarySuffix",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 96,
+       "repo": "fw"
+      },
+      "from": "loadIMapperLibrary"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+     "line": 169
+    },
+    "arm": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 193,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "allocate2",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 269,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Allocator::allocate"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+     "line": 106
+    },
+    "arm": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 97,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "isSupported",
+    "framework": [
+     {
+      "loc": {
+       "file": "libs/ui/Gralloc5.cpp",
+       "line": 744,
+       "repo": "fw"
+      },
+      "from": "Gralloc5Mapper::isSupported"
+     }
+    ],
+    "gchips": {
+     "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+     "line": 156
+    },
+    "arm": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 127,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "allocate",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+     "line": 31
+    },
+    "arm": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 82,
+     "repo": "arm"
+    }
+   },
+   {
+    "name": "dump",
+    "framework": [],
+    "gchips": {
+     "file": "gralloc4/src/aidl/GrallocAllocator2.cpp",
+     "line": 174
+    },
+    "arm": null
+   }
+  ],
+  "metadata": {
+   "framework": [
+    {
+     "method": "getBufferId",
+     "type": "BUFFER_ID",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 752,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getName",
+     "type": "NAME",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 761,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getWidth",
+     "type": "WIDTH",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 770,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getHeight",
+     "type": "HEIGHT",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 779,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getLayerCount",
+     "type": "LAYER_COUNT",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 788,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getPixelFormatRequested",
+     "type": "PIXEL_FORMAT_REQUESTED",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 798,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getPixelFormatFourCC",
+     "type": "PIXEL_FORMAT_FOURCC",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 809,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getPixelFormatModifier",
+     "type": "PIXEL_FORMAT_MODIFIER",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 820,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getUsage",
+     "type": "USAGE",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 831,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getAllocationSize",
+     "type": "ALLOCATION_SIZE",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 840,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getProtectedContent",
+     "type": "PROTECTED_CONTENT",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 850,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getCompression",
+     "type": "COMPRESSION",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 861,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getInterlaced",
+     "type": "INTERLACED",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 885,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getChromaSiting",
+     "type": "CHROMA_SITING",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 913,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getPlaneLayouts",
+     "type": "PLANE_LAYOUTS",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 941,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getDataspace",
+     "type": "DATASPACE",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 951,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "setDataspace",
+     "type": "DATASPACE",
+     "op": "set",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 961,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getBlendMode",
+     "type": "BLEND_MODE",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 966,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getSmpte2086",
+     "type": "SMPTE2086",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 976,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "setSmpte2086",
+     "type": "SMPTE2086",
+     "op": "set",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 986,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getCta861_3",
+     "type": "CTA861_3",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 991,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "setCta861_3",
+     "type": "CTA861_3",
+     "op": "set",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 1001,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getSmpte2094_40",
+     "type": "SMPTE2094_40",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 1006,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "setSmpte2094_40",
+     "type": "SMPTE2094_40",
+     "op": "set",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 1016,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "getSmpte2094_10",
+     "type": "SMPTE2094_10",
+     "op": "get",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 1022,
+      "repo": "fw"
+     }
+    },
+    {
+     "method": "setSmpte2094_10",
+     "type": "SMPTE2094_10",
+     "op": "set",
+     "loc": {
+      "file": "libs/ui/Gralloc5.cpp",
+      "line": 1032,
+      "repo": "fw"
+     }
+    }
+   ],
+   "gchips_get": {
+    "BUFFER_ID": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 67
+    },
+    "WIDTH": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 70
+    },
+    "HEIGHT": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 73
+    },
+    "LAYER_COUNT": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 76
+    },
+    "PIXEL_FORMAT_REQUESTED": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 79
+    },
+    "PIXEL_FORMAT_FOURCC": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 82
+    },
+    "PIXEL_FORMAT_MODIFIER": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 85
+    },
+    "USAGE": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 88
+    },
+    "ALLOCATION_SIZE": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 91
+    },
+    "PROTECTED_CONTENT": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 98
+    },
+    "COMPRESSION": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 104
+    },
+    "INTERLACED": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 110
+    },
+    "CHROMA_SITING": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 113
+    },
+    "PLANE_LAYOUTS": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 119
+    },
+    "NAME": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 124
+    },
+    "CROP": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 129
+    },
+    "DATASPACE": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 150
+    },
+    "BLEND_MODE": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 155
+    },
+    "SMPTE2086": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 160
+    },
+    "CTA861_3": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 165
+    },
+    "SMPTE2094_40": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 170
+    },
+    "STRIDE": {
+     "file": "gralloc4/src/hidl_common/Mapper.cpp",
+     "line": 175
+    }
+   },
+   "gchips_set": {
+    "BLEND_MODE": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 167
+    },
+    "CTA861_3": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 168
+    },
+    "DATASPACE": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 169
+    },
+    "SMPTE2086": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 170
+    },
+    "SMPTE2094_40": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 171
+    },
+    "CROP": {
+     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
+     "line": 172
+    }
+   }
+  },
+  "parcel": {
+   "words": [
+    {
+     "index": 0,
+     "value": "'GB01'",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 472,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 1,
+     "value": "width",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 473,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 2,
+     "value": "height",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 474,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 3,
+     "value": "stride",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 475,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 4,
+     "value": "format",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 476,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 5,
+     "value": "static_cast<int32_t>(layerCount)",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 477,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 6,
+     "value": "int(usage)",
+     "comment": "low 32-bits",
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 478,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 7,
+     "value": "static_cast<int32_t>(mId >> 32)",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 479,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 8,
+     "value": "static_cast<int32_t>(mId & 0xFFFFFFFFull)",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 480,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 9,
+     "value": "static_cast<int32_t>(mGenerationNumber)",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 481,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 10,
+     "value": "0",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 482,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 11,
+     "value": "0",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 483,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 12,
+     "value": "int(usage >> 32)",
+     "comment": "high 32-bits",
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 484,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 10,
+     "value": "int32_t(mTransportNumFds)",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 487,
+      "repo": "fw"
+     }
+    },
+    {
+     "index": 11,
+     "value": "int32_t(mTransportNumInts)",
+     "comment": null,
+     "loc": {
+      "file": "libs/ui/GraphicBuffer.cpp",
+      "line": 488,
+      "repo": "fw"
+     }
+    }
+   ],
+   "def": {
+    "file": "libs/ui/GraphicBuffer.cpp",
+    "line": 464,
+    "end": 501,
+    "repo": "fw"
+   },
+   "size": {
+    "file": "libs/ui/GraphicBuffer.cpp",
+    "line": 456,
+    "repo": "fw"
+   },
+   "unflatten_magic": {
+    "file": "libs/ui/GraphicBuffer.cpp",
+    "line": 515,
+    "repo": "fw"
+   }
+  },
+  "alloc_errors": [
+   {
+    "aidl": [
+     "BAD_DESCRIPTOR"
+    ],
+    "status": "BAD_VALUE",
+    "loc": {
+     "file": "libs/ui/Gralloc5.cpp",
+     "line": 275,
+     "repo": "fw"
+    }
+   },
+   {
+    "aidl": [
+     "NO_RESOURCES"
+    ],
+    "status": "NO_MEMORY",
+    "loc": {
+     "file": "libs/ui/Gralloc5.cpp",
+     "line": 278,
+     "repo": "fw"
+    }
+   },
+   {
+    "aidl": [
+     "other service-specific error"
+    ],
+    "status": "UNKNOWN_ERROR",
+    "loc": {
+     "file": "libs/ui/Gralloc5.cpp",
+     "line": 281,
+     "repo": "fw"
+    }
+   }
+  ],
+  "mapper_versions": [
+   {
+    "wrapper": "Gralloc5Mapper",
+    "version": 5,
+    "loc": {
+     "file": "libs/ui/GraphicBufferMapper.cpp",
+     "line": 61,
+     "repo": "fw"
+    }
+   },
+   {
+    "wrapper": "Gralloc4Mapper",
+    "version": 4,
+    "loc": {
+     "file": "libs/ui/GraphicBufferMapper.cpp",
+     "line": 66,
+     "repo": "fw"
+    }
+   },
+   {
+    "wrapper": "Gralloc3Mapper",
+    "version": 3,
+    "loc": {
+     "file": "libs/ui/GraphicBufferMapper.cpp",
+     "line": 71,
+     "repo": "fw"
+    }
+   },
+   {
+    "wrapper": "Gralloc2Mapper",
+    "version": 2,
+    "loc": {
+     "file": "libs/ui/GraphicBufferMapper.cpp",
+     "line": 76,
+     "repo": "fw"
+    }
+   }
+  ],
+  "removed_usage": {
+   "file": "libs/ui/Gralloc5.cpp",
+   "line": 56,
+   "repo": "fw"
+  },
+  "valid_usage": {
+   "file": "libs/ui/Gralloc5.cpp",
+   "line": 196,
+   "repo": "fw"
+  },
+  "service_name": {
+   "file": "libs/ui/Gralloc5.cpp",
+   "line": 50,
+   "repo": "fw"
+  },
+  "min_version": {
+   "file": "libs/ui/Gralloc5.cpp",
+   "line": 51,
+   "repo": "fw"
+  }
  }
 }
