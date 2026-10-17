@@ -341,6 +341,7 @@
       ${card('#/flow', 'Code flow', `Run the real code: ${nf} framework + ${ng} gchips${A ? ` (or ${na} Arm)` : ''} functions, from <code>GraphicBuffer</code> down to the dma-buf.`)}
       ${FW ? card('#/framework', 'Framework → HAL', 'libui, Gralloc5, AIMapper v5 and IAllocator: who calls what, metadata support, parcel layout.') : ''}
       ${card('#/formats', 'Formats', `${FD.formats.length} gchips formats${A ? ` and ${A.formats.length} Arm formats` : ''}, each with a size calculator.`)}
+      ${card('#/tools', 'Tools', 'Analyze a <code>dumpsys SurfaceFlinger</code> buffer list, decode a usage value, compare gchips and Arm for one request.')}
       ${A ? card('#/arm', 'Arm r56p0', 'The Arm Mali reference gralloc: capability XML, AFBC/AFRC, libformat, diff vs gchips.') : ''}
       </div><p class="small muted">Looking for something specific? Press <kbd>/</kbd> to search every format, function, flag, term and file.</p>`;
   }
