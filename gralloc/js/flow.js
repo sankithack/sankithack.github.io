@@ -15,7 +15,9 @@
   if (G.ARM && G.flowJourneyArm) IMPLS.arm = { CF: G.ARM.callflow, FJ: G.flowJourneyArm, name: 'Arm r56p0' };
   let CF = G.CF, FJ = G.flowJourney;
   const STATE_NAMES = ['handle', 'fds', 'ref_count', 'mapped', 'locked_ref_count', 'CPU flags'];
-  const PHASES = [['allocate', 'Allocate'], ['import', 'Import'], ['lock', 'Lock'], ['unlock', 'Unlock'], ['free', 'Free']];
+  const DEFAULT_PHASES = [['allocate', 'Allocate'], ['import', 'Import'], ['lock', 'Lock'], ['unlock', 'Unlock'], ['free', 'Free']];
+  const phases = () => CF.phases || DEFAULT_PHASES;
+  const lastPhase = () => phases()[phases().length - 1][0];
   const SPEEDS = { slow: 2300, normal: 1400, fast: 700 };
   const step = (id) => CF.steps.find((s) => s.id === id);
 
@@ -93,7 +95,7 @@
       <p class="lede">${esc(FJ.INTRO || 'Watch the real gralloc code run for one buffer: allocated by the allocator service, then imported, locked, unlocked and freed by an app.')} The red bar marks the line being executed; calls open the called function.</p>
       ${IMPLS.arm ? `<div class="seg" role="tablist" aria-label="implementation" style="margin-bottom:8px">${Object.entries(IMPLS).map(([k, d]) => `<button role="tab" data-impl="${k}" aria-selected="${k === fs.impl}">${esc(d.name)}</button>`).join('')}</div>` : ''}
       <div class="flowbar">
-        <div class="seg" role="tablist">${PHASES.map(([k, t]) => `<button role="tab" data-phase="${k}" aria-selected="${k === fs.phase}">${t}</button>`).join('')}</div>
+        <div class="seg" role="tablist">${phases().map(([k, t]) => `<button role="tab" data-phase="${k}" aria-selected="${k === fs.phase}">${t}</button>`).join('')}</div>
         <div class="flowctl">
           <button id="fprev" aria-label="Previous step">◀</button>
           <button id="fplay" class="primary"></button>
@@ -189,24 +191,24 @@
     }).join('');
     document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => { stop(); fs.pos = Number(b.dataset.goto); update(1); }));
     document.getElementById('fpos').textContent = `step ${fs.pos + 1} of ${pl.length}`;
-    document.getElementById('fprev').disabled = fs.pos === 0 && fs.phase === PHASES[0][0];
-    document.getElementById('fplay').textContent = fs.playing ? '❚❚ Pause' : (fs.pos === pl.length - 1 && fs.phase === 'free' ? '↻ Run again' : '▶ Run');
+    document.getElementById('fprev').disabled = fs.pos === 0 && fs.phase === phases()[0][0];
+    document.getElementById('fplay').textContent = fs.playing ? '❚❚ Pause' : (fs.pos === pl.length - 1 && fs.phase === lastPhase() ? '↻ Run again' : '▶ Run');
     document.querySelectorAll('[data-phase]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.phase === fs.phase)));
   }
 
   function advance(d) {
     const pl = plan(fs.phase);
-    const i = PHASES.findIndex(([k]) => k === fs.phase);
+    const P = phases(), i = P.findIndex(([k]) => k === fs.phase);
     if (d > 0 && fs.pos >= pl.length - 1) {
-      if (i < PHASES.length - 1) { fs.phase = PHASES[i + 1][0]; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; } else { stop(); return update(0); }
+      if (i < P.length - 1) { fs.phase = P[i + 1][0]; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; } else { stop(); return update(0); }
     } else if (d < 0 && fs.pos === 0) {
-      if (i > 0) { fs.phase = PHASES[i - 1][0]; fs.pos = plan(fs.phase).length - 1; fs.prevStack = []; fs.shownStep = null; }
+      if (i > 0) { fs.phase = P[i - 1][0]; fs.pos = plan(fs.phase).length - 1; fs.prevStack = []; fs.shownStep = null; }
     } else fs.pos += d;
     update(d);
   }
   function stop() { if (fs.playing) { clearInterval(fs.playing); fs.playing = null; } }
   function play() {
-    if (fs.phase === 'free' && fs.pos === plan('free').length - 1) { fs.phase = 'allocate'; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; }
+    if (fs.phase === lastPhase() && fs.pos === plan(lastPhase()).length - 1) { fs.phase = 'allocate'; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; }
     fs.playing = setInterval(() => { if (!document.getElementById('xcode')) return stop(); advance(1); }, SPEEDS[fs.speed]);
     update(0);
   }

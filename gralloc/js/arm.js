@@ -29,6 +29,18 @@
     fmt: N + 'RGBA_8888', w: 1920, h: 1080, layers: 1,
     usage: { read: 'often', write: 'often', bits: ['GRALLOC_USAGE_HW_TEXTURE'] },
     comp: { type: 'linear', afbc: { block: '16x16', tiled: false, split: false, db: false, sparse: false, ytr: false, bch: false, usm: false }, afrc: { rot: false, rgba: 16, luma: 16, chroma: 16 } },
+    mode: 'auto', hal: 'HAL_PIXEL_FORMAT_RGBA_8888', capsPreset: 'readme', caps: null,
+    build: { sdk: 36, hwcFbDisableAfbc: false, nonConformant: false, contiguous: false, privateFormats: true },
+  };
+  /* Capability presets: the README example XML (README.md:170-194) and two illustrative sets. */
+  const FEATS = A.capability_features.map((f) => f.name);
+  function capsFrom(ips) { const c = {}; for (const ip of AE.XIPS) c[ip] = ips[ip] ? { present: true, f: Object.assign({}, ips[ip]) } : { present: false, f: {} }; return c; }
+  const allRW = (except) => FEATS.filter((n) => n !== 'DISABLED' && !(except || []).includes(n)).reduce((m, n) => (m[n] = 'RW', m), {});
+  const CAPS_PRESETS = {
+    readme: { label: 'README example XML (GPU + DPU)', caps: () => capsFrom(A.capability_example.ips) },
+    gpu_only: { label: 'GPU XML only, every feature RW (other IPs unrestricted)', caps: () => capsFrom({ GPU: allRW() }) },
+    gpu_dpu_all: { label: 'GPU + DPU XML, every feature RW', caps: () => capsFrom({ GPU: allRW(), DPU: allRW() }) },
+    gpu_empty: { label: 'GPU XML with no features (nothing opt-in)', caps: () => capsFrom({ GPU: {} }) },
   };
   const saved = G.store.get('arm.calc', {});
   const st = Object.assign({}, DEF, saved);
@@ -36,15 +48,19 @@
   st.comp = Object.assign({}, DEF.comp, saved.comp || {});
   st.comp.afbc = Object.assign({}, DEF.comp.afbc, (saved.comp || {}).afbc || {});
   st.comp.afrc = Object.assign({}, DEF.comp.afrc, (saved.comp || {}).afrc || {});
+  st.build = Object.assign({}, DEF.build, saved.build || {});
+  if (!st.caps) st.caps = CAPS_PRESETS.readme.caps();
   if (!byName.has(st.fmt)) st.fmt = DEF.fmt;
+  if (!A.hal_requests.some((h) => h.hal === st.hal)) st.hal = DEF.hal;
   const save = () => G.store.set('arm.calc', st);
 
   /* ---------------- usage model (Arm values) ---------------- */
   const READ = { none: 0n, rarely: AU.GRALLOC_USAGE_SW_READ_RARELY, often: AU.GRALLOC_USAGE_SW_READ_OFTEN };
   const WRITE = { none: 0n, rarely: AU.GRALLOC_USAGE_SW_WRITE_RARELY, often: AU.GRALLOC_USAGE_SW_WRITE_OFTEN };
   const SKIP = /^GRALLOC_USAGE_SW_(READ|WRITE)_(RARELY|OFTEN|MASK)$/;
-  const FLAGS = A.usages.flags.filter((f) => !SKIP.test(f.name) && f.value != null).map((f) => ({ name: f.name, value: BigInt(f.value), hex: f.value_hex, loc: f.loc, kind: 'standard' }))
-    .concat(AE.PRIVATE.map((p) => ({ name: p.name, value: p.value, hex: p.value_hex, loc: p.loc, kind: 'private' })));
+  const FLAGS = A.usages.flags.filter((f) => f.kind === 'standard' && !SKIP.test(f.name) && f.value != null).map((f) => ({ name: f.name, value: BigInt(f.value), hex: f.value_hex, loc: f.loc, kind: 'standard' }))
+    .concat(A.usages.flags.filter((f) => f.kind === 'private' && f.value !== '0' && !/_(MASK|DEFAULT|SENTINEL)$/.test(f.name))
+      .map((f) => ({ name: f.name, value: BigInt(f.value), hex: f.value_hex, loc: f.loc, kind: 'private' })));
   const flag = (n) => FLAGS.find((f) => f.name === n);
   function usageValue(m) {
     let v = READ[m.read] | WRITE[m.write];
@@ -64,7 +80,9 @@
   const su = (n) => n.replace(/^GRALLOC_USAGE_/, '').replace(/^MALI_GRALLOC_USAGE_/, 'MALI_');
 
   /* ---------------- shared bits ---------------- */
-  const TABS = [['', 'Overview'], ['formats', 'Formats'], ['calc', 'Size calculator'], ['diff', 'vs gchips'], ['usage', 'Usage flags'], ['flow', 'Code flow']];
+  const TABS = [['', 'Overview'], ['formats', 'Formats'], ['calc', 'Allocation calculator'], ['caps', 'Capabilities'], ['mapper', 'Mapper & metadata'], ['handles', 'Handles & descriptors'],
+    ['build', 'Build & config'], ['files', 'Source map'], ['diff', 'vs gchips'], ['usage', 'Usage flags'], ['glossary', 'Terms'], ['flow', 'Code flow']];
+  const PAGES = {}, AFTERS = {};
   function sub() {
     const h = location.hash.replace(/^#\/?/, '').split('?')[0].split('/').map(decodeURIComponent);
     return { page: h[1] || '', arg: h[2] };
@@ -80,7 +98,7 @@
     ['Compression', 'AFBC (+ Exynos SBWC formats)', 'AFBC + AFRC (fixed-rate, coding units 16 / 24 / 32 B) + 16×16 block-linear', [al(AF.FH, 159, 254)]],
     ['IP capabilities', 'compiled in from board flags', 'XML files read at runtime from /vendor/etc/gralloc', [al('README.md', 17, 22)]],
     ['Unknown usage bits', 'logged only', 'allocation rejected; plus a per-format permitted_usage mask', [al(AF.FM, 1348, 1353), al(AF.FM, 1237, 1250)]],
-    ['Format grading', '1 + count of AFBC modifier bits', 'AFBC_BASIC worth 2, other bits 1, AFRC 2³⁰', [al(AF.FM, 991, 1058)]],
+    ['Format grading', '1 + count of AFBC modifier bits', 'AFBC_BASIC worth 2, other bits 1, AFRC 2³⁰', [al(AF.FM, 991, 1039)]],
     ['Default dataspace', 'BT709 / BT601 / BT2020 picked from size and bit depth', 'from private usage bits (colour space + range); RGB → UNKNOWN', [al(AF.FI, 1034, 1079)]],
     ['dma-buf heaps', 'system, system-uncached, camera / secure / FaceAuth heaps', 'system, system-uncached, linux,cma (build option), protected', [al(AF.HEAP, 29, 125)]],
     ['Metadata storage', 'extra dma-buf from a heap', 'shared memory, mapped at import', [al('android/src/idl_common/allocator/allocator.cpp', 118, 151), al('android/src/idl_common/mapper/mapper_common.cpp', 112, 113)]],
@@ -98,6 +116,7 @@
     if (page === 'calc') return head + tabs(page) + calcPage();
     if (page === 'diff') return head + tabs(page) + diffPage();
     if (page === 'usage') return head + tabs(page) + usagePage();
+    if (PAGES[page]) return head + tabs(page) + PAGES[page](arg);
     return head + tabs('') + overviewPage();
   };
 
@@ -245,17 +264,46 @@
         <select data-preset><option value="">Presets…</option>${Object.keys(PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
       <div class="row">${radios('read', 'CPU read:')}</div><div class="row">${radios('write', 'CPU write:')}</div>
       <details><summary>Other usage flags (${m.bits.length} set)</summary><div class="flags">${FLAGS.filter((f) => f.kind === 'standard').map(item).join('')}</div>
-        <p class="small"><b>Arm private bits</b> ${src(al(AF.USG, 45, 90))}</p><div class="flags">${FLAGS.filter((f) => f.kind === 'private').map(item).join('')}</div>
+        <p class="small"><b>Arm private bits</b> ${src(al(AF.USG, 45, 110))}</p><div class="flags">${FLAGS.filter((f) => f.kind === 'private').map(item).join('')}</div>
         <p class="small muted">Standard values parsed from ${src(al(AF.USG, 113, 144), 'usages.h')}.</p></details></div>`;
   }
+  const BUILD_OPTS = [
+    ['hwcFbDisableAfbc', 'GRALLOC_HWC_FB_DISABLE_AFBC', 'framebuffer (HW_FB) allocations stay linear', al('android/src/aidl/allocator.cpp', 39, 41)],
+    ['nonConformant', 'GRALLOC_NON_CONFORMANT_DISPLAY', 'framebuffer forced to BGRA_8888 (configure NON_CONFORMANT_DISPLAY=y)', al(AF.FM, 1314, 1328)],
+    ['contiguous', 'GRALLOC_USE_CONTIGUOUS_DISPLAY_MEMORY', 'framebuffer from the linux,cma heap', al(AF.HEAP, 111, 115)],
+  ];
   function calcPage() {
     const f = byName.get(st.fmt);
-    return `<p class="lede">Pick a base format and a compression layout; gralloc validates the request and libformat computes the planes. This is the “forced format” path (${src(al(AF.FM, 1185, 1216), 'select_forced_format')}, enabled by <code>GRALLOC_USE_PRIVATE_FORMATS</code> ${src(al(AF.FM, 1356, 1364))}). Automatic selection needs the device’s capability XML, which is not in the archive.</p>
-      <div class="panel row"><label>Format <select id="afmt">${A.formats.map((x) => `<option value="${esc(x.name)}" ${x.name === st.fmt ? 'selected' : ''}>${esc(sn(x.name))}</option>`).join('')}</select></label>
-        <label>Width <input type="number" min="1" data-d="w" value="${st.w}"></label><label>Height <input type="number" min="1" data-d="h" value="${st.h}"></label>
+    const auto = st.mode === 'auto';
+    const hr = A.hal_requests.find((h) => h.hal === st.hal);
+    const ipsOn = AE.XIPS.filter((ip) => st.caps[ip] && st.caps[ip].present);
+    return `<p class="lede">Run a real allocation request through the Arm code: format selection (${src(al(AF.FM, 1226, 1330), 'select_best_format')}), then the size path (${src(al(AF.BA, 422, 521), 'derive_format_and_size')}) and libformat. ${auto ? 'Automatic selection uses the capability XML you set on the <a href="#/arm/caps">Capabilities</a> tab.' : 'Forced format: you choose the base format and layout yourself.'}</p>
+      <div class="panel"><div class="row"><b>Request</b>
+        <label class="chk"><input type="radio" name="amode" value="auto" ${auto ? 'checked' : ''}>Automatic selection (HAL format + capabilities)</label>
+        <label class="chk"><input type="radio" name="amode" value="forced" ${auto ? '' : 'checked'}>Forced private format (choose the layout)</label></div>
+      ${auto ? `<div class="row"><label>Requested format <select id="ahal">${A.hal_requests.map((h) => `<option value="${esc(h.hal)}" ${h.hal === st.hal ? 'selected' : ''}>${esc(h.hal.replace(/^(HAL|GRALLOC)_PIXEL_FORMAT_/, ''))} (${h.hal_value != null ? hx(h.hal_value) : '?'}) → ${esc(sn(h.internal))}</option>`).join('')}</select></label>
+          ${hr ? `<span class="small">${src(hr.loc)}${hr.hal_value_source === 'manual' ? ' ' + badge('AOSP value', 'b-manual') : ''}${hr.condition ? ' ' + badge(hr.condition, 'b-unknown') : ''}</span>` : ''}</div>
+        <div class="row"><label>Capability XML <select id="acaps">${Object.entries(CAPS_PRESETS).map(([k, p]) => `<option value="${k}" ${st.capsPreset === k ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}<option value="custom" ${st.capsPreset === 'custom' ? 'selected' : ''}>custom (edited on the Capabilities tab)</option></select></label>
+          <span class="small muted">XML present for: ${ipsOn.join(', ') || 'none'} · <a href="#/arm/caps">edit</a></span></div>
+        <div class="row"><label>Android <select id="asdk">${[[35, '15 (API 35)'], [36, '16 (API 36)'], [37, '17 (API 37)']].map(([v, t]) => `<option value="${v}" ${st.build.sdk === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          ${BUILD_OPTS.map(([k, n, d, c]) => `<label class="chk" title="${esc(d)}"><input type="checkbox" data-build="${k}" ${st.build[k] ? 'checked' : ''}><span class="mono small">${n}</span></label>`).join('')}
+          <span class="small muted">configure supports Android 15–17 (${src(al('android/configure', 68, 76), 'android/configure')})</span></div>`
+      : `<div class="row"><label>Format <select id="afmt">${A.formats.map((x) => `<option value="${esc(x.name)}" ${x.name === st.fmt ? 'selected' : ''}>${esc(sn(x.name))}</option>`).join('')}</select></label>
+          <label class="chk"><input type="checkbox" data-build="privateFormats" ${st.build.privateFormats ? 'checked' : ''}><span class="mono small">GRALLOC_USE_PRIVATE_FORMATS=1</span></label>
+          <span class="small muted">${src(al(AF.FM, 1356, 1364))} · forced formats are built with ${src(al(AF.FH, 259, 475), 'GRALLOC_PRIVATE_FORMAT_WRAPPER_*')}</span></div>`}</div>
+      <div class="panel row"><label>Width <input type="number" min="1" data-d="w" value="${st.w}"></label><label>Height <input type="number" min="1" data-d="h" value="${st.h}"></label>
         <label>Layers <input type="number" min="1" max="16" data-d="layers" value="${st.layers}"></label>
         <span class="small muted">sizes:</span> ${[[1920, 1080], [1280, 720], [3840, 2160], [4032, 3024], [1000, 999]].map(([w, h]) => `<button data-wh="${w}x${h}">${w}×${h}</button>`).join(' ')}</div>
-      ${compOptions(f)}${usagePicker(st.usage)}<div id="acalcout"></div>`;
+      ${auto ? '' : compOptions(f)}${usagePicker(st.usage)}<div id="acalcout"></div>`;
+  }
+  function selectionTable(sel) {
+    if (!sel || !sel.candidates) return '';
+    const rows = sel.candidates.map((c) => `<tr class="${c.format.name === sel.chosen ? 'on' : ''}"><td>${fmtLink(c.format.name)}${c.format.name === sel.chosen ? ' ' + badge('selected', 'b-ok') : ''}${sel.request && c.format.name === sel.request.name ? ' ' + badge('requested') : ''}</td>
+      <td class="small">${c.props ? esc(c.text) : '<span class="badge b-bad">not supported</span>'}</td><td>${c.grade || 0}</td><td class="small">${c.why.map(esc).join('<br>')}</td></tr>`).join('');
+    return `<h2>Format selection</h2>
+      <div class="kv small"><div>producers</div><div>${(sel.prod || []).join(', ') || '—'} ${src(al(AF.FM, 113, 164))}</div><div>consumers</div><div>${(sel.cons || []).join(', ') || '—'} ${src(al(AF.FM, 44, 102))}</div></div>
+      <div class="tablewrap"><table><thead><tr><th>compatible base format</th><th>best layout all IPs support</th><th>grade</th><th>why</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small muted">Candidates are every formats[] row with the same sub-sampling, RGB/YUV kind and comparable components (${src(al(AF.FM, 910, 978), 'is_format_compatible')}). Each is checked by ${src(al(AF.FM, 827, 898), 'get_supported_format')} (AFRC → AFBC → block-linear → linear) and graded by ${src(al(AF.FM, 991, 1039), 'grade_format')}. Without CPU usage the highest grade wins; with CPU usage gralloc keeps the requested base format ${src(al(AF.FM, 1112, 1128))}.</p>`;
   }
   const PCOL = ['var(--p0)', 'var(--p1)', 'var(--p2)'];
   function byteMap(r) {
@@ -274,11 +322,14 @@
       <div class="legend small"><span><i style="background:var(--p0)"></i>plane 0</span><span><i style="background:var(--p1)"></i>plane 1</span><span><i style="background:var(--p2)"></i>plane 2</span><span><i style="background:var(--hdr)"></i>AFBC header</span><span><i style="background:var(--pad)"></i>alignment gap</span></div>`;
   }
   function gchipsCompare(r) {
-    const gf = G.byName.get(st.fmt);
-    if (!gf) return `<div class="panel small"><b>gchips</b>: no format of this name in gchips — nothing to compare.</div>`;
+    const auto = st.mode === 'auto';
+    const hr = auto && A.hal_requests.find((h) => h.hal === st.hal);
+    const gf = auto ? null : G.byName.get(st.fmt);
+    const halValue = auto ? hr && hr.hal_value : gf && gf.value;
+    if (halValue == null) return `<div class="panel small"><b>gchips</b>: no format of this name in gchips — nothing to compare.</div>`;
     const usage = usageValue(st.usage) & ~AU.PRIVATE_MASK;
     let g;
-    try { g = G.E.allocate({ width: st.w, height: st.h, layer_count: st.layers, hal_format: gf.value, usage }, G.state.flags); } catch (e) { g = { ok: false, error: String(e) }; }
+    try { g = G.E.allocate({ width: st.w, height: st.h, layer_count: st.layers, hal_format: halValue, usage }, G.state.flags); } catch (e) { g = { ok: false, error: String(e) }; }
     const gm = g.ok ? G.E.modNames(g.alloc_format) : [];
     return `<div class="panel"><b>Same request in gchips</b> <span class="small muted">(standard usage bits only; gchips runs its own format selection${gm.length ? ' and chose AFBC' : ''})</span>
       <div class="kv small" style="margin-top:6px">${g.ok ? `<div>selected</div><div>${gLink(g.format.name)} ${gm.map((m) => badge(m, 'b-afbc')).join('')}</div>
@@ -289,14 +340,15 @@
   function calcOut() {
     const out = document.getElementById('acalcout');
     if (!out) return;
-    const r = AE.allocate({ format: st.fmt, width: st.w, height: st.h, layers: st.layers, usage: usageValue(st.usage), comp: st.comp });
+    const r = AE.allocate({ mode: st.mode, hal: st.hal, caps: st.caps, build: st.build, privateFormats: st.build.privateFormats,
+      format: st.fmt, width: st.w, height: st.h, layers: st.layers, usage: usageValue(st.usage), comp: st.comp });
     const trace = `<h2>Trace</h2><ol class="trace">${r.trace.map((t) => `<li class="${/^E:/.test(t.msg) ? 'err' : /^W:/.test(t.msg) ? 'note' : ''}" style="${/^[EW]:/.test(t.msg) ? 'padding:2px 6px;margin:2px 0' : ''}">${esc(t.msg)} ${src(t.cite)}</li>`).join('')}</ol>`;
-    if (!r.ok) { out.innerHTML = `<div class="err"><b>Allocation fails:</b> ${esc(r.error)}</div>${trace}`; return; }
+    if (!r.ok) { out.innerHTML = `<div class="err"><b>Allocation fails:</b> ${esc(r.error)}</div>${selectionTable(r.selection)}${trace}`; return; }
     const at = r.alloc_type;
     const rows = r.planes.map((p, i) => `<tr><td>${i}</td><td>${fmt(p.offset)}</td><td>${fmt(p.size)}${p.header_size != null ? ` <span class="muted">(hdr ${fmt(p.header_size)} + body ${fmt(p.body_size)})</span>` : ''}</td><td>${fmt(p.row_stride)}</td><td>${fmt(p.aligned.w)} × ${fmt(p.aligned.h)}</td>
       <td class="small">${p.ext.w}×${p.ext.h} px, ${fmt(p.block_size)} B${p.sub.w > 1 || p.sub.h > 1 ? ` <span class="muted">(÷${p.sub.w}×${p.sub.h})</span>` : ''}</td><td>${fmt(p.blocks.x)} × ${fmt(p.blocks.y)}</td><td>${p.sa}</td></tr>`).join('');
     out.innerHTML = `<h2>Result</h2><div class="kv">
-        <div>alloc_format</div><div class="mono">${hx(r.alloc_format)} ${fmtLink(r.format.name)}</div>
+        <div>alloc_format</div><div class="mono">${hx(r.alloc_format)} ${fmtLink(r.format.name)} <span class="muted">data type ${r.data_type}</span></div>
         <div>allocation type</div><div>${at.primary_type}${at.is_tiled ? ', tiled headers' : ''}${at.is_padded ? ', padded' : ''}${r.mods & AE.IF.AFBC_BASIC ? (at.is_multi_plane ? ', multi-plane' : ', single-plane') : ''}</div>
         <div>DRM fourcc + modifier</div><div class="mono small">${esc(r.drm.fourcc)} · ${r.drm.modifier_hex}${r.drm.names.length ? ' (' + r.drm.names.join(' | ') + ')' : ' (LINEAR)'}</div>
         <div>dimensions given to libformat</div><div>${fmt(r.adjusted.w)} × ${fmt(r.adjusted.h)}${r.adjusted.w !== st.w || r.adjusted.h !== st.h ? ` <span class="muted">(requested ${st.w} × ${st.h})</span>` : ''}</div>
@@ -310,11 +362,17 @@
       ${byteMap(r)}
       <div class="tablewrap"><table><thead><tr><th>plane</th><th>offset</th><th>size</th><th>byte stride</th><th>alloc w × h</th><th>layout block</th><th>blocks x × y</th><th>stride align</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="small muted">Byte stride = libformat <code>average_row_stride</code> (for AFBC: bpp × width / 8, without the 128 B superblock alignment ${src(al(AF.LF, 918, 925))}). alloc w × h = <code>aligned_extent</code>. No extra bytes are added after libformat’s total.</p>
-      ${gchipsCompare(r)}${trace}`;
+      ${selectionTable(r.selection)}${gchipsCompare(r)}${trace}`;
   }
   function calcAfter() {
     const rerender = () => { save(); G.render(); };
-    document.getElementById('afmt').addEventListener('change', (e) => { st.fmt = e.target.value; rerender(); });
+    const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('afmt', 'change', (e) => { st.fmt = e.target.value; rerender(); });
+    on('ahal', 'change', (e) => { st.hal = e.target.value; rerender(); });
+    on('asdk', 'change', (e) => { st.build.sdk = Number(e.target.value); rerender(); });
+    on('acaps', 'change', (e) => { st.capsPreset = e.target.value; if (CAPS_PRESETS[st.capsPreset]) st.caps = CAPS_PRESETS[st.capsPreset].caps(); rerender(); });
+    document.querySelectorAll('input[name="amode"]').forEach((i) => i.addEventListener('change', () => { st.mode = i.value; rerender(); }));
+    document.querySelectorAll('[data-build]').forEach((i) => i.addEventListener('change', () => { st.build[i.dataset.build] = i.checked; rerender(); }));
     document.querySelectorAll('input[data-d]').forEach((i) => i.addEventListener('change', () => { st[i.dataset.d] = Math.max(1, Math.floor(Number(i.value) || 1)); rerender(); }));
     document.querySelectorAll('button[data-wh]').forEach((b) => b.addEventListener('click', () => { const [w, h] = b.dataset.wh.split('x').map(Number); st.w = w; st.h = h; rerender(); }));
     document.querySelectorAll('input[name="acomp"]').forEach((i) => i.addEventListener('change', () => { st.comp.type = i.value; rerender(); }));
@@ -355,7 +413,6 @@
     return `<p class="lede">Usage bits as defined in ${src(al(AF.USG, 1), 'android/src/usages.h')}. Standard values match AOSP; the private (vendor) bits mean different things than in gchips.</p>
       <div class="tablewrap"><table><thead><tr><th>Flag</th><th>Value</th><th>Defined</th></tr></thead><tbody>
       ${A.usages.flags.map((f) => `<tr><td class="mono">${esc(f.name)}</td><td class="mono">${esc(f.value_hex)}</td><td>${src(f.loc)}</td></tr>`).join('')}
-      ${AE.PRIVATE.map((p) => `<tr><td class="mono">${esc(p.name)} ${badge('private')}</td><td class="mono">${p.value_hex} <span class="muted">(bit ${p.bit})</span></td><td>${src(p.loc)}</td></tr>`).join('')}
       </tbody></table></div>
       <h2>Groups</h2><div class="kv small">${Object.entries(g).map(([k, v]) => `<div class="mono">${esc(k)}</div><div class="mono">${esc(v.value_hex)} ${src(v.loc)}</div>`).join('')}</div>
       <h2>Where usage decides the layout</h2><ol class="trace">
@@ -366,7 +423,9 @@
         <li>GPU producer + AFBC: width/height aligned to 16; video decoder + AFBC YUV 4:2:0: height + 16 (tiled) or + 32 ${src(al(AF.FM, 178, 215))}</li>
         <li><code>MALI_GRALLOC_USAGE_AFBC_PADDING</code>: AFBC rows padded to 4 superblocks for RGB ${src(al(AF.BA, 152, 155))} ${src(al(AF.LF, 208, 216))}</li>
         <li>Heap: PROTECTED → protected; FB without encoder → system (or linux,cma); CPU read often → system (cached); else system-uncached ${src(al(AF.HEAP, 103, 125))}</li>
-        <li>Colour space / range private bits → default dataspace for YUV ${src(al(AF.FI, 1034, 1079))}</li></ol>`;
+        <li>Colour space / range private bits → default dataspace for YUV ${src(al(AF.FI, 1034, 1079))}</li>
+        <li>AFRC is only chosen when the usage carries an RGBA/luma coding size (bits 28–30) and, for YUV, a chroma coding size (bits 55–56) ${src(al(AF.USG, 92, 110))} ${src(al(AF.FM, 640, 680))}</li></ol>
+      <div class="note small"><b>Shared bits:</b> the AFRC luma/RGBA coding sizes reuse private bits 0–2: size 16 = PRIVATE_2|PRIVATE_0 (PRIVATE_0 is MALI_GRALLOC_USAGE_FRONTBUFFER) and size 24 = PRIVATE_2|PRIVATE_1 (PRIVATE_1 is MALI_GRALLOC_USAGE_NO_AFBC). So front-buffer and no-AFBC checks ignore those bits whenever the AFRC sentinel PRIVATE_2 is set ${src(al(AF.USG, 215, 237))}.</div>`;
   }
 
   G.AFTER.arm = () => {
@@ -378,6 +437,7 @@
     if (page === 'formats') formatsAfter();
     else if (page === 'format') formatAfter();
     else if (page === 'calc') calcAfter();
+    else if (AFTERS[page]) AFTERS[page](sub().arg);
   };
 
   /* ---------------- code-flow data for the Arm implementation ---------------- */
@@ -420,4 +480,5 @@
     INTRO: 'Watch the Arm r56p0 gralloc code run for one buffer: allocated by the allocator service (including libformat’s size math), then imported, locked, unlocked and freed by an app.',
   };
   G.ARM = A;
+  G.ARMX = { A, AE, AU, st, save, sn, fmtLink, gLink, byName, al, AF, hx, PAGES, AFTERS, FLAGS, usageValue, CAPS_PRESETS, capsFrom, tabs, FEATS, compBadges };
 })();
