@@ -208,6 +208,13 @@ svg rect.seg { transform-box: fill-box; transform-origin: left center; animation
 .xstack li { display: flex; flex-direction: column; padding: 5px 8px; border-left: 3px solid var(--rule); margin: 3px 0; font-size: 13.5px; }
 .xstack li.top { border-left-color: var(--cr); background: var(--cr-soft); }
 .xstack li.push { animation: framePush .35s ease-out both; }
+/* framework (libui) vs vendor HAL layers in the code flow */
+.flowpick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
+.lay { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11.5px; line-height: 1.6; vertical-align: 1px; white-space: nowrap; }
+.lay-fw { background: var(--ok-soft); color: var(--ok); }
+.lay-hal { background: var(--accent-soft); color: var(--accent); }
+.xstack li.fwframe:not(.top) { border-left-color: var(--ok); }
+.xlist .lay { margin-right: 2px; }
 .xstack b { font-family: var(--mono); font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
 .xlanes { position: relative; display: grid; grid-template-rows: repeat(3, 1fr); gap: 2px; --lane: 0; }
 .xlanes > div { position: relative; z-index: 1; padding: 6px 9px; font-size: 13px; color: var(--muted); transition: color .3s; }

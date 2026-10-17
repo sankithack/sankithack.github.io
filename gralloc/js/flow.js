@@ -5,6 +5,7 @@
  * a red execution bar moves through annotated stops; at a call it pushes a stack frame and
  * opens the callee, returning pops frames. Buffer state and the process lane update alongside.
  * Stop lines are resolved from source; the notes on them are hand-written.
+ * Optionally the Android framework steps (tools/extract_fw.py) are spliced in front of the vendor flow.
  */
 (function () {
   'use strict';
@@ -13,7 +14,35 @@
   // Two implementations share the viewer: gchips (default) and the Arm r56p0 reference gralloc.
   const IMPLS = { gchips: { CF: G.CF, FJ: G.flowJourney, name: 'gchips' } };
   if (G.ARM && G.flowJourneyArm) IMPLS.arm = { CF: G.ARM.callflow, FJ: G.flowJourneyArm, name: 'Arm r56p0' };
-  let CF = G.CF, FJ = G.flowJourney;
+  // Android framework (libui: GraphicBuffer → Gralloc5) steps, joined in front of either vendor flow.
+  const FW = window.GRALLOC_FW;
+  let CF = G.CF, FJ = G.flowJourney, VCF = G.CF;
+
+  // Vendor flow with the framework spliced in: each "@key" in a framework path becomes the vendor's
+  // steps from its entry point for that key (callflow.entries) up to the next key's entry point.
+  function withFramework(V) {
+    const E = V.entries || {};
+    const res = (id) => (id && id[0] === '@' ? E[id.slice(1)] || null : id);
+    const steps = FW.steps.map((s) => ({ ...s, next: s.next.map(res).filter(Boolean), stops: s.stops.map((t) => ({ ...t, call: res(t.call) })) }));
+    const paths = {};
+    for (const [ph] of V.phases || DEFAULT_PHASES) {
+      const vp = V.paths[ph] || [], fp = FW.paths[ph];
+      if (!fp) { paths[ph] = vp; continue; }
+      const starts = fp.filter((x) => x[0] === '@').map((x) => vp.indexOf(E[x.slice(1)])).filter((i) => i >= 0).sort((a, b) => a - b);
+      const out = [], used = new Set();
+      for (const x of fp) {
+        if (x[0] !== '@') { out.push(x); continue; }
+        const i = vp.indexOf(E[x.slice(1)]);
+        if (i < 0) continue;
+        const end = starts.find((j) => j > i) ?? vp.length;
+        for (let k = i; k < end; k++) { out.push(vp[k]); used.add(k); }
+      }
+      vp.forEach((id, k) => { if (!used.has(k)) out.push(id); });
+      paths[ph] = out;
+    }
+    return { ...V, steps: [...steps, ...V.steps], paths };
+  }
+  const merged = {};
   const STATE_NAMES = ['handle', 'fds', 'ref_count', 'mapped', 'locked_ref_count', 'CPU flags'];
   const DEFAULT_PHASES = [['allocate', 'Allocate'], ['import', 'Import'], ['lock', 'Lock'], ['unlock', 'Unlock'], ['free', 'Free']];
   const phases = () => CF.phases || DEFAULT_PHASES;
@@ -21,12 +50,45 @@
   const SPEEDS = { slow: 2300, normal: 1400, fast: 700 };
   const step = (id) => CF.steps.find((s) => s.id === id);
 
-  const fs = { impl: 'gchips', phase: 'allocate', pos: 0, playing: null, speed: 'normal', shownStep: null, prevStack: [] };
-  function useImpl(k) {
+  const fs = { impl: 'gchips', fw: !!FW, phase: null, pos: 0, playing: null, speed: 'normal', shownStep: null, prevStack: [] };
+  function useImpl(k, fw) {
     const d = IMPLS[k] || IMPLS.gchips;
-    if (fs.impl !== (IMPLS[k] ? k : 'gchips')) { fs.phase = 'allocate'; fs.pos = 0; }
-    fs.impl = IMPLS[k] ? k : 'gchips';
-    CF = d.CF; FJ = d.FJ;
+    const impl = IMPLS[k] ? k : 'gchips', withFw = !!FW && fw;
+    if (fs.impl !== impl || fs.fw !== withFw || !fs.phase) { fs.phase = null; fs.pos = 0; }
+    fs.impl = impl; fs.fw = withFw;
+    VCF = d.CF; FJ = d.FJ;
+    CF = withFw ? (merged[impl] = merged[impl] || withFramework(d.CF)) : d.CF;
+    if (!fs.phase) fs.phase = phases()[0][0];
+  }
+  const isFw = (s) => s.layer === 'framework';
+  // caller → callees that the phase's walk actually opens (same rule as stackAt)
+  function opened(phase) {
+    const ids = CF.paths[phase], st = [], pairs = new Set();
+    for (const id of ids) {
+      while (st.length && !step(st[st.length - 1]).next.includes(id)) st.pop();
+      if (st.length) pairs.add(st[st.length - 1] + '>' + id);
+      st.push(id);
+    }
+    return pairs;
+  }
+  // Where a callee that this phase does not open is shown instead.
+  function shownElsewhere(callee) {
+    if (CF.paths[fs.phase].includes(callee)) return 'shown earlier in this phase';
+    const p = phases().find(([k]) => CF.paths[k] && CF.paths[k].includes(callee));
+    return p ? `shown in the ${p[1]} phase` : '';
+  }
+  // Buffer state uses the vendor path; framework steps show the state left by the last vendor step before them.
+  function stateAt(phase, id) {
+    const vp = VCF.paths[phase] || [];
+    let k = vp.indexOf(id);
+    if (k < 0) {
+      const mp = CF.paths[phase], at = mp.indexOf(id);
+      for (let i = at - 1; i >= 0 && k < 0; i--) k = vp.indexOf(mp[i]);
+    }
+    if (k >= 0) return FJ.stateFor(phase, k);
+    const P = phases(), i = P.findIndex(([x]) => x === phase);
+    for (let j = i - 1; j >= 0; j--) { const ids = VCF.paths[P[j][0]] || []; if (ids.length) return FJ.stateFor(P[j][0], ids.length - 1); }
+    return null;
   }
 
   // Execution plan for a phase: entry of each function (k = -1) then each of its stops.
@@ -70,6 +132,8 @@
     return h + tail;
   }
 
+  const layerTag = (s) => (isFw(s) ? '<span class="lay lay-fw">framework</span>' : `<span class="lay lay-hal">${esc(IMPLS[fs.impl].name)}</span>`);
+
   function codeHtml(s) {
     const lines = s.code.split('\n'), first = s.code_loc.line, inBlock = { v: false };
     const stops = new Map(s.stops.map((t, k) => [t.line, { t, k }]));
@@ -81,7 +145,7 @@
   }
 
   G.views.flow = (params) => {
-    useImpl(params.get('impl') || 'gchips');
+    useImpl(params.get('impl') || 'gchips', params.get('fw') !== '0');
     const ph = params.get('p');
     if (ph && CF.paths[ph]) {
       fs.phase = ph;
@@ -92,8 +156,12 @@
     }
     fs.shownStep = null;
     return `<h1>Code flow</h1>
-      <p class="lede">${esc(FJ.INTRO || 'Watch the real gralloc code run for one buffer: allocated by the allocator service, then imported, locked, unlocked and freed by an app.')} The red bar marks the line being executed; calls open the called function.</p>
-      ${IMPLS.arm ? `<div class="seg" role="tablist" aria-label="implementation" style="margin-bottom:8px">${Object.entries(IMPLS).map(([k, d]) => `<button role="tab" data-impl="${k}" aria-selected="${k === fs.impl}">${esc(d.name)}</button>`).join('')}</div>` : ''}
+      <p class="lede">${esc(FJ.INTRO || 'Watch the real gralloc code run for one buffer: allocated by the allocator service, then imported, locked, unlocked and freed by an app.')}${fs.fw ? ' Each phase starts in the Android framework (GraphicBuffer → GraphicBufferAllocator/Mapper → Gralloc5) and follows the call into the vendor HAL.' : ''} The red bar marks the line being executed; calls open the called function.</p>
+      <div class="flowpick">
+        ${IMPLS.arm ? `<div class="seg" role="tablist" aria-label="implementation">${Object.entries(IMPLS).map(([k, d]) => `<button role="tab" data-impl="${k}" aria-selected="${k === fs.impl}">${esc(d.name)}</button>`).join('')}</div>` : ''}
+        ${FW ? `<label class="small"><input type="checkbox" id="ffw" ${fs.fw ? 'checked' : ''}> start from the Android framework (libui → Gralloc5)</label>` : ''}
+      </div>
+      ${fs.fw ? `<p class="small muted">Framework steps (marked <span class="lay lay-fw">framework</span>) come from AOSP frameworks/native ${esc(FW.meta.branch)} @ <code>${esc(FW.meta.commit.slice(0, 12))}</code>; they join the ${esc(IMPLS[fs.impl].name)} code at the HAL entry points: ${Object.values(FW.markers).map(esc).join(', ')}.</p>` : ''}
       <div class="flowbar">
         <div class="seg" role="tablist">${phases().map(([k, t]) => `<button role="tab" data-phase="${k}" aria-selected="${k === fs.phase}">${t}</button>`).join('')}</div>
         <div class="flowctl">
@@ -124,14 +192,14 @@
     fs.pos = Math.min(Math.max(0, fs.pos), pl.length - 1);
     const cur = pl[fs.pos], s = step(cur.id);
     const stack = stackAt(fs.phase, fs.pos);
-    history.replaceState(null, '', `#/flow?${fs.impl !== 'gchips' ? 'impl=' + fs.impl + '&' : ''}p=${fs.phase}&pos=${fs.pos}`);
+    history.replaceState(null, '', `#/flow?${fs.impl !== 'gchips' ? 'impl=' + fs.impl + '&' : ''}${FW && !fs.fw ? 'fw=0&' : ''}p=${fs.phase}&pos=${fs.pos}`);
     G.render.lastRoute = location.hash;
 
     // header + code (swap with a slide when the function changes)
     const lines = document.getElementById('xlines');
     if (fs.shownStep !== s.id) {
       const goingIn = fs.prevStack.length < stack.length;
-      document.getElementById('xhead').innerHTML = `<div><b class="fn">${esc(s.function || s.title)}</b><span class="muted small"> ${esc(s.title !== s.function ? s.title : '')}</span></div>
+      document.getElementById('xhead').innerHTML = `<div>${layerTag(s)} <b class="fn">${esc(s.function || s.title)}</b><span class="muted small"> ${esc(s.title !== s.function ? s.title : '')}</span></div>
         <div class="small">${src(s.def, s.def.file + ':' + s.def.line)}${s.code_loc.end < s.def.end ? ` <span class="muted">(first ${s.code_loc.end - s.code_loc.line + 1} lines)</span>` : ''}</div>`;
       lines.className = fs.shownStep && dir ? (goingIn ? 'slide-in-r' : 'slide-in-l') : '';
       lines.innerHTML = codeHtml(s);
@@ -158,8 +226,11 @@
     } else {
       const t = s.stops[cur.k];
       const callee = t.call && step(t.call);
+      const opens = callee && opened(fs.phase).has(s.id + '>' + t.call);
+      const where = callee && !opens ? shownElsewhere(t.call) : '';
+      const cross = callee && isFw(s) && !isFw(callee) ? ` <span class="lay lay-hal">into ${esc(IMPLS[fs.impl].name)}</span>` : '';
       note.innerHTML = `<div class="anno ${t.call ? 'is-call' : ''}"><span class="ln-ref">${t.line}</span><div><p>${esc(t.note)}</p>
-        <code class="small">${esc(t.text)}</code>${callee ? `<div class="small" style="margin-top:4px">Calls <b>${esc(callee.function || callee.title)}</b> — next step opens it.</div>` : ''}
+        <code class="small">${esc(t.text)}</code>${callee ? `<div class="small" style="margin-top:4px">Calls <b>${esc(callee.function || callee.title)}</b>${cross} — ${opens ? 'next step opens it' : esc(where || 'not followed here')}.</div>` : ''}
         <div class="small muted">${src({ file: s.def.file, line: t.line })}</div></div></div>`;
     }
     note.firstElementChild.classList.add('anim-in');
@@ -168,17 +239,16 @@
     const prev = fs.prevStack;
     document.getElementById('xstack').innerHTML = stack.slice().reverse().map((id, i) => {
       const fr = step(id), isNew = !prev.includes(id);
-      return `<li class="${i === 0 ? 'top' : ''} ${isNew ? 'push' : ''}"><b>${esc(fr.function || fr.title)}</b><span class="small muted">${esc(fr.def.file.split('/').pop())}:${fr.def.line}</span></li>`;
+      return `<li class="${i === 0 ? 'top' : ''} ${isNew ? 'push' : ''} ${isFw(fr) ? 'fwframe' : ''}"><b>${esc(fr.function || fr.title)}</b><span class="small muted">${esc(fr.def.file.split('/').pop())}:${fr.def.line}</span></li>`;
     }).join('');
     fs.prevStack = stack;
 
     // lane + state
-    const lane = (FJ.J[s.id] || [0])[0];
+    const lane = isFw(s) ? 0 : (FJ.J[s.id] || [0])[0];
     const lanes = document.getElementById('xlanes');
     lanes.style.setProperty('--lane', lane);
     lanes.querySelectorAll('[data-lane]').forEach((d) => d.classList.toggle('on', Number(d.dataset.lane) === lane));
-    const sidx = CF.paths[fs.phase].indexOf(s.id);
-    const st = FJ.stateFor(fs.phase, sidx);
+    const st = stateAt(fs.phase, s.id);
     const names = FJ.STATE_NAMES || STATE_NAMES;
     const old = update.lastState;
     document.getElementById('xstate').innerHTML = st ? `<table class="statetab">${names.map((n, k) => `<tr class="${old && old[k] !== st.s[k] ? 'flash' : ''}"><td>${n}</td><td>${esc(st.s[k])}</td></tr>`).join('')}</table><div class="small muted">after ${esc(step(st.id).function || step(st.id).title)} ${src(st.s[6])}</div>` : '<div class="small muted">no state change yet</div>';
@@ -187,7 +257,7 @@
     // list + position + buttons
     document.getElementById('xlist').innerHTML = CF.paths[fs.phase].map((id) => {
       const f = step(id); const at = pl.findIndex((x) => x.id === id);
-      return `<li class="${id === s.id ? 'on' : ''}"><button data-goto="${at}">${esc(f.function || f.title)}</button> <span class="small muted">${esc(f.def.file.split('/').pop())}:${f.def.line}</span></li>`;
+      return `<li class="${id === s.id ? 'on' : ''}">${layerTag(f)} <button data-goto="${at}">${esc(f.function || f.title)}</button> <span class="small muted">${esc(f.def.file.split('/').pop())}:${f.def.line}</span></li>`;
     }).join('');
     document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => { stop(); fs.pos = Number(b.dataset.goto); update(1); }));
     document.getElementById('fpos').textContent = `step ${fs.pos + 1} of ${pl.length}`;
@@ -208,7 +278,7 @@
   }
   function stop() { if (fs.playing) { clearInterval(fs.playing); fs.playing = null; } }
   function play() {
-    if (fs.phase === lastPhase() && fs.pos === plan(lastPhase()).length - 1) { fs.phase = 'allocate'; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; }
+    if (fs.phase === lastPhase() && fs.pos === plan(lastPhase()).length - 1) { fs.phase = phases()[0][0]; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; }
     fs.playing = setInterval(() => { if (!document.getElementById('xcode')) return stop(); advance(1); }, SPEEDS[fs.speed]);
     update(0);
   }
@@ -218,7 +288,10 @@
     stop();
     fs.prevStack = [];
     update.lastState = null;
-    document.querySelectorAll('[data-impl]').forEach((b) => b.addEventListener('click', () => { stop(); location.hash = b.dataset.impl === 'gchips' ? '#/flow' : '#/flow?impl=' + b.dataset.impl; }));
+    const go = (impl, fw) => { const q = [impl !== 'gchips' ? 'impl=' + impl : '', fw ? '' : 'fw=0'].filter(Boolean).join('&'); location.hash = '#/flow' + (q ? '?' + q : ''); };
+    document.querySelectorAll('[data-impl]').forEach((b) => b.addEventListener('click', () => { stop(); go(b.dataset.impl, fs.fw); }));
+    const ffw = document.getElementById('ffw');
+    if (ffw) ffw.addEventListener('change', () => { stop(); go(fs.impl, ffw.checked); });
     document.querySelectorAll('[data-phase]').forEach((b) => b.addEventListener('click', () => { stop(); fs.phase = b.dataset.phase; fs.pos = 0; fs.prevStack = []; fs.shownStep = null; update(0); }));
     document.getElementById('fprev').addEventListener('click', () => { stop(); advance(-1); });
     document.getElementById('fnext').addEventListener('click', () => { stop(); advance(1); });

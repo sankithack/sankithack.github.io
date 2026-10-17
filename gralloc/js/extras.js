@@ -304,7 +304,7 @@
   /* Code flow: buffer journey + autoplay                                */
   /* ------------------------------------------------------------------ */
   const LANES = ['Client process (IMapper)', 'Allocator service', 'Kernel (dma-buf)'];
-  const PHASE_ORDER = ['allocate', 'import', 'lock', 'unlock', 'free'];
+  const PHASE_ORDER = (CF.phases || [['allocate'], ['import'], ['lock'], ['unlock'], ['free']]).map((p) => p[0]);
   // lane for each step, and the buffer state after it (hand-written from the cited code)
   const J = {
     aidl_allocate: [1], aidl_allocate2: [1], common_allocate: [1], buffer_allocate: [1], derive: [1], select_format: [1],
@@ -313,6 +313,14 @@
     mapper_lock: [0], gralloc_lock: [0], validate_lock: [0], ref_map: [0], ion_map: [2], buffer_sync: [0],
     mapper_unlock: [0], gralloc_unlock: [0],
     mapper_free: [0], unregister: [0], release: [0], ion_unmap: [2], alloc_side_free: [1],
+    // full flow: selection internals, isSupported, stable-C mapper v5, metadata, HAL loading
+    validate_desc: [1], get_base: [1], get_producers: [1], get_consumers: [1], producer_caps: [1], ip_caps: [1], consumer_caps: [1],
+    active_caps: [1], get_supported: [1], is_fmt_supported: [1], ip_base: [1], get_afbc_format: [1], validate_afbc: [1], grade_format: [1],
+    validate_fmt: [1], adjust_dims: [1], pixel_w_h: [1], select_heap: [1],
+    aidl_is_supported: [1], common_is_supported: [1], mapper4_is_supported: [0], mapper_suffix: [1], v5_load: [0],
+    v5_import: [0], v5_lock: [0], common_lock: [0], flush_locked: [0], reread_locked: [0], v5_unlock: [0], common_unlock: [0], v5_free: [0],
+    v5_get_std: [0], v5_std_get: [0], std_helper: [0], plane_layouts: [0], v5_get_metadata: [0], pixel_get: [0], v5_set_std: [0],
+    v5_set_helper: [0], set_crop: [0], v5_set_metadata: [0], hidl_get: [0], get_metadata: [0], hidl_set: [0], set_metadata: [0],
   };
   const STATE_AT = {
     // [handle, fds, ref_count, mapped, locked_ref_count, cpu flags, cite]

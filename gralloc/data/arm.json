@@ -18589,7 +18589,7 @@
  "callflow": {
   "steps": [
    {
-    "phase": "allocate",
+    "phase": "supported",
     "id": "aidl_allocate",
     "title": "allocator::allocate (AIDL)",
     "function": "allocator::allocate",
@@ -19122,9 +19122,7 @@
     "code": "std::optional<alloc_type_t> get_alloc_type(const internal_format_t format, const uint64_t usage)\n{\n\tconst format_info_t *format_info = format.get_base_info();\n\tif (format_info == nullptr)\n\t{\n\t\treturn std::nullopt;\n\t}\n\n\talloc_type_t alloc_type{};\n\talloc_type.primary_type = AllocBaseType::UNCOMPRESSED;\n\talloc_type.is_multi_plane = format_info->npln > 1;\n\talloc_type.is_tiled = false;\n\talloc_type.is_padded = false;\n\talloc_type.is_frontbuffer_safe = false;\n\n\t/* Determine AFBC type for this format. This is used to decide alignment.\n\t   Split block does not affect alignment, and therefore doesn't affect the allocation type. */\n\tif (format.is_afbc())\n\t{\n\t\t/* YUV transform shall not be enabled for a YUV format */\n\t\tif (format_info->is_yuv && format.get_afbc_yuv_transform())\n\t\t{\n\t\t\tMALI_GRALLOC_LOG(WARNING) << std::showbase\n\t\t\t                          << \"YUV Transform is incorrectly enabled for format = \" << std::hex\n\t\t\t                          << format_info->id << \". Extended internal format = \" << format;\n\t\t}\n\n\t\t/* Determine primary AFBC (superblock) type. */\n\t\talloc_type.primary_type = AllocBaseType::AFBC;\n\t\tif (format.get_afbc_32x8())\n\t\t{\n\t\t\talloc_type.primary_type = AllocBaseType::AFBC_WIDEBLK;\n\t\t}\n\t\telse if (format.get_afbc_64x4())\n\t\t{\n\t\t\talloc_type.primary_type = AllocBaseType::AFBC_EXTRAWIDEBLK;\n\t\t}\n\n\t\tif (format.get_afbc_tiled_headers())\n\t\t{\n\t\t\talloc_type.is_tiled = true;\n\n\t\t\tif (format_info->npln > 1 && !format.get_afbc_64x4() && format_info->is_yuv)\n\t\t\t{\n\t\t\t\tMALI_GRALLOC_LOGW(\"Extra-wide AFBC must be signalled for multi-plane formats. \"\n\t\t\t\t                  \"Falling back to single plane AFBC.\");\n\t\t\t\talloc_type.is_multi_plane = false;\n\t\t\t}\n\n\t\t\tif (format.get_afbc_double_body())\n\t\t\t{\n\t\t\t\talloc_type.is_frontbuffer_safe = true;\n\t\t\t}\n\t\t}\n\t\telse\n\t\t{\n\t\t\tif (format_info->is_yuv && format_info->npln > 1)\n\t\t\t{\n\t\t\t\tMALI_GRALLOC_LOGW(\"Multi-plane AFBC for YUV is not supported without tiling. \"\n\t\t\t\t                  \"Falling back to single plane AFBC.\");\n\t\t\t\talloc_type.is_multi_plane = false;\n\t\t\t}\n\t\t}\n\n\t\tif (format.get_afbc_64x4() && !alloc_type.is_tiled)\n\t\t{\n\t\t\t/* Headers must be tiled for extra-wide. */\n\t\t\tMALI_GRALLOC_LOGE(\"ERROR: Invalid to specify extra-wide block without tiled headers.\");\n\t\t\treturn std::nullopt;\n\t\t}\n\n\t\tif (alloc_type.is_frontbuffer_safe && (format.get_afbc_32x8() || format.get_afbc_64x4()))\n\t\t{\n\t\t\tMALI_GRALLOC_LOGE(\"ERROR: Front-buffer safe not supported with wide/extra-wide block.\");\n\t\t}\n\n\t\tif (format_info->npln == 1 && format.get_afbc_32x8() && format.get_afbc_64x4())\n\t\t{\n\t\t\t/* \"Wide + Extra-wide\" implicitly means \"multi-plane\". */\n\t\t\tMALI_GRALLOC_LOGE(\"ERROR: Invalid to specify multiplane AFBC with single plane format.\");\n\t\t\treturn std::nullopt;\n\t\t}\n\n\t\tif (usage & MALI_GRALLOC_USAGE_AFBC_PADDING)\n\t\t{\n\t\t\talloc_type.is_padded = true;\n\t\t}\n\t}\n\telse if (format.is_afrc())\n\t{\n\t\talloc_type.primary_type = AllocBaseType::AFRC;\n\n\t\tif (format.get_afrc_rot_layout())\n\t\t{\n\t\t\talloc_type.afrc.paging_tile_width = 8;\n\t\t\talloc_type.afrc.paging_tile_height = 8;\n\t\t}\n\t\telse\n\t\t{\n\t\t\talloc_type.afrc.paging_tile_width = 16;\n\t\t\talloc_type.afrc.paging_tile_height = 4;\n\t\t}\n\n\t\talloc_type.afrc.rgba_luma_coding_unit_bytes = to_bytes(format.get_afrc_rgba_coding_size());\n\t\talloc_type.afrc.rgba_luma_plane_alignment =\n\t\t    afrc_plane_alignment_requirement(alloc_type.afrc.rgba_luma_coding_unit_bytes);\n\t\tif (alloc_type.afrc.rgba_luma_plane_alignment == 0)\n\t\t{\n\t\t\treturn std::nullopt;\n\t\t}\n\n\t\talloc_type.afrc.chroma_coding_unit_bytes = to_bytes(format.get_afrc_chroma_coding_size());\n\t\talloc_type.afrc.chroma_plane_alignment =\n\t\t    afrc_plane_alignment_requirement(alloc_type.afrc.chroma_coding_unit_bytes);\n\t\tif (alloc_type.afrc.chroma_plane_alignment == 0)\n\t\t{\n\t\t\treturn std::nullopt;\n\t\t}\n\n\t\tfor (auto plane = 0; plane < format_info->npln; ++plane)\n\t\t{\n\t\t\tswitch (format_info->ncmp[plane])\n\t\t\t{\n\t\t\tcase 1:\n\t\t\t\talloc_type.afrc.clump_width[plane] = alloc_type.afrc.paging_tile_width;\n\t\t\t\talloc_type.afrc.clump_height[plane] = alloc_type.afrc.paging_tile_height;\n\t\t\t\tbreak;\n\t\t\tcase 2:\n\t\t\t\talloc_type.afrc.clump_width[plane] = 8;\n\t\t\t\talloc_type.afrc.clump_height[plane] = 4;\n\t\t\t\tbreak;\n\t\t\tcase 3:\n\t\t\tcase 4:\n\t\t\t\talloc_type.afrc.clump_width[plane] = 4;\n\t\t\t\talloc_type.afrc.clump_height[plane] = 4;\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tMALI_GRALLOC_LOGE(\"internal error: invalid number of components in plane %d (%d)\",\n\t\t\t\t                  static_cast<int>(plane), static_cast<int>(format_info->ncmp[plane]));\n\t\t\t\treturn std::nullopt;\n\t\t\t}\n\t\t}\n\t}\n\telse if (format.is_block_linear())\n\t{\n\t\talloc_type.primary_type = AllocBaseType::BLOCK_LINEAR;\n\t}\n\treturn alloc_type;\n}",
     "description": "Turn modifier bits into an allocation type: AFBC superblock size, tiled headers, AFRC paging tiles and coding units, or block-linear.",
     "description_source": "manual (written from reading the code)",
-    "next": [
-     "drm_params"
-    ],
+    "next": [],
     "stops": [
      {
       "line": 97,
@@ -19222,9 +19220,7 @@
     "code": "static int mali_gralloc_get_drm_params(buffer_descriptor_t *descriptor, uint32_t *drm_format_fourcc,\n                                       uint64_t *drm_format_modifier, const format_info_t *format_info)\n{\n\tprivate_handle_t hnd(descriptor->size, descriptor->consumer_usage, descriptor->producer_usage, -1,\n\t                     descriptor->hal_format, descriptor->alloc_format, descriptor->width, descriptor->height, 0,\n\t                     descriptor->plane_info, descriptor->pixel_stride, (format_info->npln > 1 ? true : false));\n\t*drm_format_modifier = drm_modifier_from_handle(&hnd);\n\n\t/* Try to map internal format to official DRM format using Gralloc's table first */\n\t*drm_format_fourcc = drm_fourcc_from_handle(&hnd);\n\tif (DRM_FORMAT_INVALID != *drm_format_fourcc)\n\t{\n\t\treturn 0;\n\t}\n\n\t/* Try to map internal format to local DRM format */\n\t*drm_format_fourcc = mali_gralloc_find_compatible_format(format_info->id);\n\tif (DRM_FORMAT_INVALID != *drm_format_fourcc)\n\t{\n\t\treturn 0;\n\t}\n\n\t/* Gralloc couldn't map the internal format to a DRM format - return error */\n\treturn -EINVAL;\n}",
     "description": "Express the internal format as a DRM fourcc + modifier, falling back to a local table for depth/RAW/Y8 formats.",
     "description_source": "manual (written from reading the code)",
-    "next": [
-     "lf_layout"
-    ],
+    "next": [],
     "stops": [
      {
       "line": 402,
@@ -19273,9 +19269,7 @@
     "code": "mali_libformat_error mali_libformat_get_layout(mali_libformat_layout *layout, uint32_t fourcc, uint64_t modifier,\n                                               mali_libformat_extent ip_align_in_pixels, bool is_afbc_padded)\n{\n\tif (layout == NULL)\n\t{\n\t\treturn MALI_LIBFORMAT_ERROR_NO_RESOURCE;\n\t}\n\n\tstruct mali_libformat_format_info format_info;\n\tauto libformat_err = mali_libformat_get_format_info(fourcc, &format_info);\n\tif (libformat_err != MALI_LIBFORMAT_ERROR_NONE)\n\t{\n\t\treturn libformat_err;\n\t}\n\n\t*layout = {};\n\tauto subsample_extent = mali_libformat_get_subsample_extent_for_plane(fourcc, MALI_LIBFORMAT_PLANE1);\n\tif (modifier == DRM_FORMAT_MOD_LINEAR)\n\t{\n\t\tif (format_info.is_linear == true)\n\t\t{\n\t\t\tswitch (format_info.num_of_planes)\n\t\t\t{\n\t\t\tcase MALI_LIBFORMAT_1_PLANE:\n\t\t\t\t*layout = mali_libformat_linear_interleaved(format_info.layout_block_info[MALI_LIBFORMAT_PLANE0].size,\n\t\t\t\t                                            format_info.layout_block_info[MALI_LIBFORMAT_PLANE0].extent,\n\t\t\t\t                                            format_info.tile_size, ip_align_in_pixels);\n\t\t\t\tbreak;\n\t\t\tcase MALI_LIBFORMAT_2_PLANES:\n\t\t\t\t*layout = mali_libformat_linear_semiplanar(\n\t\t\t\t    format_info.layout_block_info[MALI_LIBFORMAT_PLANE0].size,\n\t\t\t\t    format_info.layout_block_info[MALI_LIBFORMAT_PLANE1].size,\n\t\t\t\t    format_info.layout_block_info[MALI_LIBFORMAT_PLANE0].extent,\n\t\t\t\t    format_info.layout_block_info[MALI_LIBFORMAT_PLANE1].extent, MALI_LIBFORMAT_DEFAULT_ALIGNMENT,\n\t\t\t\t    mali_libformat_get_subsample_extent_for_plane(fourcc, MALI_LIBFORMAT_PLANE1));\n\t\t\t\tbreak;\n\t\t\tcase MALI_LIBFORMAT_3_PLANES:\n\t\t\t\t*layout = mali_libformat_linear_planar(format_info.layout_block_info[MALI_LIBFORMAT_PLANE0].size,\n\t\t\t\t                                       format_info.layout_block_info[MALI_LIBFORMAT_PLANE1].size,\n\t\t\t\t                                       format_info.layout_block_info[MALI_LIBFORMAT_PLANE2].size,\n\t\t\t\t                                       format_info.layout_block_info[MALI_LIBFORMAT_PLANE0].extent,\n\t\t\t\t                                       format_info.layout_block_info[MALI_LIBFORMAT_PLANE1].extent,\n\t\t\t\t                                       format_info.layout_block_info[MALI_LIBFORMAT_PLANE2].extent,\n\t\t\t\t                                       MALI_LIBFORMAT_DEFAULT_ALIGNMENT, subsample_extent,\n\t\t\t\t                                       format_info.tile_size, ip_align_in_pixels);\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t\t\t}\n\n\t\t\tlayout->bits_per_pixel_p0 = format_info.bits_per_pixel[MALI_LIBFORMAT_PLANE0];\n\n\t\t\treturn MALI_LIBFORMAT_ERROR_NONE;\n\t\t}\n\n\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t}\n\telse if (mali_libformat_is_afbc_modifier(modifier))\n\t{\n\t\tif (format_info.is_afbc == true)\n\t\t{\n\t\t\tbool is_tiled = modifier & AFBC_FORMAT_MOD_TILED;\n\t\t\tbool is_double_body = modifier & AFBC_FORMAT_MOD_DB;\n\t\t\tbool is_superblock_wide = ((AFBC_FORMAT_MOD_BLOCK_SIZE_MASK & modifier) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8);\n\t\t\tauto extent0 = mali_libformat_afbc_get_superblock_size_extent(modifier, MALI_LIBFORMAT_PLANE0, is_tiled);\n\t\t\tauto extent1 = mali_libformat_afbc_get_superblock_size_extent(modifier, MALI_LIBFORMAT_PLANE1, is_tiled);\n\t\t\tbool is_yuv = mali_libformat_is_yuv(fourcc);\n\t\t\tuint32_t afbc_tiled_headers_size;\n\n\t\t\tif (is_tiled == true)\n\t\t\t{\n\t\t\t\tafbc_tiled_headers_size = (format_info.bits_per_pixel_afbc[MALI_LIBFORMAT_PLANE0] > 32) ?\n\t\t\t\t                              MALI_LIBFORMAT_AFBC_TILE_SIZE_4 :\n\t\t\t\t                              MALI_LIBFORMAT_AFBC_TILE_SIZE_8;\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\tafbc_tiled_headers_size = MALI_LIBFORMAT_AFBC_NON_TILED_SIZE;\n\t\t\t}\n\n\t\t\tswitch (format_info.num_of_planes)\n\t\t\t{\n\t\t\tcase MALI_LIBFORMAT_1_PLANE:\n\t\t\t\t*layout = mali_libformat_afbc_interleaved(\n\t\t\t\t    extent0, afbc_tiled_headers_size, is_double_body, is_superblock_wide,\n\t\t\t\t    (MALI_LIBFORMAT_PIXEL_NUM_IN_BLOCK_AFBC * format_info.bits_per_pixel_afbc[MALI_LIBFORMAT_PLANE0] /\n\t\t\t\t     MALI_LIBFORMAT_BITS_IN_BYTE),\n\t\t\t\t    is_afbc_padded, is_yuv);\n\n\t\t\t\tbreak;\n\t\t\tcase MALI_LIBFORMAT_2_PLANES:\n\t\t\t\tif (fourcc == DRM_FORMAT_RGB888_A8)\n\t\t\t\t{\n\t\t\t\t\t*layout = mali_libformat_afbc_semiplanar(extent0, extent1, is_double_body, is_superblock_wide,\n\t\t\t\t\t                                         is_afbc_padded, is_yuv, afbc_tiled_headers_size,\n\t\t\t\t\t                                         (MALI_LIBFORMAT_PIXEL_NUM_IN_BLOCK_AFBC *\n\t\t\t\t\t                                          format_info.bits_per_pixel_afbc[MALI_LIBFORMAT_PLANE0] /\n\t\t\t\t\t                                          MALI_LIBFORMAT_BITS_IN_BYTE),\n\t\t\t\t\t                                         MALI_LIBFORMAT_PIXEL_NUM_IN_BLOCK_AFBC);\n\t\t\t\t}\n\t\t\t\telse\n\t\t\t\t{\n\t\t\t\t\tif (!is_tiled)\n\t\t\t\t\t{\n\t\t\t\t\t\treturn MALI_LIBFORMAT_ERROR_INVALID;\n\t\t\t\t\t}\n\t\t\t\t\t*layout = mali_libformat_afbc_semiplanar(\n\t\t\t\t\t    extent0, extent1, is_double_body, is_superblock_wide, is_afbc_padded, is_yuv,\n\t\t\t\t\t    afbc_tiled_headers_size,\n\t\t\t\t\t    (MALI_LIBFORMAT_PIXEL_NUM_IN_BLOCK_AFBC *\n\t\t\t\t\t     format_info.bits_per_pixel_afbc[MALI_LIBFORMAT_PLANE0] / MALI_LIBFORMAT_BITS_IN_BYTE),\n\t\t\t\t\t    (MALI_LIBFORMAT_PIXEL_NUM_IN_BLOCK_AFBC *\n\t\t\t\t\t     format_info.bits_per_pixel_afbc[MALI_LIBFORMAT_PLANE1] / MALI_LIBFORMAT_BITS_IN_BYTE),\n\t\t\t\t\t    mali_libformat_get_subsample_extent_for_plane(fourcc, MALI_LIBFORMAT_PLANE1));\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t\t\t}\n\n\t\t\tlayout->bits_per_pixel_p0 = format_info.bits_per_pixel[MALI_LIBFORMAT_PLANE0];\n\n\t\t\treturn MALI_LIBFORMAT_ERROR_NONE;\n\t\t}\n\n\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t}\n\telse if (mali_libformat_is_afrc_modifier(modifier))\n\t{\n\t\tif (format_info.is_afrc == true)\n\t\t{\n\t\t\tmali_libformat_extent tile = {};\n\t\t\tauto ret = mali_libformat_get_afrc_paging_tile_dimensions(modifier, &tile.width, &tile.height);\n\t\t\tif (ret != MALI_LIBFORMAT_ERROR_NONE)\n\t\t\t{\n\t\t\t\treturn MALI_LIBFORMAT_ERROR_INVALID;\n\t\t\t}\n\t\t\tmali_libformat_extent clump = {};\n\t\t\tint num_planes = mali_libformat_get_num_planes(fourcc);\n\t\t\tif (num_planes == 0)\n\t\t\t{\n\t\t\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t\t\t}\n\t\t\tfor (int plane = 0; plane < num_planes; ++plane)\n\t\t\t{\n\t\t\t\tauto compressed_size = mali_libformat_afrc_get_compressed_size(modifier, plane);\n\t\t\t\tif (compressed_size == -1)\n\t\t\t\t{\n\t\t\t\t\treturn MALI_LIBFORMAT_ERROR_INVALID;\n\t\t\t\t}\n\t\t\t\tauto size_alignment = mali_libformat_afrc_align_to(compressed_size);\n\t\t\t\tret = mali_libformat_get_afrc_clump_dimensions(fourcc, modifier, plane, &clump.width, &clump.height);\n\t\t\t\tif (ret != MALI_LIBFORMAT_ERROR_NONE)\n\t\t\t\t{\n\t\t\t\t\treturn MALI_LIBFORMAT_ERROR_INVALID;\n\t\t\t\t}\n\t\t\t\tauto block_extent = tile * clump;\n\t\t\t\tlayout->plane_block_info[layout->num_planes] = {\n\t\t\t\t\tblock_extent, (uint32_t)compressed_size * static_cast<int>(tile.width * tile.height)\n\t\t\t\t};\n\t\t\t\tlayout->plane_subsample[layout->num_planes] =\n\t\t\t\t    mali_libformat_get_subsample_extent_for_plane(fourcc, plane);\n\t\t\t\tlayout->total_size_alignment[layout->num_planes] = size_alignment;\n\t\t\t\tlayout->plane_size_alignment[layout->num_planes++] =\n\t\t\t\t    MALI_LIBFORMAT_DEFAULT_ALIGNMENT; //not used as part of AFRC\n\t\t\t}\n\t\t\tlayout->ip_pixel_align = ip_align_in_pixels;\n\t\t\tlayout->tile_size = format_info.tile_size;\n\t\t\tlayout->afbc_info.is_afbc = false;\n\t\t\tlayout->bits_per_pixel_p0 = format_info.bits_per_pixel[MALI_LIBFORMAT_PLANE0];\n\n\t\t\treturn MALI_LIBFORMAT_ERROR_NONE;\n\t\t}\n\n\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t}\n\telse if (mali_libformat_is_block_linear_modifier(modifier))\n\t{\n\t\tif (format_info.is_block_linear == true)\n\t\t{\n\t\t\tauto block_extent1 = MALI_LIBFORMAT_BLOCK_LINEAR_PIXEL_BLOCK /\n\t\t\t                     mali_libformat_get_subsample_extent_for_plane(fourcc, MALI_LIBFORMAT_PLANE_UV);\n\t\t\t*layout = mali_libformat_linear_semiplanar(\n\t\t\t    ((MALI_LIBFORMAT_PIXEL_NUM_IN_BLOCK_BLOCK_LINEAR * format_info.bits_per_pixel[MALI_LIBFORMAT_PLANE_Y]) /\n\t\t\t     MALI_LIBFORMAT_BITS_IN_BYTE),\n\t\t\t    ((block_extent1.width * block_extent1.height * format_info.bits_per_pixel[MALI_LIBFORMAT_PLANE_UV]) /\n\t\t\t     MALI_LIBFORMAT_BITS_IN_BYTE),\n\t\t\t    MALI_LIBFORMAT_BLOCK_LINEAR_PIXEL_BLOCK, block_extent1, MALI_LIBFORMAT_DEFAULT_ALIGNMENT,\n\t\t\t    mali_libformat_get_subsample_extent_for_plane(fourcc, MALI_LIBFORMAT_PLANE_UV),\n\t\t\t    MALI_LIBFORMAT_BLOCK_LINEAR_PIXEL_BLOCK);\n\n\t\t\tlayout->bits_per_pixel_p0 = format_info.bits_per_pixel[MALI_LIBFORMAT_PLANE0];\n\n\t\t\treturn MALI_LIBFORMAT_ERROR_NONE;\n\t\t}\n\n\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t}\n\telse\n\t{\n\t\treturn MALI_LIBFORMAT_ERROR_NOT_SUPPORTED;\n\t}\n}",
     "description": "libformat: build the plane/block layout for linear, AFBC, AFRC or block-linear from the per-fourcc table.",
     "description_source": "manual (written from reading the code)",
-    "next": [
-     "lf_stride"
-    ],
+    "next": [],
     "stops": [
      {
       "line": 700,
@@ -19330,9 +19324,7 @@
     "code": "mali_libformat_error mali_libformat_get_mali_stride_alignment(\n    uint32_t fourcc, uint64_t modifier, uint32_t stride_alignment[MALI_LIBFORMAT_MAX_ALLOCATION_PLANES],\n    bool optimize_for_mali, uint32_t optimize_for_pixel_width)\n{\n\tif (modifier == DRM_FORMAT_MOD_LINEAR)\n\t{\n\t\tuint32_t bpp_arr[MALI_LIBFORMAT_MAX_PLANES];\n\t\tauto ret = mali_libformat_get_bits_per_pixel(fourcc, bpp_arr);\n\t\tif (ret != MALI_LIBFORMAT_ERROR_NONE)\n\t\t{\n\t\t\treturn MALI_LIBFORMAT_ERROR_INVALID;\n\t\t}\n\t\tauto is_yuv_format = mali_libformat_is_yuv(fourcc);\n\n\t\tfor (int plane = 0; plane < MALI_LIBFORMAT_MAX_PLANES; plane++)\n\t\t{\n\t\t\tstride_alignment[plane] = mali_libformat_get_mali_stride_alignment_per_plane(\n\t\t\t    is_yuv_format, optimize_for_mali, bpp_arr[plane], optimize_for_pixel_width);\n\n\t\t\t/*\n\t\t\t * Check that there isn't alignment with 0 - this will cause segmentation fault.\n\t\t\t */\n\t\t\tif (stride_alignment[plane] == 0)\n\t\t\t{\n\t\t\t\treturn MALI_LIBFORMAT_ERROR_INVALID;\n\t\t\t}\n\t\t}\n\t}\n\telse\n\t{\n\t\tfor (int plane = 0; plane < MALI_LIBFORMAT_MAX_ALLOCATION_PLANES; plane++)\n\t\t{\n\t\t\tstride_alignment[plane] = 1;\n\t\t}\n\t}\n\treturn MALI_LIBFORMAT_ERROR_NONE;\n}",
     "description": "Linear only: row stride aligned to 64 B (RGB) or 128 B (YUV) for Mali, combined with the CPU pixel-width alignment.",
     "description_source": "manual (written from reading the code)",
-    "next": [
-     "lf_compute"
-    ],
+    "next": [],
     "stops": [
      {
       "line": 661,
@@ -19369,9 +19361,7 @@
     "code": "mali_libformat_error mali_libformat_compute_allocation(mali_libformat_allocation *allocation,\n                                                       const mali_libformat_layout *layout,\n                                                       mali_libformat_extent image_extent,\n                                                       uint32_t stride_alignment[MALI_LIBFORMAT_MAX_ALLOCATION_PLANES])\n{\n\tint idx;\n\n\tif ((allocation == NULL) || (layout == NULL))\n\t{\n\t\treturn MALI_LIBFORMAT_ERROR_NO_RESOURCE;\n\t}\n\t*allocation = {};\n\tallocation->num_planes = layout->num_planes;\n\n\tfor (idx = 0; idx < allocation->num_planes; idx++)\n\t{\n\t\tauto block = layout->plane_block_info[idx];\n\t\t/* Align subsample plane based on the format definition*/\n\t\tallocation->aligned_extent[idx] = align(\n\t\t    (image_extent / layout->plane_subsample[idx]) +\n\t\t        mali_libformat_extent{\n\t\t            static_cast<uint32_t>((image_extent.width % layout->plane_subsample[idx].width) == 0 ? 0 : 1),\n\t\t            static_cast<uint32_t>((image_extent.height % layout->plane_subsample[idx].height) == 0 ? 0 : 1) },\n\t\t    block.extent);\n\n\t\tauto [num_blocks_x, num_blocks_y] = allocation->aligned_extent[idx] / block.extent;\n\t\tint block_stride = num_blocks_x * block.size;\n\t\tallocation->planes[idx].block_stride = block_stride;\n\t\tallocation->planes[idx].average_row_stride =\n\t\t    align(block_stride * layout->tile_size / block.extent.height, stride_alignment[idx]) / layout->tile_size;\n\t\tint plane_size = allocation->planes[idx].average_row_stride * num_blocks_y * block.extent.height;\n\t\tif (layout->afbc_info.is_afbc)\n\t\t{\n\t\t\t/* In AFBC there's an 128 bytes alignment for each superblock that affects the values\n\t\t\t   of both the average byte stride and the plane size while in fact we don't want this\n\t\t\t   alignment to be affecting the average byte stride. */\n\t\t\tallocation->planes[idx].average_row_stride =\n\t\t\t    layout->afbc_info.bpp[idx / 2] * allocation->aligned_extent[idx].width / MALI_LIBFORMAT_BITS_IN_BYTE;\n\t\t}\n\t\t/* Align plane to ip requirement (e.g. CPU) */\n\t\tallocation->aligned_extent[idx] = align(allocation->aligned_extent[idx], layout->ip_pixel_align);\n\n\t\tallocation->total_size = align(allocation->total_size, layout->total_size_alignment[idx]);\n\t\tplane_size = align(plane_size, layout->plane_size_alignment[idx]);\n\t\t/* Set the offset of the current plane */\n\t\tauto plane_offset = allocation->total_size;\n\t\tallocation->planes[idx].offset = plane_offset;\n\t\t/* Set the current plane size after alignment */\n\t\tallocation->planes[idx].size = plane_size;\n\t\t/* Update the total size */\n\t\tallocation->total_size += plane_size;\n\t}\n\n\tallocation->pixel_stride =\n\t    (allocation->planes[MALI_LIBFORMAT_PLANE0].average_row_stride * MALI_LIBFORMAT_BITS_IN_BYTE) /\n\t    layout->bits_per_pixel_p0;\n\n\t/**\n\t * Merge the AFBC header and body into single allocation plane:\n\t * The offest should be taken from the offset calculated in header allocation plane.\n\t * The size should be the sum of both header and body sizes which were calculated above.\n\t * All other fields (aligned_extent, block_stride, average_row_stride) should be taken\n\t * from the body allocation plane.\n\t * The number of planes should be divided by 2.\n\t * The total size of the allocation is the same.\n\t **/\n\tif (layout->afbc_info.is_afbc)\n\t{\n\t\tfor (int idx_out = 0; idx_out < allocation->num_planes; idx_out++)\n\t\t{\n\t\t\tif (idx_out < allocation->num_planes / 2)\n\t\t\t{\n\t\t\t\t/* Adjust the 1st half of the allocation planes to hold the calculated data */\n\t\t\t\tint idx_in = idx_out * 2;\n\t\t\t\tallocation->aligned_extent[idx_out] = allocation->aligned_extent[idx_in + 1];\n\t\t\t\tallocation->planes[idx_out].offset = allocation->planes[idx_in].offset;\n\t\t\t\tallocation->planes[idx_out].block_stride = allocation->planes[idx_in + 1].block_stride;\n\t\t\t\tallocation->planes[idx_out].average_row_stride = allocation->planes[idx_in + 1].average_row_stride;\n\t\t\t\tallocation->planes[idx_out].size =\n\t\t\t\t    allocation->planes[idx_in].size + allocation->planes[idx_in + 1].size;\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\t/* Initialize the rest of the planes data to 0 */\n\t\t\t\tallocation->aligned_extent[idx_out] = { 0, 0 };\n\t\t\t\tallocation->planes[idx_out].offset = 0;\n\t\t\t\tallocation->planes[idx_out].block_stride = 0;\n\t\t\t\tallocation->planes[idx_out].average_row_stride = 0;\n\t\t\t\tallocation->planes[idx_out].size = 0;\n\t\t\t}\n\t\t}\n\t\tallocation->num_planes /= 2;\n\t}\n\n\treturn MALI_LIBFORMAT_ERROR_NONE;\n}",
     "description": "For every layout plane: align the extent to whole blocks, compute row stride and plane size, place it; merge AFBC header and body.",
     "description_source": "manual (written from reading the code)",
-    "next": [
-     "update_desc"
-    ],
+    "next": [],
     "stops": [
      {
       "line": 905,
@@ -20546,7 +20536,7 @@
     ]
    },
    {
-    "phase": "supported",
+    "phase": "allocate",
     "id": "allocate2",
     "title": "allocator::allocate2 (AIDL v2)",
     "function": "allocator::allocate2",
@@ -20570,10 +20560,11 @@
      "repo": "arm"
     },
     "code": "ndk::ScopedAStatus allocator::allocate2(const BufferDescriptorInfo &in_descriptor, int32_t in_count,\n                                        AllocationResult *out_result)\n{\n\tauto supported = false;\n\tauto status = allocator::isSupported(in_descriptor, &supported);\n\tif (!status.isOk())\n\t{\n\t\tMALI_GRALLOC_LOGE(\"allocator::isSupported failed.\");\n\t\treturn status;\n\t}\n\n\tif (!supported)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Unsupported BufferDescriptorInfo.\");\n\t\treturn ndk::ScopedAStatus::fromServiceSpecificError(static_cast<int32_t>(AllocationError::UNSUPPORTED));\n\t}\n\n\tbuffer_descriptor_t buffer_descriptor;\n\tbuffer_descriptor.width = in_descriptor.width;\n\tbuffer_descriptor.height = in_descriptor.height;\n\tbuffer_descriptor.hal_format = static_cast<uint64_t>(in_descriptor.format);\n\tbuffer_descriptor.producer_usage = static_cast<uint64_t>(in_descriptor.usage);\n\tbuffer_descriptor.consumer_usage = buffer_descriptor.producer_usage;\n\tbuffer_descriptor.layer_count = in_descriptor.layerCount;\n\tbuffer_descriptor.name = in_descriptor.name;\n\tbuffer_descriptor.reserved_size = in_descriptor.reservedSize;\n\t/* BufferDecsriptorInfo.additionalOptions can be used as another way to allocate AFRC formats in the future */\n\treturn allocate_common(&buffer_descriptor, in_count, out_result);\n}",
-    "description": "AIDL IAllocator v2 entry that takes a BufferDescriptorInfo directly: it first asks isSupported, then fills a descriptor and joins allocate_common.",
+    "description": "AIDL IAllocator v2 entry (what libui's Gralloc5Allocator calls) that takes a BufferDescriptorInfo directly: it first runs isSupported (shown in the isSupported phase), then fills a descriptor and joins allocate_common.",
     "description_source": "manual (written from reading the code)",
     "next": [
-     "is_supported"
+     "is_supported",
+     "allocate_common"
     ],
     "stops": [
      {
@@ -20590,9 +20581,173 @@
      },
      {
       "line": 124,
-      "note": "Continue exactly as the Allocate phase (allocate_common).",
-      "call": null,
+      "note": "Shared allocation path.",
+      "call": "allocate_common",
       "text": "return allocate_common(&buffer_descriptor, in_count, out_result);"
+     }
+    ]
+   },
+   {
+    "phase": "setup",
+    "id": "mapper_suffix",
+    "title": "allocator::getIMapperLibrarySuffix",
+    "function": "allocator::getIMapperLibrarySuffix",
+    "def": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 193,
+     "end": 202,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 193,
+     "end": 201,
+     "repo": "arm"
+    },
+    "snippet": "ndk::ScopedAStatus allocator::getIMapperLibrarySuffix(std::string *out_result)\n{\n#if defined(GRALLOC_STABLEC_MAPPER_ENABLED) && GRALLOC_STABLEC_MAPPER_ENABLED == 1\n\t*out_result = \"arm\";\n\treturn ndk::ScopedAStatus::ok();\n#else\n\t(void)(out_result);\n\treturn ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);\n#endif",
+    "code_loc": {
+     "file": "android/src/aidl/allocator.cpp",
+     "line": 193,
+     "end": 202,
+     "repo": "arm"
+    },
+    "code": "ndk::ScopedAStatus allocator::getIMapperLibrarySuffix(std::string *out_result)\n{\n#if defined(GRALLOC_STABLEC_MAPPER_ENABLED) && GRALLOC_STABLEC_MAPPER_ENABLED == 1\n\t*out_result = \"arm\";\n\treturn ndk::ScopedAStatus::ok();\n#else\n\t(void)(out_result);\n\treturn ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);\n#endif\n}",
+    "description": "Tells libui which mapper library to load: \"arm\" \u2192 mapper.arm.so, only when built with GRALLOC_STABLEC_MAPPER_ENABLED=1; otherwise EX_UNSUPPORTED_OPERATION.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 195,
+      "note": "Only with the stable-C mapper built.",
+      "call": null,
+      "text": "#if defined(GRALLOC_STABLEC_MAPPER_ENABLED) && GRALLOC_STABLEC_MAPPER_ENABLED == 1"
+     },
+     {
+      "line": 196,
+      "note": "Library suffix \"arm\".",
+      "call": null,
+      "text": "*out_result = \"arm\";"
+     }
+    ]
+   },
+   {
+    "phase": "setup",
+    "id": "v5_load",
+    "title": "AIMapper_loadIMapper",
+    "function": "AIMapper_loadIMapper",
+    "def": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 451,
+     "end": 455,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 451,
+     "end": 455,
+     "repo": "arm"
+    },
+    "snippet": "extern \"C\" AIMapper_Error AIMapper_loadIMapper(AIMapper *_Nullable *_Nonnull outImplementation)\n{\n\tstatic vendor::mapper::IMapperProvider<GrallocMapperV5> provider;\n\treturn provider.load(outImplementation);\n}",
+    "code_loc": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 451,
+     "end": 455,
+     "repo": "arm"
+    },
+    "code": "extern \"C\" AIMapper_Error AIMapper_loadIMapper(AIMapper *_Nullable *_Nonnull outImplementation)\n{\n\tstatic vendor::mapper::IMapperProvider<GrallocMapperV5> provider;\n\treturn provider.load(outImplementation);\n}",
+    "description": "The library's one exported entry point: hands back the AIMapper function table backed by GrallocMapperV5.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 453,
+      "note": "One provider object per process.",
+      "call": null,
+      "text": "static vendor::mapper::IMapperProvider<GrallocMapperV5> provider;"
+     },
+     {
+      "line": 454,
+      "note": "Fill in the AIMapper table.",
+      "call": null,
+      "text": "return provider.load(outImplementation);"
+     }
+    ]
+   },
+   {
+    "phase": "metadata",
+    "id": "v5_get_std",
+    "title": "GrallocMapperV5::getStandardMetadata",
+    "function": "GrallocMapperV5::getStandardMetadata",
+    "def": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 300,
+     "end": 305,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 300,
+     "end": 305,
+     "repo": "arm"
+    },
+    "snippet": "int32_t GrallocMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,\n                                             void *_Nonnull outData, size_t outDataSize)\n{\n\tAIMapper_MetadataType standard_metadata{ common::STANDARD_METADATA_NAME, standardMetadataType };\n\treturn getMetadata(buffer, standard_metadata, outData, outDataSize);\n}",
+    "code_loc": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 300,
+     "end": 305,
+     "repo": "arm"
+    },
+    "code": "int32_t GrallocMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,\n                                             void *_Nonnull outData, size_t outDataSize)\n{\n\tAIMapper_MetadataType standard_metadata{ common::STANDARD_METADATA_NAME, standardMetadataType };\n\treturn getMetadata(buffer, standard_metadata, outData, outDataSize);\n}",
+    "description": "What libui calls for typed metadata reads: wraps the type id with the standard metadata name and reuses getMetadata.",
+    "description_source": "manual (written from reading the code)",
+    "next": [
+     "v5_get_metadata"
+    ],
+    "stops": [
+     {
+      "line": 304,
+      "note": "Same path as getMetadata.",
+      "call": "v5_get_metadata",
+      "text": "return getMetadata(buffer, standard_metadata, outData, outDataSize);"
+     }
+    ]
+   },
+   {
+    "phase": "metadata",
+    "id": "v5_set_std",
+    "title": "GrallocMapperV5::setStandardMetadata",
+    "function": "GrallocMapperV5::setStandardMetadata",
+    "def": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 361,
+     "end": 366,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 361,
+     "end": 366,
+     "repo": "arm"
+    },
+    "snippet": "AIMapper_Error GrallocMapperV5::setStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,\n                                                    const void *_Nonnull metadata, size_t metadataSize)\n{\n\tAIMapper_MetadataType standard_metadata{ common::STANDARD_METADATA_NAME, standardMetadataType };\n\treturn setMetadata(buffer, standard_metadata, metadata, metadataSize);\n}",
+    "code_loc": {
+     "file": "android/src/stablec/mapper/mapper.cpp",
+     "line": 361,
+     "end": 366,
+     "repo": "arm"
+    },
+    "code": "AIMapper_Error GrallocMapperV5::setStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,\n                                                    const void *_Nonnull metadata, size_t metadataSize)\n{\n\tAIMapper_MetadataType standard_metadata{ common::STANDARD_METADATA_NAME, standardMetadataType };\n\treturn setMetadata(buffer, standard_metadata, metadata, metadataSize);\n}",
+    "description": "What libui calls for typed metadata writes: reuses setMetadata.",
+    "description_source": "manual (written from reading the code)",
+    "next": [
+     "v5_set_metadata"
+    ],
+    "stops": [
+     {
+      "line": 365,
+      "note": "Same path as setMetadata.",
+      "call": "v5_set_metadata",
+      "text": "return setMetadata(buffer, standard_metadata, metadata, metadataSize);"
      }
     ]
    },
@@ -21280,8 +21435,12 @@
    }
   ],
   "paths": {
+   "setup": [
+    "mapper_suffix",
+    "v5_load"
+   ],
    "allocate": [
-    "aidl_allocate",
+    "allocate2",
     "allocate_common",
     "common_allocate",
     "buffer_allocate",
@@ -21307,10 +21466,10 @@
     "pick_heap"
    ],
    "supported": [
-    "allocate2",
     "is_supported",
     "derive",
-    "protected_heap"
+    "protected_heap",
+    "aidl_allocate"
    ],
    "import": [
     "v5_import",
@@ -21334,10 +21493,12 @@
     "buffer_sync"
    ],
    "metadata": [
+    "v5_get_std",
     "v5_get_metadata",
     "common_get",
     "get_metadata",
     "plane_layouts",
+    "v5_set_std",
     "v5_set_metadata",
     "common_set",
     "set_metadata"
@@ -21351,12 +21512,16 @@
   },
   "phases": [
    [
+    "setup",
+    "Load HAL"
+   ],
+   [
     "allocate",
     "Allocate"
    ],
    [
     "supported",
-    "isSupported / allocate2"
+    "isSupported / V1 allocate"
    ],
    [
     "import",
@@ -21378,7 +21543,19 @@
     "free",
     "Free"
    ]
-  ]
+  ],
+  "entries": {
+   "suffix": "mapper_suffix",
+   "load": "v5_load",
+   "allocate": "allocate2",
+   "supported": "is_supported",
+   "import": "v5_import",
+   "lock": "v5_lock",
+   "unlock": "v5_unlock",
+   "get_std": "v5_get_std",
+   "set_std": "v5_set_std",
+   "free": "v5_free"
+  }
  },
  "comparison": {
   "common": [
