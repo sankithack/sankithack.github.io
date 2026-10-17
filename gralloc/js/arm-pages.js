@@ -227,6 +227,8 @@
       <div id="filelist"></div>`;
   };
   AFTERS.files = () => {
+    const qp = new URLSearchParams(location.hash.split('?')[1] || '').get('q');
+    if (qp != null) { fq.q = qp; document.getElementById('fileq').value = qp; }
     const draw = () => {
       const q = fq.q.toLowerCase();
       const rows = A.files.filter((f) => !q || f.path.toLowerCase().includes(q) || (f.note || '').toLowerCase().includes(q) || (f.functions || []).some((x) => x.name.toLowerCase().includes(q)));

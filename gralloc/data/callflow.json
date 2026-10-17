@@ -3549,7 +3549,7 @@
    "phase": "setup",
    "id": "v5_load",
    "title": "AIMapper_loadIMapper",
-   "function": "GrallocMapper::getReservedRegion",
+   "function": "AIMapper_loadIMapper",
    "def": {
     "file": "gralloc4/src/stable-c/GrallocMapper.cpp",
     "line": 283,
