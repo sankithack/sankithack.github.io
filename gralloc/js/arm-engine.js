@@ -294,6 +294,292 @@
     return p;
   }
 
+
+  /* ======================================================================================
+   * Automatic format selection — port of android/src/core/formats.cpp + capabilities/.
+   * caps = { GPU: { present: bool, f: { FEATURE: 'RW'|'RO'|'WO'|'NO' } }, DPU, DPU_AEU, VPU, CAM }
+   * An IP with present = false has no XML file: no restriction (capabilities.cpp:52-60).
+   * ====================================================================================== */
+  const CAPS = 'android/src/capabilities/capabilities.cpp', CAPH = 'android/src/capabilities/capabilities.h';
+  const XIPS = ['GPU', 'DPU', 'DPU_AEU', 'VPU', 'CAM'];
+  const CPU_FEATURES = ['FORMAT_R10G10B10A2', 'FORMAT_R10G10B10A10', 'FORMAT_R16G16B16A16_FLOAT', 'FORMAT_RGB16', 'FORMAT_DEPTH_STENCIL'];
+  const FL = { F_NONE: 0, F_LIN: 1, F_AFBC: 2, F_AFRC: 4, F_BL_YUV: 8 };               // format_info.h:27-36
+  const flagsOf = (arr) => (arr || []).reduce((a, n) => a | (FL[n] || 0), 0);
+  const fname = (v) => ['LIN', 'AFBC', 'AFRC', 'BL_YUV'].filter((n, i) => v & (1 << i)).join('|') || 'NONE';
+  const DEPTH = ['DEPTH_16', 'DEPTH_24', 'DEPTH_32F', 'DEPTH_32F_STENCIL_8', 'DEPTH_24_STENCIL_8_AFBC', 'DEPTH_24_STENCIL_8', 'STENCIL_8'].map((x) => 'MALI_GRALLOC_FORMAT_INTERNAL_' + x);
+  const isDepth = (f) => DEPTH.includes(f.name);                                           // format_info.cpp:1081-1096
+  const total = (f) => f.ncmp.reduce((a, b) => a + b, 0);
+  const sn = (n) => n.replace('MALI_GRALLOC_FORMAT_INTERNAL_', '');
+  function dataType(f) {                                                                   // formats.cpp:581-607
+    const n = sn(f.name);
+    if (['STENCIL_8', 'BLOB', 'RG16', 'RAW16'].includes(n)) return 'UINT';
+    if (n === 'RGBA_16161616' || n === 'DEPTH_32F') return 'SFLOAT';
+    return 'UNORM';
+  }
+  function consumersOf(usage) {                                                            // formats.cpp:44-102
+    let u = usage & ~U.PRIVATE_MASK & ~U.GRALLOC_USAGE_PROTECTED;
+    const c = new Set();
+    if (u === U.GRALLOC_USAGE_HW_COMPOSER) { c.add('DPU'); return c; }
+    if (u & U.GRALLOC_USAGE_SW_READ_MASK) c.add('CPU');
+    if (u & U.GRALLOC_USAGE_HW_FB) c.add('DPU');
+    if (u & U.GRALLOC_USAGE_HW_VIDEO_ENCODER) c.add('VPU');
+    if ((u & (U.GRALLOC_USAGE_HW_TEXTURE | U.GRALLOC_USAGE_HW_COMPOSER)) === (U.GRALLOC_USAGE_HW_TEXTURE | U.GRALLOC_USAGE_HW_COMPOSER)) c.add('DPU');
+    if (u & (U.GRALLOC_USAGE_HW_TEXTURE | U.GRALLOC_USAGE_GPU_DATA_BUFFER)) c.add('GPU');
+    if (u & (U.GRALLOC_USAGE_HW_CAMERA_READ | U.GRALLOC_USAGE_SENSOR_DIRECT_DATA)) c.add('CAM');
+    return c;
+  }
+  /* ip_support_feature (capabilities.cpp:35-84) */
+  function makeCaps(caps) {
+    const perm = (ip, feat) => (caps[ip] && caps[ip].f && caps[ip].f[feat]) || null;
+    function feature(prod, cons, feat) {
+      if ((prod.has('CPU') || cons.has('CPU')) && !CPU_FEATURES.includes(feat)) return false;
+      for (const ip of XIPS) {
+        if (!caps[ip] || !caps[ip].present) continue;
+        const p = perm(ip, feat);
+        if (prod.has(ip) && !(p === 'RW' || p === 'WO')) return false;
+        if (cons.has(ip) && !(p === 'RW' || p === 'RO')) return false;
+      }
+      return true;
+    }
+    const none = new Set();
+    return {
+      support: (p, c, feat) => feature(p, c, feat),
+      prod: (p, feat) => feature(p, none, feat),
+      cons: (c, feat) => feature(none, c, feat),
+      present: (ip) => !feature(new Set([ip]), new Set([ip]), 'DISABLED'),           // capabilities.h:214-228
+      gpuMissing: !(caps.GPU && caps.GPU.present),
+    };
+  }
+  const subsampledYuv = (f) => f.is_yuv && (f.hsub > 1 || f.vsub > 1);
+  function allocTypeOk(f, m) {                                                             // buffer_allocation.cpp:86-150 (multi-plane result)
+    let multi = f.npln > 1;
+    if (m.tiled) { if (f.npln > 1 && !m.x64 && f.is_yuv) multi = false; }
+    else if (f.is_yuv && f.npln > 1) multi = false;
+    if (m.x64 && !m.tiled) return null;
+    if (f.npln === 1 && m.w32 && m.x64) return null;
+    return { is_multi_plane: multi };
+  }
+  function modsToBits(m) {
+    let b = 0;
+    if (m.afbc) {
+      b |= IF.AFBC_BASIC;
+      if (m.split) b |= IF.AFBC_SPLITBLK; if (m.w32) b |= IF.AFBC_WIDEBLK; if (m.tiled) b |= IF.AFBC_TILED_HEADERS;
+      if (m.x64) b |= IF.AFBC_EXTRAWIDEBLK; if (m.db) b |= IF.AFBC_DOUBLE_BODY; if (m.ytr) b |= IF.AFBC_YUV_TRANSFORM; if (m.sparse) b |= IF.AFBC_SPARSE;
+    } else if (m.afrc) {
+      b |= IF.AFRC_BASIC; if (m.rot) b |= IF.AFRC_ROT_LAYOUT;
+      b |= (CU_INTERNAL[m.luma] || 0) << RGBA_CU_SHIFT; b |= (CU_INTERNAL[m.chroma] || 0) << CHROMA_CU_SHIFT;
+    } else if (m.bl) b |= IF.BLOCK_LINEAR_BASIC;
+    return b >>> 0;
+  }
+  function modsText(m) {
+    if (m.afbc) return 'AFBC ' + [m.x64 && !m.w32 ? '64×4' : m.w32 && m.x64 ? '32×8+64×4' : m.w32 ? '32×8' : '16×16', m.tiled && 'tiled', m.split && 'split', m.db && 'double-body', m.sparse && 'sparse', m.ytr && 'YTR'].filter(Boolean).join(', ');
+    if (m.afrc) return `AFRC ${m.rot ? 'rotation' : 'scan'} layout, CU ${m.luma}${m.chroma ? '/' + m.chroma : ''} B`;
+    if (m.bl) return 'block-linear 16×16';
+    return 'linear';
+  }
+  const usageIsFrontbuffer = (u) => !!(u & U.GRALLOC_USAGE_FRONTBUFFER) || (!!(u & U.MALI_GRALLOC_USAGE_FRONTBUFFER) && !(u & U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_SENTINEL));   // usages.h:215-220
+  const usageIsNoAfbc = (u) => (u & U.MALI_GRALLOC_USAGE_NO_AFBC) === U.MALI_GRALLOC_USAGE_NO_AFBC && !(u & U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_SENTINEL);         // usages.h:230-237
+
+  function isFormatSupported(C, f, row, usage, prod, cons) {                              // formats.cpp:374-472
+    let fl = ~0;
+    const R = (k) => flagsOf(row[k]);
+    if (prod.has('CPU')) fl &= R('cpu_wr'); if (prod.has('GPU')) fl &= R('gpu_wr'); if (prod.has('DPU')) fl &= R('dpu_wr');
+    if (prod.has('DPU_AEU')) fl &= R('dpu_aeu_wr'); if (prod.has('CAM')) fl &= R('cam_wr'); if (prod.has('VPU')) fl &= R('vpu_wr');
+    if (cons.has('CPU')) fl &= R('cpu_rd'); if (cons.has('GPU')) fl &= R('gpu_rd'); if (cons.has('DPU')) fl &= R('dpu_rd'); if (cons.has('VPU')) fl &= R('vpu_rd');
+    const why = [`IP table → ${fname(fl & 15)}`];
+    if (usage & U.GRALLOC_USAGE_GPU_DATA_BUFFER) { fl &= FL.F_LIN; why.push('GPU_DATA_BUFFER → linear only'); }
+    if (!(usage & U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_MASK) && (fl & FL.F_AFRC)) { fl &= ~FL.F_AFRC; why.push('no AFRC coding-size usage → no AFRC'); }
+    const sup = (feat) => C.support(prod, cons, feat);
+    if (fl & FL.F_AFBC) {
+      if (!f.afbc || !sup('AFBC_16X16')) { fl &= ~FL.F_AFBC; why.push(!f.afbc ? 'table .afbc = false' : 'AFBC_16X16 missing'); }
+      if (f.is_yuv && !sup('AFBC_YUV') && (fl & FL.F_AFBC)) { fl &= ~FL.F_AFBC; why.push('AFBC_YUV missing'); }
+      if (usageIsFrontbuffer(usage) && !sup('AFBC_DOUBLE_BODY') && (fl & FL.F_AFBC)) { fl &= ~FL.F_AFBC; why.push('front buffer needs AFBC_DOUBLE_BODY'); }
+      if (sn(f.name) === 'Y210' && !sup('AFBC_FORMAT_Y210') && (fl & FL.F_AFBC)) { fl &= ~FL.F_AFBC; why.push('AFBC_FORMAT_Y210 missing'); }
+    }
+    if (fl & FL.F_AFRC) {
+      if (!f.afrc || (!sup('AFRC_ROT_LAYOUT') && !sup('AFRC_SCAN_LAYOUT'))) { fl &= ~FL.F_AFRC; why.push(!f.afrc ? 'table .afrc = false' : 'no AFRC layout feature'); }
+    }
+    if (fl & FL.F_BL_YUV) {
+      if (!(f.block_linear && f.is_yuv)) { fl &= ~FL.F_BL_YUV; why.push('not a block-linear YUV format'); }
+      else if (f.bps === 8 && !sup('YUV_BL_8')) { fl &= ~FL.F_BL_YUV; why.push('YUV_BL_8 missing'); }
+      else if (f.bps === 10 && !sup('YUV_BL_10')) { fl &= ~FL.F_BL_YUV; why.push('YUV_BL_10 missing'); }
+    }
+    if ((fl & 15) !== 0) {
+      const n = sn(f.name);
+      if (n === 'RGBA_1010102' && !sup('FORMAT_R10G10B10A2')) { fl = 0; why.push('FORMAT_R10G10B10A2 missing → format unsupported'); }
+      else if (n === 'RGBA_16161616') {
+        if (!sup('FORMAT_R16G16B16A16_FLOAT')) { fl = 0; why.push('FORMAT_R16G16B16A16_FLOAT missing → unsupported'); }
+        else if (!sup('AFBC_FORMAT_R16G16B16A16_FLOAT')) { fl = FL.F_LIN; why.push('AFBC_FORMAT_R16G16B16A16_FLOAT missing → linear'); }
+      } else if (n === 'RGBA_10101010' && !sup('FORMAT_R10G10B10A10')) { fl = 0; why.push('FORMAT_R10G10B10A10 missing → unsupported'); }
+      else if ((n === 'RAW16' || n === 'RG16') && !sup('FORMAT_RGB16')) { fl = 0; why.push('FORMAT_RGB16 missing → unsupported'); }
+      else if (isDepth(f) && !sup('FORMAT_DEPTH_STENCIL')) { fl = 0; why.push('FORMAT_DEPTH_STENCIL missing → unsupported'); }
+    }
+    return { flags: fl & 15, why };
+  }
+  function afrcFormat(C, f, usage, prod, cons) {                                           // formats.cpp:620-680
+    const m = { afrc: true };
+    if (C.support(prod, cons, 'AFRC_ROT_LAYOUT')) m.rot = true;
+    else if (!C.support(prod, cons, 'AFRC_SCAN_LAYOUT')) return null;
+    const lm = usage & U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_MASK;
+    m.luma = lm === U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_16 ? 16 : lm === U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_24 ? 24 : lm === U.MALI_GRALLOC_USAGE_AFRC_RGBA_LUMA_CODING_SIZE_32 ? 32 : 0;
+    if (!m.luma) return null;
+    const cm = usage & U.MALI_GRALLOC_USAGE_AFRC_CHROMA_CODING_SIZE_MASK;
+    if (f.is_yuv) {
+      m.chroma = cm === U.MALI_GRALLOC_USAGE_AFRC_CHROMA_CODING_SIZE_16 ? 16 : cm === U.MALI_GRALLOC_USAGE_AFRC_CHROMA_CODING_SIZE_24 ? 24 : cm === U.MALI_GRALLOC_USAGE_AFRC_CHROMA_CODING_SIZE_32 ? 32 : 0;
+      if (!m.chroma) return null;
+    } else if (cm) return null;
+    return m;
+  }
+  function validateAfbc(C, f, m, prod, cons) {                                             // formats.cpp:485-572
+    const sup = (feat) => C.support(prod, cons, feat);
+    if (m.db) { m.w32 = false; m.x64 = false; }
+    if (m.w32 && m.split && subsampledYuv(f)) m.split = false;
+    if (m.w32 && !m.split && !subsampledYuv(f) && sn(f.name) !== 'RGB_565') { if (sup('AFBC_BLOCK_SPLIT')) m.split = true; else m.w32 = false; }
+    if (sn(f.name) === 'RGB_565') m.split = false;
+    if (m.afbc && !sup('AFBC_16X16')) return {};
+    if (m.split && !sup('AFBC_BLOCK_SPLIT')) m.split = false;
+    if (m.w32 && !sup('AFBC_32X8')) m.w32 = false;
+    if (m.tiled && !sup('AFBC_TILED_HEADERS')) m.tiled = false;
+    if (!m.sparse && (!C.prod(prod, 'AFBC_WRITE_NON_SPARSE') || prod.size === 0)) m.sparse = true;
+    return m;
+  }
+  function afbcFormat(C, f, usage, prod, cons) {                                           // formats.cpp:696-793
+    if (f.is_yuv) {
+      if (cons.size && !C.cons(cons, 'AFBC_YUV')) return null;
+      if (!C.prod(prod, 'AFBC_YUV')) return null;
+    }
+    if (prod.has('VPU') && cons.has('VPU')) return null;
+    if (!C.support(prod, cons, 'AFBC_16X16')) return null;
+    const m = { afbc: true, ytr: !!f.yuv_transform };
+    if (prod.size === 0 || !C.prod(prod, 'AFBC_WRITE_NON_SPARSE')) m.sparse = true;
+    if (C.support(prod, cons, 'AFBC_TILED_HEADERS')) {
+      m.tiled = true;
+      if (usageIsFrontbuffer(usage) && C.support(prod, cons, 'AFBC_DOUBLE_BODY')) m.db = true;
+      if (f.npln > 1 && C.support(prod, cons, 'AFBC_TILED_HEADERS') && C.support(prod, cons, 'AFBC_64X4') && f.is_yuv) m.x64 = true;
+    }
+    if (prod.has('GPU') && cons.has('DPU') && C.present('DPU')) {
+      if (C.support(prod, cons, 'AFBC_32X8') && !f.is_yuv) m.w32 = true;
+      if (C.support(prod, cons, 'AFBC_BLOCK_SPLIT')) {
+        let en = true;
+        if (f.is_yuv && prod.has('GPU')) en = false;
+        if ((!f.is_rgb || f.bpp[0] < 24) && (prod.has('DPU_AEU') || cons.has('DPU'))) en = false;
+        m.split = en;
+      }
+    }
+    const v = validateAfbc(C, f, m, prod, cons);
+    return v.afbc ? v : null;
+  }
+  function supportedFormat(C, f, usage, prod, cons, dflags) {                              // formats.cpp:827-898
+    const row = f.ip;
+    if (!row) return { props: null, why: ['no formats_ip_support[] row'] };
+    let r = isFormatSupported(C, f, row, usage, prod, cons);
+    let why = r.why;
+    if (r.flags === 0 && cons.has('GPU') && cons.has('DPU')) {
+      const c2 = new Set(cons); c2.delete('DPU');
+      r = isFormatSupported(C, f, row, usage, prod, c2);
+      why = why.concat(['retry without DPU consumer (GPU composition fallback): ' + r.why.join('; ')]);
+    }
+    let fl = r.flags;
+    if ((dflags & 8) && (usage & U.GRALLOC_USAGE_HW_FB)) { fl &= ~(FL.F_AFBC | FL.F_AFRC | FL.F_BL_YUV); why.push('HWC_FB_DISABLE_AFBC: framebuffer stays linear'); }
+    if (fl & FL.F_AFRC) { const m = afrcFormat(C, f, usage, prod, cons); if (m) return { props: { flag: 'AFRC', m }, why }; why.push('AFRC not usable (layout feature / coding-size usage)'); }
+    if ((fl & FL.F_AFBC) && !usageIsNoAfbc(usage)) {
+      const m = afbcFormat(C, f, usage, prod, cons);
+      if (m) { const at = allocTypeOk(f, m); if (at && (f.npln === 1 || at.is_multi_plane)) return { props: { flag: 'AFBC', m }, why }; why.push('AFBC modifiers not valid multi-plane AFBC for this format'); }
+      else why.push('get_afbc_format returned no AFBC');
+    } else if ((fl & FL.F_AFBC) && usageIsNoAfbc(usage)) why.push('MALI_GRALLOC_USAGE_NO_AFBC');
+    if (fl & FL.F_BL_YUV) { if (C.support(prod, cons, 'YUV_BL_8') || C.support(prod, cons, 'YUV_BL_10')) return { props: { flag: 'BL_YUV', m: { bl: true } }, why }; }
+    if (fl & FL.F_LIN) return { props: { flag: 'LIN', m: {} }, why };
+    return { props: null, why };
+  }
+  function comparable(o, n) {                                                              // formats.cpp:910-955
+    if (o.is_yuv && n.bps === o.bps) {
+      if (total(n) === total(o)) return true;
+      if (o.has_alpha && total(n) === 3 && n.is_yuv && !n.has_alpha) return true;
+    } else if (o.is_rgb) {
+      if (total(n) === total(o) && n.bpp[0] === o.bpp[0] && n.bps === o.bps) return true;
+    } else if (isDepth(o) && isDepth(n)) return total(o) === total(n) && o.bps === n.bps;
+    else if (n.name === o.name) return true;
+    return false;
+  }
+  const compatible = (o, n) => n.hsub === o.hsub && n.vsub === o.vsub && n.is_rgb === o.is_rgb && n.is_yuv === o.is_yuv && comparable(o, n);   // :967-978
+  const sameOrReordered = (x, y) => x.npln === y.npln && total(x) === total(y) && x.bps === y.bps && x.is_yuv === y.is_yuv && x.hsub === y.hsub && x.vsub === y.vsub;
+  function grade(m, base, req) {                                                           // formats.cpp:991-1039
+    let g = 1;
+    if (m.afrc) { if (req.name === base.name || sameOrReordered(req, base)) g++; }
+    else if (req.is_rgb && req.bpp[0] !== base.bpp[0]) return 0;
+    if (m.afbc) { g += 2; for (const k of ['split', 'w32', 'tiled', 'x64', 'db', 'ytr', 'sparse']) if (m[k]) g += 1; }
+    if (m.bl) g += 1;
+    if (m.afrc) g += 2 ** 30;
+    return g;
+  }
+
+  /* select_best_format (formats.cpp:1226-1330) + get_internal_format_with_usage (:347-358) */
+  function selectBest(req, T) {
+    const usage = req.usage, b = req.build || {};
+    const sdk = b.sdk || 36;
+    let dflags = 1 | 2 | 4;                                                                // GPU_DATA_BUFFER_WITH_ANY_FORMAT | USE_AIDL_FRONTBUFFER_USAGE | SUPPORTS_R8
+    if (b.hwcFbDisableAfbc) dflags |= 8;
+    dflags |= sdk > 33 ? 16 : 32;
+    T(`allocate_common sets descriptor flags 0x${dflags.toString(16)} (any-format GPU data buffer, AIDL front buffer, R8${b.hwcFbDisableAfbc ? ', HWC_FB_DISABLE_AFBC' : ''}, ${sdk > 33 ? 'R16/RG16' : 'HW_IMP_CAM_USAGE'})`, loc('android/src/aidl/allocator.cpp', 38, 46));
+    const hr = A.hal_requests.find((h) => h.hal === req.hal);
+    if (!hr) return { ok: false, error: `unknown requested format ${req.hal}` };
+    if (hr.condition && sdk <= 33) return { ok: false, error: `${req.hal} is only mapped when ${hr.condition.replace('#if ', '')}`, cite: hr.loc };
+    let reqName = hr.internal;
+    if ((dflags & 32) && req.hal === 'HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED' && (usage & (U.GRALLOC_USAGE_HW_CAMERA_WRITE | U.GRALLOC_USAGE_SENSOR_DIRECT_DATA | U.GRALLOC_USAGE_HW_CAMERA_READ))) {
+      reqName = 'MALI_GRALLOC_FORMAT_INTERNAL_RG16'; T('Android 13 camera rule: IMPLEMENTATION_DEFINED + camera usage → RG16', loc(F.FM, 347, 358));
+    }
+    const rf = byName(reqName);
+    if (!rf) return { ok: false, error: `${req.hal} maps to ${sn(reqName)}, which has no formats[] row — rejected`, cite: hr.loc };
+    T(`requested ${req.hal} → base format ${sn(rf.name)}`, hr.loc);
+    const perm = BigInt(rf.permitted_usage), V = U.VENDOR_USAGE;
+    if (((perm | usage) & ~V) !== (perm & ~V)) return { ok: false, error: `usage not permitted for ${sn(rf.name)}: bits 0x${((~perm & usage) & ~V).toString(16)} are outside permitted_usage ${rf.permitted_usage_hex}`, cite: loc(F.FM, 1237, 1250) };
+    T(`usage is within ${sn(rf.name)}.permitted_usage (${rf.permitted_usage_expr})`, loc(F.FM, 1237, 1250));
+    const prod = producers(usage), cons = consumersOf(usage);
+    if (!prod.size && !cons.size) return { ok: false, error: 'no producer and no consumer identified from the usage', cite: loc(F.FM, 1256, 1260) };
+    if (!prod.size) { prod.add('CPU'); T('no producer identified: the CPU is assumed to be the producer', loc(F.FM, 1266, 1270)); }
+    T(`producers: ${[...prod].join(', ')}; consumers: ${[...cons].join(', ') || 'none'}`, loc(F.FM, 44, 164));
+    if (usageIsNoAfbc(usage) && rf.is_yuv) return { ok: false, error: 'MALI_GRALLOC_USAGE_NO_AFBC is invalid for YUV formats', cite: loc(F.FM, 1272, 1276) };
+    if (!(dflags & 1) && (usage & U.GRALLOC_USAGE_GPU_DATA_BUFFER) && sn(rf.name) !== 'BLOB') return { ok: false, error: 'GPU_DATA_BUFFER needs BLOB without the AIDL allocator', cite: loc(F.FM, 1278, 1284) };
+    if (!(dflags & 2) && (usage & U.GRALLOC_USAGE_FRONTBUFFER)) return { ok: false, error: 'FRONT_BUFFER usage not supported', cite: loc(F.FM, 1285, 1289) };
+    if ((req.hal === 'GRALLOC_PIXEL_FORMAT_R16_UINT' || req.hal === 'GRALLOC_PIXEL_FORMAT_R16G16_UINT') && !(dflags & 16)) return { ok: false, error: `${req.hal} needs SUPPORTS_R16_RG16 (Android 14+)`, cite: loc(F.FM, 1298, 1304) };
+    if (usageIsFrontbuffer(usage) && (req.layers || 1) > 1) return { ok: false, error: 'front-buffer usage with more than one layer is not supported', cite: loc(F.FM, 1306, 1310) };
+
+    const C = makeCaps(req.caps || {});
+    if (C.gpuMissing) return { ok: false, error: 'no GPU capabilities: gralloc aborts (LOG_ALWAYS_FATAL) when the GPU XML is missing', cite: loc(CAPS, 57, 61) };
+    // get_best_format (formats.cpp:1060-1131)
+    const candidates = [];
+    let best = 0, bestC = null, reqC = null;
+    for (const f of A.formats) {
+      if (!compatible(rf, f)) continue;
+      const r = supportedFormat(C, f, usage, prod, cons, dflags);
+      const cand = { format: f, why: r.why, props: r.props, grade: 0 };
+      if (r.props) {
+        cand.grade = grade(r.props.m, f, rf);
+        cand.text = modsText(r.props.m);
+        if (cand.grade) {
+          if (cand.grade > best) { best = cand.grade; bestC = cand; }
+          if (f.name === rf.name) reqC = cand;
+        }
+      }
+      candidates.push(cand);
+    }
+    const cpu = prod.has('CPU') || cons.has('CPU');
+    let chosen = null;
+    if (bestC) {
+      if ((reqC ? reqC.grade : 0) !== best && !cpu) chosen = bestC;
+      else if (reqC) chosen = reqC;
+    }
+    T(`get_best_format: ${candidates.length} compatible base formats, ${candidates.filter((x) => x.grade).length} supported; best grade ${best}${reqC ? `, requested format grade ${reqC.grade}` : ', requested format not supported'}`, loc(F.FM, 1060, 1131));
+    if (!chosen) return { ok: false, error: cpu && bestC ? `the requested format is not supported, and with CPU usage gralloc does not switch to another base format (best would be ${sn(bestC.format.name)})` : 'no supported format for this usage and capability set', cite: loc(F.FM, 1112, 1128), candidates, best, prod: [...prod], cons: [...cons] };
+    let f = chosen.format, m = chosen.props.m;
+    if (b.nonConformant && (usage & U.GRALLOC_USAGE_HW_FB)) {
+      if (sn(f.name) !== 'BGRA_8888' && (usage & (U.GRALLOC_USAGE_SW_WRITE_MASK | U.GRALLOC_USAGE_SW_READ_MASK))) return { ok: false, error: 'GRALLOC_NON_CONFORMANT_DISPLAY: framebuffer + CPU access needs BGRA_8888', cite: loc(F.FM, 1314, 1328) };
+      f = byName('MALI_GRALLOC_FORMAT_INTERNAL_BGRA_8888'); m = {};
+      T('GRALLOC_NON_CONFORMANT_DISPLAY: framebuffer forced to BGRA_8888 linear', loc(F.FM, 1314, 1328));
+    }
+    T(`selected ${sn(f.name)} — ${modsText(m)} (grade ${chosen.grade})`, loc(F.FM, 1112, 1128));
+    return { ok: true, format: f, mods: modsToBits(m), m, request: rf, candidates, best, chosen: f.name, prod: [...prod], cons: [...cons], dflags };
+  }
   /*
    * req = { format: internal format name, width, height, layers, usage: BigInt,
    *         comp: { type: 'linear'|'afbc'|'afrc'|'block_linear',
@@ -304,8 +590,8 @@
     const trace = [];
     const T = (msg, cite) => trace.push({ msg, cite });
     const fail = (error, cite) => { T('E: ' + error, cite); return { ok: false, error, trace }; };
-    const f = byName(req.format);
-    if (!f) return fail(`unknown format ${req.format}`);
+    let f = req.mode === 'auto' ? null : byName(req.format);
+    if (!f && req.mode !== 'auto') return fail(`unknown format ${req.format}`);
     const usage = req.usage;
     const W = req.width, H = req.height, layers = Math.max(1, req.layers || 1);
 
@@ -314,9 +600,15 @@
     if (bad) return fail(`usage 0x${usage.toString(16)} has bits outside VALID_USAGE: 0x${bad.toString(16)} — rejected`, loc(F.FM, 1348, 1353));
     T(`usage 0x${usage.toString(16)} is inside VALID_USAGE`, loc(F.FM, 1348));
 
-    // 2. forced format = base | modifiers (formats.cpp:1185-1216)
+    // 2. format: automatic selection (formats.cpp:1226-1330) or forced private format (formats.cpp:1185-1216)
     const c = req.comp || { type: 'linear' };
     let mods = 0;
+    let selection = null;
+    if (req.mode === 'auto') {
+      selection = selectBest(req, T);
+      if (!selection.ok) return Object.assign(fail(selection.error, selection.cite), { selection });
+      f = selection.format; mods = selection.mods;
+    } else {
     if (c.type === 'afbc') {
       const a = c.afbc || {};
       mods |= IF.AFBC_BASIC;
@@ -337,8 +629,11 @@
       mods |= (CU_INTERNAL[multi ? r.luma : r.rgba] || 0) << RGBA_CU_SHIFT;
       if (multi) mods |= (CU_INTERNAL[r.chroma] || 0) << CHROMA_CU_SHIFT;
     } else if (c.type === 'block_linear') mods |= IF.BLOCK_LINEAR_BASIC;
+    if (req.privateFormats === false) return fail('forced private formats need GRALLOC_USE_PRIVATE_FORMATS=1 (configure PRIVATE_FORMATS=y, the default)', loc(F.FM, 1356, 1364));
+    }
     const allocFormat = ((f.internal_value != null ? f.internal_value : f.value) | mods) >>> 0;
     const has = (bit) => (mods & bit) !== 0;
+    if (req.mode !== 'auto') {
     T(`forced format: base ${f.name.replace('MALI_GRALLOC_FORMAT_INTERNAL_', '')} with modifiers 0x${(mods >>> 0).toString(16)} → alloc_format 0x${allocFormat.toString(16)}`, loc(F.FM, 1191, 1206));
 
     // check_modifiers_against_format (formats.cpp:1151-1175)
@@ -357,6 +652,7 @@
       return fail(`select_forced_format: invalid modifiers — ${why}`, loc(F.FM, 1151, 1175));
     }
     T('check_modifiers_against_format: modifiers accepted for this base format', loc(F.FM, 1151, 1175));
+    }
 
     // 3. get_alloc_type (buffer_allocation.cpp:69-217)
     const at = { primary_type: 'UNCOMPRESSED', is_multi_plane: f.npln > 1, is_tiled: false, is_padded: false, is_frontbuffer_safe: false };
@@ -422,12 +718,12 @@
     } else if (has(IF.AFRC_BASIC)) {
       let m = 0n;
       if (!has(IF.AFRC_ROT_LAYOUT)) { m |= M.AFRC_LAYOUT_SCAN; modNames.push('LAYOUT_SCAN'); }
-      const r = c.afrc || {};
+      const luma = 16 + 8 * ((mods >>> RGBA_CU_SHIFT) & 3), chroma = 16 + 8 * ((mods >>> CHROMA_CU_SHIFT) & 3);
       const cuMod = (n) => (n === 32 ? M.CU_32 : n === 24 ? M.CU_24 : M.CU_16);
       if (f.is_yuv && isMulti) {
-        m |= cuMod(r.luma); m |= cuMod(r.chroma) << 4n;
-        modNames.push(`CU_SIZE_P0(${r.luma || 16})`, `CU_SIZE_P12(${r.chroma || 16})`);
-      } else { m |= cuMod(r.rgba); modNames.push(`CU_SIZE_P0(${r.rgba || 16})`); }
+        m |= cuMod(luma); m |= cuMod(chroma) << 4n;
+        modNames.push(`CU_SIZE_P0(${luma})`, `CU_SIZE_P12(${chroma})`);
+      } else { m |= cuMod(luma); modNames.push(`CU_SIZE_P0(${luma})`); }
       mod = armCode(TYPE_AFRC, m);
       T(`DRM modifier: DRM_FORMAT_MOD_ARM_AFRC(${modNames.join(' | ')})`, loc(F.DRM, 86, 151));
     } else if (has(IF.BLOCK_LINEAR_BASIC)) {
@@ -475,7 +771,7 @@
     // heap (dma_buf_heaps.cpp:103-125) — heap names for system/system-uncached come from AOSP libdmabufheap (not in archive)
     let heap;
     if (usage & U.GRALLOC_USAGE_PROTECTED) heap = { name: 'protected', cite: loc(F.HEAP, 105, 108) };
-    else if (!(usage & U.GRALLOC_USAGE_HW_VIDEO_ENCODER) && (usage & U.GRALLOC_USAGE_HW_FB)) heap = { name: 'system', note: '"linux,cma" when built with GRALLOC_USE_CONTIGUOUS_DISPLAY_MEMORY', cite: loc(F.HEAP, 109, 116) };
+    else if (!(usage & U.GRALLOC_USAGE_HW_VIDEO_ENCODER) && (usage & U.GRALLOC_USAGE_HW_FB)) heap = (req.build && req.build.contiguous) ? { name: 'linux,cma', note: 'GRALLOC_USE_CONTIGUOUS_DISPLAY_MEMORY=1', cite: loc(F.HEAP, 111, 112) } : { name: 'system', note: '"linux,cma" when built with GRALLOC_USE_CONTIGUOUS_DISPLAY_MEMORY', cite: loc(F.HEAP, 109, 116) };
     else if ((usage & U.GRALLOC_USAGE_SW_READ_MASK) === U.GRALLOC_USAGE_SW_READ_OFTEN) heap = { name: 'system', note: 'cached (CPU reads often)', cite: loc(F.HEAP, 117, 120) };
     else heap = { name: 'system-uncached', cite: loc(F.HEAP, 121, 124) };
 
@@ -490,7 +786,8 @@
     }
 
     return {
-      ok: true, trace, format: f, alloc_format: allocFormat, mods, alloc_type: at,
+      ok: true, trace, format: f, alloc_format: allocFormat, mods, alloc_type: at, selection,
+      data_type: dataType(f),
       adjusted: { w: aw, h: ah }, drm: { fourcc: dm.fourcc, modifier: mod, modifier_hex: '0x' + mod.toString(16).padStart(16, '0'), names: modNames },
       has_cpu: hasCpu, has_gpu: hasGpu, producers: [...prod], stride_alignment: sa.slice(0, Math.max(3, lr.layout.planes.length)),
       layout: lr.layout, allocation: al, planes: al.planes, total: al.total, size, pixel_stride: pixelStride, layers,
@@ -499,5 +796,5 @@
     };
   }
 
-  window.ArmEngine = { init, PRIVATE, allocate, getLayout, compute, strideAlignment, producers, IF, M, loc, F, usages: () => U };
+  window.ArmEngine = { init, PRIVATE, selectBest, consumersOf, makeCaps, XIPS, dataType, allocate, getLayout, compute, strideAlignment, producers, IF, M, loc, F, usages: () => U };
 })();
