@@ -89,6 +89,12 @@ body.srch-open { overflow: hidden; }
 @media (max-width: 1240px) { .srch-btn span, .srch-btn kbd { display: none; } }
 @media (max-width: 560px) { .srch-res a { grid-template-columns: minmax(0, 1fr); } .srch-kind { grid-row: auto; } .srch-res a .small { grid-column: 1; } .srch { padding-top: 12px; } }
 
+.srch-panel.keys { padding: 14px 18px; width: min(440px, 100%); }
+.srch-panel.keys h3 { margin: 0 0 8px; }
+.srch-panel.keys td { padding: 4px 10px 4px 0; vertical-align: top; }
+textarea#dumpin { width: 100%; font-family: var(--mono); font-size: 12.5px; background: var(--sheet); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 8px; white-space: pre; overflow-x: auto; }
+table.vs td:first-child { color: var(--muted); white-space: nowrap; }
+
 /* framework page */
 a.btn { display: inline-block; padding: 3px 10px; border: 1px solid var(--rule); border-radius: 4px; text-decoration: none; color: var(--cb); background: var(--sheet); margin: 2px 2px 2px 0; }
 a.btn:hover { border-color: var(--cb); }

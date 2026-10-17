@@ -20,6 +20,7 @@
     ['Arm mapper & metadata', '#/arm/mapper'], ['Arm handles & descriptors', '#/arm/handles'], ['Arm build & config', '#/arm/build'],
     ['Arm source map', '#/arm/files'], ['Arm vs gchips', '#/arm/diff'], ['Arm usage flags', '#/arm/usage'], ['Arm terms', '#/arm/glossary'],
     ['Arm request mapping', '#/arm/requests'],
+    ['Tools: dumpsys analyzer', '#/tools/dumpsys'], ['Tools: usage decoder', '#/tools/usage'], ['Tools: gchips vs Arm', '#/tools/vs'],
   ];
   const short = (n) => n.replace('MALI_GRALLOC_FORMAT_INTERNAL_', '').replace('HAL_PIXEL_FORMAT_', '');
   const slug = (t) => t.replace(/\W+/g, '-');
@@ -113,9 +114,26 @@
   btn.addEventListener('click', open);
   const theme = document.getElementById('theme');
   if (theme) theme.parentNode.insertBefore(btn, theme);
+  // Keyboard shortcuts panel ("?")
+  let help = null;
+  const KEYS = [['/', 'or Ctrl+K — search the site'], ['?', 'show this list'], ['Esc', 'close search / this list'],
+    ['→ / ←', 'Code flow: next / previous step'], ['Space', 'Code flow: run / pause'], ['↑ ↓ Enter', 'Search: move and open a result']];
+  function toggleHelp(show) {
+    if (!help) {
+      help = document.createElement('div');
+      help.className = 'srch';
+      help.innerHTML = `<div class="srch-panel keys" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><h3>Keyboard shortcuts</h3>
+        <table>${KEYS.map(([k, d]) => `<tr><td>${k.split(' ').map((x) => (/^(or|\/)$/.test(x) ? x : `<kbd>${esc(x)}</kbd>`)).join(' ')}</td><td>${esc(d)}</td></tr>`).join('')}</table></div>`;
+      help.addEventListener('click', (e) => { if (e.target === help) toggleHelp(false); });
+      document.body.appendChild(help);
+    }
+    help.hidden = !show;
+  }
   document.addEventListener('keydown', (e) => {
     const typing = /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.target.isContentEditable;
-    if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); open(); }
+    if (e.key === 'Escape' && help && !help.hidden) { toggleHelp(false); return; }
+    if (e.key === '?' && !typing) { e.preventDefault(); toggleHelp(true); return; }
+    if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); toggleHelp(false); open(); }
   });
   G.search = { open, query };
 })();
