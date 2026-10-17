@@ -21,6 +21,12 @@
       const t = label || `arm:${armShort(loc.file)}:${at}`;
       return `<a class="src src-arm" href="${ARM_ROOT}${loc.file}" target="_blank" rel="noopener" title="Arm r56p0 ${esc(loc.file)}:${at} — opens your local copy in arm-r56p0/ (not published)">${esc(t)}</a>`;
     }
+    if (loc.repo === 'fw') {
+      // AOSP frameworks/native files, pinned to the commit in framework/SOURCE.txt
+      const t = label || `fw:${loc.file.replace(/^libs\/ui\//, '')}:${loc.line}${loc.end ? '-' + loc.end : ''}`;
+      const href = window.GRALLOC_FW ? `${window.GRALLOC_FW.meta.browse}${loc.file}#${loc.line}` : '#';
+      return `<a class="src src-fw" href="${href}" target="_blank" rel="noopener" title="AOSP frameworks/native ${esc(loc.file)}:${loc.line}">${esc(t)}</a>`;
+    }
     const t = label || `${short(loc.file)}:${loc.line}${loc.end ? '-' + loc.end : ''}`;
     const href = BROWSE ? `${BROWSE}${loc.file}#${loc.line}` : '#';
     return `<a class="src" href="${href}" target="_blank" rel="noopener" title="${esc(loc.file)}:${loc.line}">${esc(t)}</a>`;

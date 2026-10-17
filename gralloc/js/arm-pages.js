@@ -297,7 +297,7 @@
   if (FJ) {
     Object.assign(FJ.J, {
       get_supported: [1], is_fmt_supported: [1], ip_support_feature: [1], get_afrc_format: [1], get_afbc_format: [1], validate_afbc: [1], grade_format: [1],
-      allocate2: [1], is_supported: [1], protected_heap: [2], v5_import: [0], v5_lock: [0], common_lock: [0], v5_unlock: [0], common_unlock: [0], v5_free: [0],
+      allocate2: [1], is_supported: [1], mapper_suffix: [1], v5_load: [0], v5_get_std: [0], v5_set_std: [0], protected_heap: [2], v5_import: [0], v5_lock: [0], common_lock: [0], v5_unlock: [0], common_unlock: [0], v5_free: [0],
       v5_get_metadata: [0], common_get: [0], get_metadata: [0], plane_layouts: [0], v5_set_metadata: [0], common_set: [0], set_metadata: [0],
     });
     Object.assign(FJ.STATE_AT, {
