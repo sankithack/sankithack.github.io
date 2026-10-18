@@ -7,6 +7,7 @@
   var MID = "drivers/gpu/arm/midgard/";
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var main = $("#main");
+  var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ------------------------------------------------------------------ helpers
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -22,6 +23,7 @@
   var SUBS = {}; C.subs.forEach(function (s) { SUBS[s.id] = s; });
   function subLink(id) { var s = SUBS[id]; return s ? '<a href="#/sub/' + id + '">' + esc(s.title) + "</a>" : esc(id); }
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function plain(html) { var d = document.createElement("div"); d.innerHTML = html || ""; return (d.textContent || "").replace(/\s+/g, " ").trim(); }
   function debounce(fn, ms) { var t; return function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); }; }
 
   // ------------------------------------------------------------------ indexes
@@ -248,8 +250,8 @@
       var inner = '<rect x="' + b.x + '" y="' + b.y + '" width="' + b.w + '" height="' + b.h + '" rx="8"/>';
       linesT.forEach(function (t, k) { inner += '<text x="' + (b.x + b.w / 2) + '" y="' + (cy + k * 16 + 4) + '" text-anchor="middle">' + esc(t) + "</text>"; });
       if (b.note) inner += '<text class="note" x="' + (b.x + b.w / 2) + '" y="' + (cy + linesT.length * 16 + 2) + '" text-anchor="middle">' + esc(b.note) + "</text>";
-      if (b.sub) h.push('<a href="#/sub/' + b.sub + '" class="' + cls + '" tabindex="0"><title>' + esc(SUBS[b.sub] ? SUBS[b.sub].title : b.label) + "</title>" + inner + "</a>");
-      else h.push('<g class="' + cls + '">' + inner + "</g>");
+      if (b.sub) h.push('<a href="#/sub/' + b.sub + '" class="' + cls + '" data-box="' + b.id + '" tabindex="0"><title>' + esc(SUBS[b.sub] ? SUBS[b.sub].title : b.label) + "</title>" + inner + "</a>");
+      else h.push('<g class="' + cls + '" data-box="' + b.id + '">' + inner + "</g>");
     });
     h.push("</svg>");
     return h.join("");
@@ -262,7 +264,9 @@
       '<p class="lede">Generated from <code>' + esc(m.src_root) + "</code> (release <b>" + esc(m.release) + "</b>). Every <code>file:line</code> on this site was computed from the source.</p>",
       '<div class="stats">',
       ["files", "lines", "functions", "structs", "call_edges", "ioctls", "kconfig", "locks", "registers"].map(function (k) { return '<span class="stat"><b>' + (c[k] || 0).toLocaleString() + "</b>" + k.replace("_", " ") + "</span>"; }).join(""),
-      "</div>", C.pages.overview, archSvg(),
+      "</div>", C.pages.overview, '<div class="journey card"><div class="ctrl"><b>Journey player</b> <select id="jflow">' +
+        C.flows.map(function (f) { return '<option value="' + f.id + '">' + esc(f.title) + "</option>"; }).join("") +
+        '</select><button class="btn" id="jplay">▶ Play</button><button class="btn" id="jstep">Step →</button><span class="muted small" id="jcap">Pick a flow and press Play to watch it move across the architecture.</span></div>' + archSvg() + "</div>",
       '<p class="small muted">Click a box to open that subsystem. Boxes tinted yellow are JM-only and blue are CSF-only. Arrows show the main call direction.</p>',
       "<h2>Flows</h2><div class=\"cards\">"];
     C.flows.forEach(function (f) { h.push('<a class="card' + onlyCls(f.tag) + '" href="#/flow/' + f.id + '"><h3>' + esc(f.title) + tagHtml(f.tag) + "</h3>" + f.summary + "</a>"); });
@@ -270,6 +274,50 @@
     C.subs.forEach(function (s) { h.push('<a class="card' + onlyCls(s.tag) + '" href="#/sub/' + s.id + '" style="border-top:3px solid ' + esc(s.color) + '"><h3>' + esc(s.title) + tagHtml(s.tag) + "</h3><p>" + esc(s.short) + "</p></a>"); });
     h.push("</div>", C.pages.howto, footer());
     page(h.join(""));
+    journey();
+  }
+  function stepBox(f, st) {
+    var A = C.arch, sub = null;
+    if (st.lane === "user") return "umd";
+    if (st.lane === "hw" || st.lane === "fw") return st.lane === "fw" || f.tag === "CSF" || st.tag === "CSF" ? "gpu_mcu" : f.tag === "JM" || st.tag === "JM" ? "gpu_js" : "gpu_cores";
+    if (st.lane === "vfs") return st.to === "core" || st.lane === st.to ? "uapi" : "osk";
+    if (st.fn != null) sub = F[FN[st.fn][1]].s; else if (st.file) sub = F[fileByPath[st.file]].s;
+    for (var i = 0; i < A.boxes.length; i++) if (A.boxes[i].sub === sub) return A.boxes[i].id;
+    return "uapi";
+  }
+  function journey() {
+    var svg = main.querySelector(".arch"); if (!svg) return;
+    var B = {}; C.arch.boxes.forEach(function (b) { B[b.id] = b; });
+    var layer = document.createElementNS("http://www.w3.org/2000/svg", "g"); layer.setAttribute("class", "jlayer"); svg.appendChild(layer);
+    var timer = null, k = -1, prev = null;
+    function f() { return FLOWS[$("#jflow").value]; }
+    function center(id) { var b = B[id]; return [b.x + b.w / 2, b.y + b.h / 2]; }
+    function show(i) {
+      var fl = f(), st = fl.steps[i], box = stepBox(fl, st);
+      [].forEach.call(svg.querySelectorAll(".box.hot"), function (e) { e.classList.remove("hot"); });
+      var el = svg.querySelector('[data-box="' + box + '"]'); if (el) el.classList.add("hot");
+      var c = center(box), p = prev ? center(prev) : c;
+      layer.innerHTML = (prev && prev !== box ? '<path class="jtrail" d="M' + p[0] + "," + p[1] + " L" + c[0] + "," + c[1] + '"/>' : "") +
+        '<circle class="jdot" r="9" cx="' + (RM ? c[0] : p[0]) + '" cy="' + (RM ? c[1] : p[1]) + '">' +
+        (RM ? "" : '<animate attributeName="cx" from="' + p[0] + '" to="' + c[0] + '" dur="0.7s" fill="freeze"/><animate attributeName="cy" from="' + p[1] + '" to="' + c[1] + '" dur="0.7s" fill="freeze"/>') + "</circle>";
+      prev = box;
+      $("#jcap").innerHTML = "<b>" + (i + 1) + "/" + fl.steps.length + "</b> " + esc(st.title) + (st.name ? " · <a href=\"#/flow/" + fl.id + "/" + (i + 1) + '"><code>' + esc(st.name) + "()</code></a>" : "");
+    }
+    function next() {
+      if (!document.body.contains(svg)) { stop(); return false; }
+      var fl = f(), i = k + 1;
+      while (i < fl.steps.length && !beOk(fl.steps[i].tag)) i++;
+      if (i >= fl.steps.length) { stop(); k = -1; prev = null; return false; }
+      k = i; show(k); return true;
+    }
+    function stop() { if (timer) clearInterval(timer); timer = null; var b = $("#jplay"); if (b) b.textContent = "▶ Play"; }
+    $("#jplay").onclick = function () {
+      if (timer) return stop();
+      if (k < 0) { prev = null; }
+      $("#jplay").textContent = "❚❚ Pause"; next(); timer = setInterval(function () { if (!document.body.contains(svg)) return stop(); next(); }, 1500);
+    };
+    $("#jstep").onclick = function () { stop(); next(); };
+    $("#jflow").onchange = function () { stop(); k = -1; prev = null; layer.innerHTML = ""; [].forEach.call(svg.querySelectorAll(".box.hot"), function (e) { e.classList.remove("hot"); }); $("#jcap").textContent = "Press Play."; };
   }
   function footer() {
     var m = K.meta;
@@ -350,6 +398,7 @@
     var inter = subInteractions(id);
     h.push("<h2>How it talks to other subsystems</h2>", s.talks || "", '<div class="cols2"><div><h3>Outgoing calls</h3>' + interTable(inter.out, "out") + "</div><div><h3>Incoming calls</h3>" + interTable(inter.inn, "in") + "</div></div>",
       '<p class="small muted">Counts come from the static call graph (direct calls only, no function pointers).</p>');
+    if (id === "mmu") h.push("<h2>Animation: walking the GPU page table</h2>", walkWidgetHtml());
     if (s.debug) h.push("<h2>Debugging tips</h2>", s.debug);
     h.push("<h2>Files in this subsystem (" + files.length + ")</h2><div class=\"tablewrap\"><table><thead><tr><th>File</th><th>Lines</th><th>Build</th><th>Purpose (from file header)</th></tr></thead><tbody>");
     files.forEach(function (fi) { var f = F[fi]; h.push('<tr class="' + onlyCls(f.t).trim() + '"><td><a href="#/file/' + esc(f.p) + '"><code>' + esc(short(f.p)) + "</code></a>" + tagHtml(f.t === "common" ? "" : f.t) + "</td><td>" + f.n + "</td><td class=\"small\">" + buildConds(f) + "</td><td class=\"small\">" + esc((f.pu || "").slice(0, 160)) + "</td></tr>"); });
@@ -364,6 +413,7 @@
       h.push('<p class="small muted" id="qscore"></p></div>');
     }
     page(h.join(""));
+    if (id === "mmu") walkWidgetInit();
     [].forEach.call(main.querySelectorAll(".quiz .q"), function (qd) {
       qd.addEventListener("change", function (e) {
         var a = +qd.getAttribute("data-a"), v = +e.target.value;
@@ -385,7 +435,7 @@
     var avail = (holder && holder.clientWidth) || 900, W = Math.max(640, Math.min(1400, avail)), fixed = avail < 640;
     var lanes = flow.lanes, n = lanes.length, top = 70, rowH = 42, colW = (W - 20) / n;
     var lx = {}; lanes.forEach(function (l, i) { lx[l[0]] = 10 + colW * (i + 0.5); });
-    var H = top + flow.steps.length * rowH + 24;
+    var H = top + flow.steps.length * rowH + 24, curPath = null;
     var h = ['<svg class="seq" style="width:' + (fixed ? W + "px" : "100%") + '" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Sequence diagram">',
       '<defs><marker id="sa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>'];
     lanes.forEach(function (l) {
@@ -404,10 +454,18 @@
       if (x1 === x2) tx = x1 + 40;
       var maxc = Math.floor((W - tx - 6) / 7.2);
       if (lab.length > maxc) lab = lab.slice(0, maxc - 1) + "…";
+      if (k === cur) curPath = path;
       h.push('<g class="' + cls + '" data-k="' + k + '"><path class="' + (k === cur ? "anim" : "") + '" d="' + path + '" marker-end="url(#sa)"/>' +
         '<circle class="num" cx="' + x1 + '" cy="' + y + '" r="10"/><text class="numt" x="' + x1 + '" y="' + (y + 4) + '" text-anchor="middle">' + (k + 1) + "</text>" +
         '<text x="' + tx + '" y="' + (y - 7) + '">' + esc(lab) + "</text><title>" + esc((k + 1) + ". " + s.title) + "</title></g>");
     });
+    if (curPath && flow.steps[cur]) {
+      var dt = plain(flow.steps[cur].data || flow.steps[cur].title);
+      if (dt.length > 46) dt = dt.slice(0, 45) + "…";
+      h.push('<g class="pkt"><circle r="7"/><g class="pktlab"><rect x="10" y="8" rx="5" height="18" width="' + (dt.length * 6.4 + 12) + '"/><text x="16" y="21">' + esc(dt) + "</text></g>" +
+        (RM ? "" : '<animateMotion dur="1.1s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1" path="' + curPath + '"/>') + "</g>");
+      if (RM) h[h.length - 1] = h[h.length - 1].replace('<g class="pkt">', '<g class="pkt" transform="translate(' + curPath.replace(/^M([\d.]+),([\d.]+).*/, "$1,$2") + ')">');
+    }
     h.push("</svg>");
     return h.join("");
   }
@@ -419,6 +477,7 @@
       '<div class="seqwrap"><div><div id="seq"></div><p class="small muted">Click an arrow or use ← → keys. Columns are the actors; each arrow is one step and points to the actor being called or receiving data. Steps tagged for the other back-end are dimmed and skipped by the filter.</p></div>',
       '<div class="stepbox card" id="stepbox"></div></div>'];
     if (f.dataflow) h.push("<h2>Data flow in this walkthrough</h2>", f.dataflow);
+    if (id === "memalloc" || id === "fault") h.push("<h2>Animation: how the GPU translates an address</h2>", walkWidgetHtml());
     h.push("<h2>All steps</h2><ol class=\"steplist\" id=\"steplist\">");
     f.steps.forEach(function (s, k) { h.push('<li data-k="' + k + '" class="' + onlyCls(s.tag).trim() + '"><span class="no">' + (k + 1) + ".</span>" + esc(s.title) + tagHtml(s.tag) + ' <span class="cites">' + (s.fn != null ? esc(s.name) + "() " : "") + (s.file ? esc(short(s.file)) + ":" + s.line : "") + "</span></li>"); });
     h.push("</ol>");
@@ -450,6 +509,7 @@
       if (k < 0 || k >= f.steps.length) return false;
       show(k, true); return true;
     }
+    if (id === "memalloc" || id === "fault") walkWidgetInit();
     $("#seq").addEventListener("click", function (e) { var g = e.target.closest(".step"); if (g) show(+g.getAttribute("data-k"), true); });
     $("#steplist").addEventListener("click", function (e) { var li = e.target.closest("li"); if (li && !e.target.closest("a")) show(+li.getAttribute("data-k"), true); });
     keyHandler = function (e) { if (e.key === "ArrowRight") go(1); else if (e.key === "ArrowLeft") go(-1); };
@@ -462,7 +522,7 @@
     var h = ["<h1>Data flow</h1>", '<p class="lede">How each important piece of data changes form as it moves between userspace, the driver\'s layers, memory, firmware and hardware. Each flow walkthrough also has a <b>Data</b> box per step.</p>'];
     h.push('<p>' + C.dataflow.map(function (d) { return '<a class="pill" href="#/dataflow/' + d.id + '">' + esc(d.title) + "</a>"; }).join(" ") + "</p>");
     C.dataflow.forEach(function (d) {
-      h.push('<h2 id="df-' + d.id + '">' + esc(d.title) + "</h2>", d.summary, '<div class="pipeline">');
+      h.push('<h2 id="df-' + d.id + '">' + esc(d.title) + ' <button class="btn dfplay" data-df="' + d.id + '">▶ Animate</button></h2>', d.summary, '<div class="pipeline" id="pl-' + d.id + '">');
       d.stages.forEach(function (st, k) {
         if (k) h.push('<div class="arrow">▼</div>');
         h.push('<div class="stage"><div><div class="layer">' + esc(st.layer) + '</div><div class="form">' + st.form + '</div></div><div class="what">' + st.what + "</div></div>");
@@ -472,6 +532,73 @@
     h.push("<h2>Per-flow data summaries</h2>");
     C.flows.forEach(function (f) { if (f.dataflow) h.push('<h3><a href="#/flow/' + f.id + '">' + esc(f.title) + "</a>" + tagHtml(f.tag) + "</h3>", f.dataflow); });
     page(h.join(""));
+    function animate(pl) {
+      var st = pl.querySelectorAll(".stage, .arrow");
+      [].forEach.call(st, function (e) { e.classList.remove("lit"); });
+      if (RM) return;
+      pl.classList.add("playing");
+      [].forEach.call(st, function (e, i) { setTimeout(function () { e.classList.add("lit"); if (i === st.length - 1) setTimeout(function () { pl.classList.remove("playing"); }, 900); }, 150 + i * 260); });
+    }
+    [].forEach.call(main.querySelectorAll(".dfplay"), function (b) { b.onclick = function () { animate($("#pl-" + b.getAttribute("data-df"))); }; });
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (ents) { ents.forEach(function (en) { if (en.isIntersecting) { animate(en.target); io.unobserve(en.target); } }); }, { threshold: 0.25 });
+      [].forEach.call(main.querySelectorAll(".pipeline"), function (p) { io.observe(p); });
+    }
+  }
+
+  // ---- page-table walk animation (index math from mmu_get_next_pgd)
+  function walkWidgetHtml() {
+    var nx = pickDef("mmu_get_next_pgd"), ents = macByName.KBASE_MMU_PAGE_ENTRIES;
+    var src = (nx != null ? "Index math from " + fnLink(nx) + ' <span class="cites">' + cite(FN[nx][1], FN[nx][2]) + "</span>: <code>idx = (vpfn &gt;&gt; ((3 - level) * 9)) &amp; 0x1FF</code>, with <code>vpfn = gpu_va &gt;&gt; 12</code>. " : "") +
+      (ents ? "512 entries per table (" + cite(MAC[ents[0]][1], MAC[ents[0]][2]) + "). " : "");
+    return '<div class="walk card"><p class="small">' + src + 'Four levels (0–3) × 9 bits + a 12-bit page offset = a 48-bit address space in this diagram; the usable VA width of a given GPU comes from its <code>MMU_FEATURES</code> register. With a 2 MB page the level-2 entry is the final one and bits 20:0 are the offset.</p>' +
+      '<div class="ctrl"><label class="small">GPU virtual address <input id="wva" class="mono" value="0x7f3a5c41e2a8" size="18"></label> <button class="btn" id="wplay">▶ Walk</button> <button class="btn" id="wstep">Step →</button> <span class="small muted" id="wcap"></span></div>' +
+      '<div id="wbits" class="wbits"></div><div id="wtables" class="wtables"></div></div>';
+  }
+  function walkWidgetInit() {
+    var inp = $("#wva"); if (!inp) return;
+    var lvl = -1, timer = null, segs = null;
+    var names = ["L0 index", "L1 index", "L2 index", "L3 index", "page offset"];
+    function parse() {
+      var t = inp.value.trim().replace(/_/g, ""); var v;
+      try { v = BigInt(t.indexOf("0x") === 0 || t.indexOf("0X") === 0 ? t : (/^[0-9a-f]+$/i.test(t) && /[a-f]/i.test(t) ? "0x" + t : t)); } catch (e) { return null; }
+      v = v & ((1n << 48n) - 1n);
+      var vpfn = v >> 12n;
+      var idx = [0, 1, 2, 3].map(function (l) { return Number((vpfn >> BigInt((3 - l) * 9)) & 0x1FFn); });
+      return { v: v, idx: idx, off: Number(v & 0xFFFn) };
+    }
+    function render() {
+      segs = parse();
+      if (!segs) { $("#wbits").innerHTML = '<p class="muted">Enter a hex address like 0x7f3a5c41e2a8.</p>'; $("#wtables").innerHTML = ""; return; }
+      var ranges = ["47:39", "38:30", "29:21", "20:12", "11:0"], vals = segs.idx.concat([segs.off]);
+      $("#wbits").innerHTML = ranges.map(function (r, i) {
+        var bits = i < 4 ? vals[i].toString(2).padStart(9, "0") : vals[i].toString(2).padStart(12, "0");
+        return '<div class="bseg s' + i + (lvl === i || (lvl === 4 && i === 4) ? " on" : "") + '" style="flex:' + (i < 4 ? 9 : 12) + '"><div class="r">bits ' + r + '</div><div class="b mono">' + bits + '</div><div class="v">' + names[i] + " = " + (i < 4 ? vals[i] : "0x" + vals[i].toString(16)) + "</div></div>";
+      }).join("");
+      var t = [];
+      for (var l = 0; l < 4; l++) {
+        var on = lvl >= l, pos = (segs.idx[l] / 511) * 100;
+        t.push('<div class="tbl' + (on ? " on" : "") + (lvl === l ? " cur" : "") + '"><div class="th">Level ' + l + (l === 0 ? " (pgd)" : "") + '</div><div class="col"><div class="ent" style="top:calc(' + pos.toFixed(2) + '% - 5px)"><span>[' + segs.idx[l] + "]</span></div></div><div class=\"tf\">" +
+          (l === 0 ? "root = <code>kctx-&gt;mmu.pgd</code>, written to the AS's <code>TRANSTAB</code>" : l < 3 ? "table page found via the level " + (l - 1) + " entry" : "leaf entry (ATE) → physical page") + "</div></div>");
+        if (l < 3) t.push('<div class="link' + (lvl > l ? " on" : "") + '">→</div>');
+      }
+      t.push('<div class="link' + (lvl >= 4 ? " on" : "") + '">→</div><div class="tbl page' + (lvl >= 4 ? " on cur" : "") + '"><div class="th">4 KB page</div><div class="col"><div class="ent" style="top:calc(' + ((segs.off / 4095) * 100).toFixed(2) + '% - 5px)"><span>+0x' + segs.off.toString(16) + '</span></div></div><div class="tf">PA = page base + offset</div></div>');
+      $("#wtables").innerHTML = t.join("");
+      var caps = ["Level 0: index " + segs.idx[0] + " selects an entry in the context's top-level table (the pgd).", "Level 1: that entry points to a level-1 table; index " + segs.idx[1] + " selects the next entry.",
+        "Level 2: index " + segs.idx[2] + ". For a 2 MB page this entry would already be the final mapping.", "Level 3: index " + segs.idx[3] + " selects the ATE holding the physical page address and attributes.",
+        "Offset 0x" + segs.off.toString(16) + " is added inside the 4 KB page: translation complete. A missing (invalid) entry at any level raises a GPU page fault instead."];
+      $("#wcap").textContent = lvl >= 0 ? caps[Math.min(lvl, 4)] : "Press Walk to animate the lookup.";
+    }
+    function step() { lvl = lvl >= 4 ? -1 : lvl + 1; render(); return lvl < 4 && lvl >= 0; }
+    function stop() { if (timer) clearInterval(timer); timer = null; var b = $("#wplay"); if (b) b.textContent = "▶ Walk"; }
+    $("#wplay").onclick = function () {
+      if (timer) return stop();
+      lvl = -1; $("#wplay").textContent = "❚❚ Pause"; step();
+      timer = setInterval(function () { if (!$("#wva")) return stop(); if (!step()) stop(); }, RM ? 300 : 1100);
+    };
+    $("#wstep").onclick = function () { stop(); step(); };
+    inp.addEventListener("input", function () { stop(); lvl = -1; render(); });
+    render();
   }
 
   // ---- struct pages
