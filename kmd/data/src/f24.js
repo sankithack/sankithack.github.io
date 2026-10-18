@@ -1,0 +1,1 @@
+KMD_SRC(24,"CONFIG_MALI_PLATFORM_NAME=\"meson\"\n");

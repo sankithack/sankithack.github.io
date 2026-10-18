@@ -1,0 +1,1 @@
+KMD_SRC(17,"CONFIG_MALI_DEBUG=y\n");

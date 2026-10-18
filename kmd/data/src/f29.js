@@ -1,0 +1,1 @@
+KMD_SRC(29,"CONFIG_SYNC_FILE=y\n");

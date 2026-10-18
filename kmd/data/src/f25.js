@@ -1,0 +1,1 @@
+KMD_SRC(25,"CONFIG_MALI_PLATFORM_NAME=\"vexpress\"\n");

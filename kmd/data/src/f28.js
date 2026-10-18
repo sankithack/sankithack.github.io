@@ -1,0 +1,1 @@
+KMD_SRC(28,"CONFIG_MALI_REAL_HW=y\n");

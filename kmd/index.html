@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mali KMD Explorer</title>
+<meta name="description" content="Interactive guide to the Arm Mali GPU kernel driver (mali_kbase r56p0), generated from the source: subsystems, flows, data flow, structs, ioctls, code viewer.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230550ae'/%3E%3Cpath d='M8 23V10l8 7 8-7v13' fill='none' stroke='%23fff' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+try { var t = localStorage.getItem("kmd-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+</head>
+<body>
+<header class="top">
+  <button class="btn" id="menuBtn" aria-label="Menu">☰</button>
+  <a class="brand" href="#/">Mali KMD Explorer <small>mali_kbase r56p0</small></a>
+  <div class="search">
+    <input type="search" id="q" placeholder="Search functions, structs, files, ioctls, terms…  ( / )" autocomplete="off" aria-label="Search">
+    <div class="dropdown" id="dd" role="listbox"></div>
+  </div>
+  <div class="ctrls">
+    <div class="seg" id="beSeg" title="Show content for which back-end">
+      <button data-be="all" class="on">All</button><button data-be="JM">JM</button><button data-be="CSF">CSF</button>
+    </div>
+    <button class="btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="side" id="nav"></nav>
+  <main id="main"><div class="loading">Loading data…</div></main>
+</div>
+<div class="tip" id="tip"></div>
+<script src="data/meta.js"></script>
+<script src="data/index.js"></script>
+<script src="data/content.js"></script>
+<script src="data/interfaces.js"></script>
+<script src="data/xref.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
