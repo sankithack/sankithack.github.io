@@ -308,3 +308,41 @@ h2 .btn.dfplay { font-size: .8rem; padding: 2px 8px; margin-left: 8px; vertical-
   main > *, .arch .box.hot, .arch .jtrail, .pipeline .stage.lit { animation: none !important; }
   .wbits .bseg, .wtables .tbl, .wtables .ent, .wtables .link { transition: none !important; }
 }
+
+/* ---- flow tabs + code flow */
+.flowbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0; position: sticky; top: 52px; z-index: 5; background: var(--bg); padding: 6px 0; }
+.flowbar .tabs { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-right: 8px; }
+.flowbar .tabs button { border: 0; background: var(--surface); color: var(--text); padding: 6px 12px; font: inherit; font-size: .9rem; cursor: pointer; }
+.flowbar .tabs button.on { background: var(--accent); color: #fff; font-weight: 600; }
+.cflow { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+.cfleft { position: sticky; top: 110px; }
+.cfh { font-weight: 700; margin-bottom: 6px; }
+.cfstack { display: flex; flex-direction: column; gap: 6px; }
+.cfstack .frame { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; background: var(--surface2); font-size: .88rem; }
+.cfstack .frame.top { border-color: var(--accent); background: var(--accent-bg); box-shadow: 0 2px 8px rgba(9,105,218,.15); }
+.cfstack .frame.enter { animation: frameIn .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes frameIn { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
+.cfstack .fidx { color: var(--muted); font-family: var(--mono); font-size: .8rem; }
+.boundary { margin: 4px 0 8px; padding: 5px 8px; border-radius: 8px; background: var(--jm-bg); color: var(--jm); font-weight: 700; font-size: .85rem; }
+.boundary.flash { animation: flash 1.2s ease; }
+@keyframes flash { 0%, 40% { box-shadow: 0 0 0 4px var(--jm); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.cfcap { margin-bottom: 10px; }
+.cfcap h3 { margin-top: 0; }
+.cfcodehead { margin: 4px 0; }
+.cfcode { position: relative; max-height: 60vh; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--code-bg); }
+.cfcode .ln { transition: background .2s; }
+.cfcode .ln.trail { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.cfcode .ln.exec { background: var(--hl2); box-shadow: inset 4px 0 0 var(--accent); }
+.cfcode .ln.exec .lnum::before, .cfcode .ln.callsite .lnum::before { content: "▶ "; color: var(--accent); }
+.cfcode .ln.callsite { background: var(--accent-bg); box-shadow: inset 4px 0 0 var(--accent); animation: callpulse .5s ease 2; }
+@keyframes callpulse { 50% { background: var(--hl2); } }
+.ctree .ctrl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.ctree select { padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+.ctul, .ctul ul { list-style: none; margin: 0; padding-left: 18px; border-left: 1px dashed var(--border); }
+.ctul { border-left: 0; padding-left: 0; }
+.ctn { margin: 2px 0; opacity: 0; transform: translateX(-8px); transition: opacity .25s, transform .25s; }
+.ctn.show { opacity: 1; transform: none; }
+.ctn .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+@media (max-width: 980px) { .cflow { grid-template-columns: minmax(0, 1fr); } .cfleft { position: static; } .flowbar { top: 52px; } }
+@media (prefers-reduced-motion: reduce) { .cfstack .frame.enter, .boundary.flash, .cfcode .ln.callsite { animation: none !important; } .ctn { transition: none !important; } }
+.cfstack .frame.implied { opacity: .7; border-style: dashed; background: var(--surface); }

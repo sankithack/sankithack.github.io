@@ -473,9 +473,13 @@
     var f = FLOWS[id]; if (!f) return notFound();
     setTitle(f.title);
     var cur = stepArg != null ? Math.max(0, Math.min(f.steps.length - 1, stepArg)) : 0;
+    var view = store("kmd-flowview") === "code" ? "code" : "diagram";
     var h = ['<div class="crumbs"><a href="#/">Overview</a> › Flow</div><h1>' + esc(f.title) + tagHtml(f.tag) + "</h1>", f.summary,
-      '<div class="seqwrap"><div><div id="seq"></div><p class="small muted">Click an arrow or use ← → keys. Columns are the actors; each arrow is one step and points to the actor being called or receiving data. Steps tagged for the other back-end are dimmed and skipped by the filter.</p></div>',
-      '<div class="stepbox card" id="stepbox"></div></div>'];
+      '<div class="flowbar"><div class="tabs" role="tablist"><button data-v="diagram">Sequence diagram</button><button data-v="code">Code flow ▶</button></div>' +
+      '<button class="btn" id="prev">← Prev</button><button class="btn" id="next">Next →</button><button class="btn" id="play">▶ Play</button><span class="muted small" id="stepno"></span></div>',
+      '<div id="vdiagram"><div class="seqwrap"><div><div id="seq"></div><p class="small muted">Click an arrow or use ← → keys. Columns are the actors; each arrow is one step and points to the actor being called or receiving data. Steps tagged for the other back-end are dimmed and skipped by the filter.</p></div>',
+      '<div class="stepbox card" id="stepbox"></div></div></div>',
+      '<div id="vcode" hidden>' + codeFlowHtml() + "</div>"];
     if (f.dataflow) h.push("<h2>Data flow in this walkthrough</h2>", f.dataflow);
     if (id === "memalloc" || id === "fault") h.push("<h2>Animation: how the GPU translates an address</h2>", walkWidgetHtml());
     h.push("<h2>All steps</h2><ol class=\"steplist\" id=\"steplist\">");
@@ -483,38 +487,253 @@
     h.push("</ol>");
     if (f.notes) h.push(f.notes);
     page(h.join(""), true);
-    var timer = null;
-    function show(k, scroll) {
-      cur = k;
-      var s = f.steps[k];
-      $("#seq").innerHTML = seqSvg(f, cur);
-      [].forEach.call(main.querySelectorAll("#steplist li"), function (li) { li.classList.toggle("cur", +li.getAttribute("data-k") === k); });
+    var timer = null, cf = null;
+    function stepDetail(s) {
       var where = s.file ? (s.fn != null ? fnLink(s.fn, s.name + "()") + " · " : "") + cite(fileByPath[s.file], s.line) : "";
-      var bh = ['<div class="ctrl"><button class="btn" id="prev">← Prev</button><button class="btn" id="next">Next →</button><button class="btn" id="play">' + (timer ? "❚❚ Pause" : "▶ Play") + "</button>",
-        '<span class="muted small">Step ' + (k + 1) + " / " + f.steps.length + "</span></div>",
-        "<h3>" + (k + 1) + ". " + esc(s.title) + tagHtml(s.tag) + "</h3>", '<div class="where">' + where + "</div>", s.text];
-      if (s.data) bh.push('<div class="databox"><b>Data</b>' + s.data + "</div>");
-      if (s.ex) bh.push(excerptHtml(s.ex.file, s.ex.start, s.ex.lines, s.ex.focus));
-      $("#stepbox").innerHTML = bh.join("");
-      autolink($("#stepbox"));
+      return "<h3>" + (cur + 1) + ". " + esc(s.title) + tagHtml(s.tag) + "</h3>" + '<div class="where">' + where + "</div>" + s.text +
+        (s.data ? '<div class="databox"><b>Data</b>' + s.data + "</div>" : "");
+    }
+    function show(k, scroll, animate) {
+      var prevK = cur; cur = k;
+      var s = f.steps[k];
+      [].forEach.call(main.querySelectorAll("#steplist li"), function (li) { li.classList.toggle("cur", +li.getAttribute("data-k") === k); });
+      $("#stepno").textContent = "Step " + (k + 1) + " / " + f.steps.length;
       $("#prev").disabled = k === 0; $("#next").disabled = k === f.steps.length - 1;
-      $("#prev").onclick = function () { go(-1); }; $("#next").onclick = function () { go(1); };
-      $("#play").onclick = function () { if (timer) { clearInterval(timer); timer = null; show(cur); } else { timer = setInterval(function () { if (!go(1)) { clearInterval(timer); timer = null; show(cur); } }, 2600); show(cur); } };
+      $("#play").textContent = timer ? "❚❚ Pause" : "▶ Play";
+      if (view === "diagram") {
+        $("#seq").innerHTML = seqSvg(f, cur);
+        $("#stepbox").innerHTML = stepDetail(s) + (s.ex ? excerptHtml(s.ex.file, s.ex.start, s.ex.lines, s.ex.focus) : "");
+        autolink($("#stepbox"));
+      } else if (cf) {
+        cf.render(k, animate !== false && prevK === k - 1, stepDetail(s));
+      }
       history.replaceState(null, "", "#/flow/" + id + "/" + (k + 1));
-      if (scroll) { var el = $("#stepbox"); if (el.getBoundingClientRect().top < 0 || el.getBoundingClientRect().top > window.innerHeight) el.scrollIntoView({ block: "start" }); }
+      if (scroll && view === "diagram") { var el = $("#stepbox"); if (el.getBoundingClientRect().top < 0 || el.getBoundingClientRect().top > window.innerHeight) el.scrollIntoView({ block: "start" }); }
     }
     function go(d) {
       var k = cur + d;
       while (k >= 0 && k < f.steps.length && !beOk(f.steps[k].tag)) k += d;
       if (k < 0 || k >= f.steps.length) return false;
-      show(k, true); return true;
+      show(k, true, d === 1); return true;
     }
+    function stopPlay() { if (timer) clearInterval(timer); timer = null; if ($("#play")) $("#play").textContent = "▶ Play"; }
+    $("#prev").onclick = function () { stopPlay(); go(-1); };
+    $("#next").onclick = function () { stopPlay(); go(1); };
+    $("#play").onclick = function () {
+      if (timer) return stopPlay();
+      timer = setInterval(function () { if (!$("#play")) return stopPlay(); if (!go(1)) stopPlay(); }, view === "code" ? 3600 : 2600);
+      $("#play").textContent = "❚❚ Pause"; if (!go(1)) stopPlay();
+    };
+    function setView(v) {
+      view = v; store("kmd-flowview", v);
+      [].forEach.call(main.querySelectorAll(".flowbar .tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-v") === v); });
+      $("#vdiagram").hidden = v !== "diagram"; $("#vcode").hidden = v !== "code";
+      if (v === "code" && !cf) {
+        $("#cfcode").innerHTML = '<div class="loading">Loading source files…</div>';
+        cf = makeCodeFlow(f, function () { show(cur, false, false); });
+      } else show(cur, false, false);
+    }
+    main.querySelector(".flowbar .tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) { stopPlay(); setView(b.getAttribute("data-v")); } });
     if (id === "memalloc" || id === "fault") walkWidgetInit();
-    $("#seq").addEventListener("click", function (e) { var g = e.target.closest(".step"); if (g) show(+g.getAttribute("data-k"), true); });
-    $("#steplist").addEventListener("click", function (e) { var li = e.target.closest("li"); if (li && !e.target.closest("a")) show(+li.getAttribute("data-k"), true); });
-    keyHandler = function (e) { if (e.key === "ArrowRight") go(1); else if (e.key === "ArrowLeft") go(-1); };
-    resizeHandler = debounce(function () { if ($("#seq")) $("#seq").innerHTML = seqSvg(f, cur); }, 150);
-    requestAnimationFrame(function () { if (!beOk(f.steps[cur].tag)) { var k0 = cur; cur = -1; if (!go(1)) show(k0); } else show(cur); });
+    $("#seq").addEventListener("click", function (e) { var g = e.target.closest(".step"); if (g) { stopPlay(); show(+g.getAttribute("data-k"), true, false); } });
+    $("#steplist").addEventListener("click", function (e) { var li = e.target.closest("li"); if (li && !e.target.closest("a")) { stopPlay(); show(+li.getAttribute("data-k"), true, false); } });
+    keyHandler = function (e) { if (e.key === "ArrowRight") { stopPlay(); go(1); } else if (e.key === "ArrowLeft") { stopPlay(); go(-1); } };
+    resizeHandler = debounce(function () { if ($("#seq") && view === "diagram") $("#seq").innerHTML = seqSvg(f, cur); }, 150);
+    requestAnimationFrame(function () {
+      if (!beOk(f.steps[cur].tag)) { var k = cur; while (k < f.steps.length && !beOk(f.steps[k].tag)) k++; if (k < f.steps.length) cur = k; }
+      setView(view);
+    });
+  }
+
+  // ---- animated code flow: call stack + source with an execution cursor
+  function codeFlowHtml() {
+    return '<div class="cflow"><div class="cfleft card"><div class="cfh">Call stack <span class="muted small">(top = running)</span></div><div id="cfboundary"></div><div id="cfstack" class="cfstack"></div>' +
+      '<p class="small muted">Frames are derived from the generated call graph: a step is pushed onto the frame that directly calls it. Dashed frames are intermediate functions inferred from the call graph (one real path is shown if several exist); "via table[]" means a call through a function-pointer table such as <code>dev_init[]</code>. When nothing on the stack can reach the step, execution entered from elsewhere (syscall, interrupt, worker) and a new stack starts.</p></div>' +
+      '<div class="cfright"><div class="card cfcap" id="cfcap"></div><div class="cfcodehead" id="cfhead"></div><div class="cfcode" id="cfcode"></div></div></div>';
+  }
+  function boundaryLabel(s) {
+    return { user: "⇢ System call from userspace", irq: "⚡ Hardware interrupt (IRQ context)", wq: "⏱ Deferred work: workqueue / kthread", vfs: "⇢ Called by the Linux kernel core",
+      hw: "⚙ Hardware", fw: "⚙ MCU firmware", pm: "⇢ New entry (power management)", csf: "⇢ New entry (scheduler thread / callback)" }[s.lane] || "⇢ New entry point (another context or a function pointer)";
+  }
+  function makeCodeFlow(f, ready) {
+    var files = {}, states = null, token = 0;
+    f.steps.forEach(function (s) { if (s.fn != null) files[FN[s.fn][1]] = 1; });
+    var need = Object.keys(files), left = need.length;
+    var missing = {};
+    function lines(fi) { if (SRC[fi] == null) { missing[fi] = 1; return []; } return SRC[fi].split("\n"); }
+    function callsName(callerId, name) { return X.calls[callerId].some(function (t) { return FN[t][0] === name; }); }
+    function findCallLine(callerId, name, from) {
+      var fr = FN[callerId], L = lines(fr[1]), rx = new RegExp("\\b" + name + "\\s*\\(");
+      for (var pass = 0; pass < 2; pass++) for (var ln = pass ? fr[2] : Math.max(fr[2], from || fr[2]); ln <= fr[3]; ln++) if (rx.test(L[ln - 1])) return ln;
+      return null;
+    }
+    function findPath(fromId, name, maxDepth) {
+      // BFS over direct calls: returns [id1, ..., target] (excluding fromId)
+      var q = [[fromId, []]], seen = {}; seen[fromId] = 1;
+      while (q.length) {
+        var it = q.shift(), cs = X.calls[it[0]];
+        for (var i = 0; i < cs.length; i++) {
+          var c = cs[i], path = it[1].concat([c]);
+          if (FN[c][0] === name) return path;
+          if (!seen[c] && path.length < maxDepth) { seen[c] = 1; q.push([c, path]); }
+        }
+      }
+      return null;
+    }
+    function bodyLine(fnId, rx, from) {
+      var fr = FN[fnId], L = lines(fr[1]);
+      for (var pass = 0; pass < 2; pass++) for (var ln = pass ? fr[2] : Math.max(fr[2], from || fr[2]); ln <= fr[3]; ln++) if (rx.test(L[ln - 1])) return ln;
+      return null;
+    }
+    function tableCaller(fnId, stack) {
+      // fn stored in a file-scope table (e.g. dev_init[]) that a frame on the stack, or one of its
+      // direct callees, calls through: table[i].member(...)
+      var trefs = refby[fnId].filter(function (r) { return r[0] === "tab"; });
+      var tabs = trefs.map(function (r) { return TAB[r[1]][0]; });
+      if (!tabs.length) return null;
+      // ops structs: ".member = fn" in the table, called as "->member(" or ".member(" elsewhere
+      var members = [];
+      trefs.forEach(function (r) {
+        var t = TAB[r[1]], L = lines(t[1]), rx = new RegExp("\\.\\s*(\\w+)\\s*=\\s*&?\\s*" + FN[fnId][0] + "\\b");
+        for (var ln = t[2]; ln <= t[3] && ln <= L.length; ln++) { var m = rx.exec(L[ln - 1]); if (m) members.push([m[1], t[0]]); }
+      });
+      for (var i2 = stack.length - 1; i2 >= 0; i2--) {
+        var cands2 = [stack[i2].fn].concat(X.calls[stack[i2].fn]);
+        for (var c2 = 0; c2 < cands2.length; c2++) for (var mi = 0; mi < members.length; mi++) {
+          var ln2 = bodyLine(cands2[c2], new RegExp("(->|\\.)\\s*" + members[mi][0] + "\\s*\\("), c2 ? null : stack[i2].line);
+          if (ln2) return { i: i2, via: c2 ? cands2[c2] : null, table: members[mi][1] + "." + members[mi][0], line: ln2, ops: true };
+        }
+      }
+      for (var i = stack.length - 1; i >= 0; i--) {
+        var cands = [stack[i].fn].concat(X.calls[stack[i].fn]);
+        for (var c = 0; c < cands.length; c++) for (var t = 0; t < tabs.length; t++) {
+          var ln = bodyLine(cands[c], new RegExp("\\b" + tabs[t] + "\\s*\\[[^\\]]*\\]\\s*\\.\\s*\\w+\\s*\\("), c ? null : stack[i].line);
+          if (ln) return { i: i, via: c ? cands[c] : null, table: tabs[t], line: ln };
+        }
+      }
+      return null;
+    }
+    function compute() {
+      var stack = []; states = [];
+      function snap() { return stack.map(function (x) { return { fn: x.fn, line: x.line, implied: x.implied, via: x.via }; }); }
+      f.steps.forEach(function (s) {
+        var ev;
+        if (s.fn == null) { states.push({ stack: snap(), ev: { type: "outside", label: boundaryLabel(s) }, ext: s }); return; }
+        var fn = s.fn, name = FN[fn][0], top = stack[stack.length - 1], i, ei = -1, path = null, pi = -1, tc;
+        for (i = stack.length - 1; i >= 0; i--) { if (FN[stack[i].fn][0] === name) { ei = i; break; } }
+        if (top && FN[top.fn][0] === name) { top.line = s.line; top.implied = false; ev = { type: "same" }; }
+        else {
+          for (i = stack.length - 1; i >= 0; i--) { var pth = findPath(stack[i].fn, name, 3); if (pth && (ei < 0 || i > ei) && (!path || pth.length < path.length)) { path = pth; pi = i; } }
+          if (path) {
+            stack = stack.slice(0, pi + 1);
+            var caller = stack[pi], cl = null;
+            path.forEach(function (id, k) {
+              var last = k === path.length - 1, ln = bodyLine(caller.fn, new RegExp("\\b" + FN[id][0] + "\\s*\\("), caller.line);
+              if (ln) caller.line = ln;
+              if (k === 0) cl = ln;
+              var fr = { fn: last ? fn : id, line: last ? s.line : FN[id][2], implied: !last };
+              stack.push(fr); caller = fr;
+            });
+            ev = { type: "call", callLine: cl, depth: path.length };
+          } else if (ei >= 0) { stack = stack.slice(0, ei + 1); stack[ei].line = s.line; stack[ei].implied = false; ev = { type: "return" }; }
+          else if ((tc = tableCaller(fn, stack))) {
+            stack = stack.slice(0, tc.i + 1);
+            var dep = 1;
+            if (tc.via != null) {
+              var cl2 = bodyLine(stack[tc.i].fn, new RegExp("\\b" + FN[tc.via][0] + "\\s*\\("), stack[tc.i].line);
+              if (cl2) stack[tc.i].line = cl2;
+              stack.push({ fn: tc.via, line: tc.line, implied: true }); dep = 2;
+            } else stack[tc.i].line = tc.line;
+            stack.push({ fn: fn, line: s.line, via: tc.table }); ev = { type: "call", callLine: tc.via != null ? cl2 : tc.line, depth: dep, via: tc.table };
+          } else { stack = [{ fn: fn, line: s.line }]; ev = { type: "entry", label: boundaryLabel(s) }; }
+        }
+        states.push({ stack: snap(), ev: ev });
+      });
+    }
+    var rounds = 0;
+    function done() {
+      missing = {}; compute();
+      var need2 = Object.keys(missing);
+      if (!need2.length || ++rounds > 4) return ready();
+      var n2 = need2.length;
+      need2.forEach(function (fi) { loadSrc(+fi, function () { if (--n2 === 0) done(); }); });
+    }
+    if (!left) done(); else need.forEach(function (fi) { loadSrc(+fi, function () { if (--left === 0) done(); }); });
+
+    function stackHtml(st, enterTop) {
+      return st.stack.slice().reverse().map(function (fr, i) {
+        var fd = FN[fr.fn];
+        return '<div class="frame' + (i === 0 ? " top" : "") + (fr.implied ? " implied" : "") + (i === 0 && enterTop ? " enter" : "") + '"><span class="fidx">#' + (st.stack.length - 1 - i) + "</span> " + fnLink(fr.fn) + tagHtml(fd[5] === "common" ? "" : fd[5]) +
+          (fr.implied ? ' <span class="small muted" title="Inferred from the call graph; when several real paths exist one is shown">on the call path</span>' : "") + (fr.via ? ' <span class="small muted">via <code>' + esc(fr.via) + (fr.via.indexOf(".") < 0 ? "[]" : "") + "</code></span>" : "") +
+          '<div class="small"><a class="cite" href="' + codeHref(F[fd[1]].p, fr.line) + '">' + esc(short(F[fd[1]].p)) + ":" + fr.line + "</a></div></div>";
+      }).join("") || '<div class="muted small">(outside the driver)</div>';
+    }
+    function codeHtml(fnId) {
+      var fd = FN[fnId], L = lines(fd[1]).slice(fd[2] - 1, fd[3]);
+      var hl = highlightLines(L.join("\n"), fd[1]);
+      return '<div class="code">' + hl.map(function (l, k) { var n = fd[2] + k; return '<div class="ln" data-n="' + n + '"><a class="lnum" href="' + codeHref(F[fd[1]].p, n) + '">' + n + '</a><span class="lc">' + (l || " ") + "</span></div>"; }).join("") + "</div>";
+    }
+    function setCursor(n, cls) {
+      var box = $("#cfcode"); if (!box) return;
+      [].forEach.call(box.querySelectorAll(".ln.exec, .ln.callsite, .ln.trail"), function (e) { e.classList.remove("exec", "callsite"); });
+      var el = box.querySelector('.ln[data-n="' + n + '"]'); if (!el) return;
+      el.classList.add(cls || "exec"); el.classList.add("trail");
+      var top = el.offsetTop - box.clientHeight / 2 + 20;
+      if (box.scrollTo) box.scrollTo({ top: Math.max(0, top), behavior: RM ? "auto" : "smooth" }); else box.scrollTop = top;
+    }
+    function scan(from, to, my, cls, cb) {
+      if (RM || from == null || from === to) { setCursor(to, cls); return cb && setTimeout(cb, RM ? 0 : 250); }
+      var hops = Math.min(14, Math.abs(to - from)), k = 0, dir = to > from ? 1 : -1;
+      (function hop() {
+        if (my !== token) return;
+        k++; var n = k >= hops ? to : Math.round(from + (to - from) * k / hops);
+        setCursor(n, k >= hops ? cls : "exec");
+        if (k < hops) setTimeout(hop, 55); else if (cb) setTimeout(cb, 300);
+      })();
+    }
+    function showFrame(fnId) {
+      var fd = FN[fnId];
+      $("#cfhead").innerHTML = fnLink(fnId) + ' <span class="muted small">' + esc(short(F[fd[1]].p)) + ":" + fd[2] + "–" + fd[3] + "</span>";
+      $("#cfcode").innerHTML = codeHtml(fnId);
+    }
+    var shown = null;
+    return {
+      render: function (k, animate, capHtml) {
+        if (!states || !$("#cfcode")) return;
+        var my = ++token, st = states[k], prev = k > 0 ? states[k - 1] : null;
+        $("#cfcap").innerHTML = capHtml; autolink($("#cfcap"));
+        var b = $("#cfboundary");
+        b.innerHTML = st.ev.label ? '<div class="boundary' + (animate && !RM ? " flash" : "") + '">' + esc(st.ev.label) + "</div>" : "";
+        if (st.ev.type === "outside") {
+          $("#cfstack").innerHTML = stackHtml(st, false);
+          $("#cfhead").innerHTML = '<span class="muted">Outside the driver</span>';
+          $("#cfcode").innerHTML = st.ext.ex ? excerptHtml(st.ext.ex.file, st.ext.ex.start, st.ext.ex.lines, st.ext.ex.focus) : "";
+          shown = null; return;
+        }
+        var top = st.stack[st.stack.length - 1];
+        if (animate && prev && st.ev.type === "call" && prev.stack.length && prev.ev.type !== "outside") {
+          var depth = st.ev.depth || 1, caller = st.stack[st.stack.length - 1 - depth], prevTop = prev.stack[prev.stack.length - 1];
+          // 1) run in the caller up to the call site, 2) push frame(s), 3) run callee to the step's line
+          $("#cfstack").innerHTML = stackHtml({ stack: st.stack.slice(0, st.stack.length - depth) }, false);
+          if (shown !== caller.fn) { showFrame(caller.fn); shown = caller.fn; }
+          var startLn = prevTop && prevTop.fn === caller.fn ? prevTop.line : FN[caller.fn][2];
+          var callerAt = prev.stack.map(function (x) { return x.fn; }).indexOf(caller.fn) >= 0 ? startLn : FN[caller.fn][2];
+          scan(callerAt, st.ev.callLine || caller.line, my, "callsite", function () {
+            if (my !== token) return;
+            $("#cfstack").innerHTML = stackHtml(st, true);
+            showFrame(top.fn); shown = top.fn;
+            setCursor(FN[top.fn][2], "exec");
+            setTimeout(function () { if (my === token) scan(FN[top.fn][2], top.line, my, "exec"); }, RM ? 0 : 350);
+          });
+          return;
+        }
+        $("#cfstack").innerHTML = stackHtml(st, animate && st.ev.type !== "same");
+        var from = null;
+        if (shown === top.fn && prev) { var pt = prev.stack[prev.stack.length - 1]; from = pt && pt.fn === top.fn ? pt.line : null; }
+        if (shown !== top.fn) { showFrame(top.fn); shown = top.fn; if (animate) from = st.ev.type === "entry" ? FN[top.fn][2] : null; }
+        if (animate) scan(from, top.line, my, "exec"); else setCursor(top.line, "exec");
+      }
+    };
   }
 
   function pDataflow() {
@@ -749,9 +968,31 @@
       h.push("<h2>Referenced by (function pointer / table)</h2>");
       refby[id].forEach(function (r) { if (r[0] === "fn") h.push("<div>" + fnLinkCite(r[1]) + "</div>"); else { var t = TAB[r[1]]; h.push("<div><code>" + esc(t[0]) + '</code> <span class="muted small">' + esc(t[4].slice(0, 90)) + "</span> " + cite(t[1], t[2]) + "</div>"); } });
     }
+    h.push('<h2>Animated call tree</h2><div class="ctree card"><div class="ctrl"><button class="btn" id="ctCallees">▶ Who it calls</button><button class="btn" id="ctCallers">▶ Who calls it</button>' +
+      '<label class="small">depth <select id="ctDepth"><option>2</option><option selected>3</option><option>4</option></select></label><span class="small muted">Direct calls from the generated call graph (no function pointers); repeated functions are not expanded twice.</span></div><div id="ctree"></div></div>');
     if (fnInFlows[id]) h.push("<h2>Appears in flows</h2>" + fnInFlows[id].map(function (r) { return '<a class="pill" href="#/flow/' + r[0] + "/" + (r[1] + 1) + '">' + esc(FLOWS[r[0]].title) + " · step " + (r[1] + 1) + "</a>"; }).join(" "));
     h.push('<h2>Source</h2><p><a class="btn" href="' + codeHref(F[fi].p, f[2]) + '">Open in code viewer</a></p><div id="fsrc" class="loading">Loading source…</div>');
     page(h.join(""));
+    function tree(dir) {
+      var depth = +$("#ctDepth").value, seen = {}, order = [], total = 0, CAP = 140;
+      function kids(n) { return (dir === "down" ? X.calls[n] : callers[n]).slice().sort(function (a, b) { return FN[a][0] < FN[b][0] ? -1 : 1; }).filter(function (c) { return beOk(FN[c][5]); }); }
+      function node(n, d, path) {
+        var fd = FN[n], col = (SUBS[F[fd[1]].s] || {}).color || "#999", ks = d < depth && !seen[n] ? kids(n) : [], more = 0;
+        var rep = seen[n] && d > 0; seen[n] = 1; total++;
+        if (ks.length > 12) { more = ks.length - 12; ks = ks.slice(0, 12); }
+        var hid = "ct" + order.length; order.push(hid);
+        var inner = ks.filter(function (c) { return path.indexOf(c) < 0; }).map(function (c) { return total < CAP ? node(c, d + 1, path.concat([c])) : ""; }).join("");
+        return '<li id="' + hid + '" class="ctn"><span class="dot" style="background:' + esc(col) + '"></span>' + fnLink(n) + tagHtml(fd[5] === "common" ? "" : fd[5]) +
+          ' <span class="muted small">' + esc(SUBS[F[fd[1]].s] ? SUBS[F[fd[1]].s].title.replace(/ \(.*\)/, "") : "") + (rep ? " · shown above" : "") + "</span>" +
+          (inner || more ? "<ul>" + inner + (more ? '<li class="ctn muted small">… ' + more + " more</li>" : "") + "</ul>" : "") + "</li>";
+      }
+      $("#ctree").innerHTML = '<ul class="ctul">' + node(id, 0, [id]) + "</ul>";
+      var items = $("#ctree").querySelectorAll(".ctn");
+      if (RM) { [].forEach.call(items, function (e) { e.classList.add("show"); }); return; }
+      [].forEach.call(items, function (e, i) { setTimeout(function () { e.classList.add("show"); }, Math.min(i, 120) * 45); });
+    }
+    $("#ctCallees").onclick = function () { tree("down"); };
+    $("#ctCallers").onclick = function () { tree("up"); };
     loadSrc(fi, function (text) {
       var el = $("#fsrc"); if (!el) return;
       var lines = text.split("\n").slice(f[2] - 1, f[3]);
