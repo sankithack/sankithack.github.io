@@ -2,6 +2,7 @@
 
 Live: https://sankithack.github.io/
 
+- **Mali KMD Explorer**: https://sankithack.github.io/kmd/ (interactive guide to the Arm Mali GPU kernel driver `mali_kbase` r56p0: subsystems, flow walkthroughs, data flow, structs, ioctls and a cross-referenced code viewer, generated from the driver source).
 - **gralloc explorer**: https://sankithack.github.io/gralloc/ (how Google gchips gralloc describes and allocates buffers, generated from AOSP `platform/hardware/google/gchips`; also covers the Arm Mali reference gralloc r56p0 at https://sankithack.github.io/gralloc/#/arm).
 - **AMDVLK Driver Atlas**: https://sankithack.github.io/vulkan/ (interactive walkthrough of AMD's open-source Vulkan driver stack, built from the real source).
 - **Chess Strategy Academy**: https://sankithack.github.io/chess/ (interactive chess course: openings with variations, tactics, strategy, endgames and trainers).
