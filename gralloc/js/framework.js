@@ -22,7 +22,7 @@
   const yes = (loc, extra) => (loc ? `<span class="ok">✓</span> ${src(loc)}${extra ? ` <span class="small muted">${esc(extra)}</span>` : ''}` : '<span class="muted">—</span>');
 
   const SECTIONS = [['stack', 'The stack'], ['phases', 'Phase by phase'], ['load', 'Loading the HAL'], ['aimapper', 'AIMapper v5'],
-    ['iallocator', 'IAllocator'], ['metadata', 'Metadata support'], ['parcel', 'GraphicBuffer parcel'], ['checks', 'Checks & errors'], ['notes', 'Code observations']];
+    ['iallocator', 'IAllocator'], ['metadata', 'Metadata support'], ['storage', 'Metadata storage'], ['parcel', 'GraphicBuffer parcel'], ['checks', 'Checks & errors'], ['notes', 'Code observations']];
 
   function stack() {
     const g = (id) => gStep(id), a = (id) => aStep(id);
@@ -168,6 +168,35 @@
     </tbody></table></div>`;
   }
 
+  // Where both HALs keep mutable metadata: one shared dma-buf per buffer holding struct shared_metadata.
+  function storage() {
+    const SM = G.CF.shared_metadata, AL = (A && A.shared_metadata_layout) || [];
+    if (!SM) return '';
+    const hi = AL.find((v) => /> 36/.test(v.variant)), lo = AL.find((v) => /≤ 36/.test(v.variant));
+    // The ≤ 36 variant lists only the members after the #if; members below its first offset are common to both.
+    const split = lo ? Math.min(...lo.fields.filter((x) => x.offset != null).map((x) => x.offset)) : Infinity;
+    const aRow = (f) => {
+      const h = hi && hi.fields.find((x) => x.field === f), l = lo && lo.fields.find((x) => x.field === f);
+      if (!h && !l) return null;
+      const off = (x) => (x.offset == null ? '' : `@${x.offset}, `) + `${x.size} B`;
+      return h && l && (h.offset !== l.offset || h.size !== l.size) ? `API > 36: ${off(h)} ${src(h.loc)}<br>API ≤ 36: ${off(l)} ${src(l.loc)}` : `${off(h || l)} ${src((h || l).loc)}${!l && lo && h.offset != null && h.offset >= split ? ' <span class="small muted">(API > 36 only)</span>' : ''}`;
+    };
+    const names = SM.fields.map((f) => f.field);
+    (hi ? hi.fields : []).concat(lo ? lo.fields : []).forEach((f) => { if (!names.includes(f.field)) names.push(f.field); });
+    const fl = (impl, id, t) => { const h = G.flowLink && G.flowLink(impl, id); return h ? `<a href="${h}">${esc(t)}</a>` : esc(t); };
+    return `<p class="small">Both HALs keep the values that can change after allocation (dataspace, crop, blend mode, HDR, name…) in a <b>second dma-buf</b> per buffer, laid out as <code>struct shared_metadata</code>. Every process that imports the buffer maps the same bytes, so a value set in one process is seen in the others.</p>
+      <div class="tablewrap"><table><thead><tr><th>field</th><th>gchips ${src(SM.struct, 'SharedMetadata_struct.h')}</th>${A ? '<th>Arm r56p0 (offset, size)</th>' : ''}</tr></thead><tbody>
+      ${names.map((n) => { const g = SM.fields.find((f) => f.field === n), a = A ? aRow(n) : null;
+        return `<tr><td class="mono">${esc(n)}</td><td class="small">${g ? `<span class="mono">${esc(g.type)}</span> ${src(g.loc)}` : '<span class="muted">—</span>'}</td>${A ? `<td class="small mono">${a || '<span class="muted">—</span>'}</td>` : ''}</tr>`; }).join('')}
+      </tbody></table></div>
+      <ul class="small">
+        <li><b>Offsets:</b> Arm's come from its enabled <code>static_assert</code>s. gchips' matching asserts are compiled out with <code>#if 0</code> ${src(SM.asserts_disabled)}, and its first two members are Exynos video structs defined outside gralloc, so byte offsets for gchips are not derived here.</li>
+        <li><b>When it is mapped:</b> gchips maps the metadata dma-buf on first use — ${fl('gchips', 'metadata_addr', 'get_metadata_addr')} → ${fl('gchips', 'map_metadata', 'map_metadata_locked')}. Arm maps it during import — ${fl('arm', 'import_buffer', 'import_buffer')}.</li>
+        <li><b>Reading a value:</b> gchips' getters call <code>.value()</code> on the returned address without checking it (${fl('gchips', 'shm_get_dataspace', 'get_dataspace')}). Arm's read <code>attr_base</code> directly (${fl('arm', 'shm_get_dataspace', 'get_dataspace')}).</li>
+        <li><b>Size:</b> gchips allocates shared metadata + the client's reserved region ${src(SM.attr_size)}, plus 32 KiB when <code>GRALLOC_USAGE_ROIINFO</code> is set ${src(G.L('gralloc4/src/hidl_common/Allocator.cpp', 128, 131))} — that is where <code>get_video_roiinfo</code> points, after the struct and the reserved region.</li>
+      </ul>`;
+  }
+
   function metadata() {
     const M = R.metadata;
     const arm = new Map(((A && A.metadata) || []).filter((m) => m.kind === 'standard').map((m) => [m.name, m]));
@@ -218,12 +247,13 @@
   G.views.framework = () => `<h1>Android framework → gralloc HAL</h1>
     <p class="lede">How Android's graphics library <b>libui</b> reaches the vendor gralloc: <code>GraphicBuffer</code> → <code>GraphicBufferAllocator</code> / <code>GraphicBufferMapper</code> → <code>Gralloc5Allocator</code> / <code>Gralloc5Mapper</code> → AIDL <code>IAllocator</code> (binder) and the stable-C <code>AIMapper</code> v5 (in-process). Parsed from AOSP frameworks/native ${esc(FW.meta.branch)} @ <code>${esc(FW.meta.commit.slice(0, 12))}</code>; <span class="mono">fw:</span> links open that commit.</p>
     <nav class="toc small">${SECTIONS.map(([k, t]) => `<a href="#/framework" data-sec="${k}">${esc(t)}</a>`).join('')}</nav>
-    <h2 id="fw-stack">The stack</h2>${journeyPanel()}${stack()}
+    <h2 id="fw-stack">The stack</h2><div class="jwrap">${journeyPanel()}${stack()}</div>
     <h2 id="fw-phases">Phase by phase</h2><p class="small">Every phase of the <a href="#/flow">code flow</a> starts in libui and crosses into the vendor code at these points.</p>${phases()}
     <h2 id="fw-load">Loading the HAL</h2>${loading()}
     <h2 id="fw-aimapper">AIMapper v5 functions</h2><p class="small">All functions of the stable-C mapper table that libui calls or either vendor implements.</p>${iface(R.aimapper, 'AIMapper v5')}
     <h2 id="fw-iallocator">IAllocator methods</h2>${iface(R.iallocator, 'IAllocator')}
     <h2 id="fw-metadata">Metadata support</h2>${metadata()}
+    <h2 id="fw-storage">Metadata storage</h2>${storage()}
     <h2 id="fw-parcel">GraphicBuffer over binder</h2>${parcel()}
     <h2 id="fw-checks">Checks &amp; errors</h2>${checks()}
     <h2 id="fw-notes">Code observations</h2>${notes()}`;

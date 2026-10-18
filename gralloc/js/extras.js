@@ -321,6 +321,10 @@
     v5_import: [0], v5_lock: [0], common_lock: [0], flush_locked: [0], reread_locked: [0], v5_unlock: [0], common_unlock: [0], v5_free: [0],
     v5_get_std: [0], v5_std_get: [0], std_helper: [0], plane_layouts: [0], v5_get_metadata: [0], pixel_get: [0], v5_set_std: [0],
     v5_set_helper: [0], set_crop: [0], v5_set_metadata: [0], hidl_get: [0], get_metadata: [0], hidl_set: [0], set_metadata: [0],
+    // descriptor encoding, handle checks, cache sync, metadata storage
+    to_internal: [1], m4_create_desc: [0], validate_desc_info: [0], encode_desc: [0], decode_desc: [1], pop_string: [1],
+    hnd_validate: [0], get_validated: [0], validate_locked: [0], sanity: [0], ion_sync_start: [0], ion_sync_end: [0], ion_sync: [0],
+    cpu_sync: [2], shm_get_dataspace: [0], shm_set_dataspace: [0], metadata_addr: [0], map_metadata: [2],
   };
   const STATE_AT = {
     // [handle, fds, ref_count, mapped, locked_ref_count, cpu flags, cite]
