@@ -117,6 +117,7 @@
     if (page === 'diff') return head + tabs(page) + diffPage();
     if (page === 'usage') return head + tabs(page) + usagePage();
     if (PAGES[page]) return head + tabs(page) + PAGES[page](arg);
+    if (page) return head + tabs('') + `<div class="err">There is no Arm page called <code>${esc(page)}</code>.</div>` + overviewPage();
     return head + tabs('') + overviewPage();
   };
 
@@ -124,7 +125,7 @@
     const c = A.counts;
     const feats = A.features.reduce((m, f) => { (m[f.section] = m[f.section] || []).push(f); return m; }, {});
     return `<p class="lede">The Arm reference gralloc (“wsialloc”) from <code>${esc(A.meta.release)}</code>. gchips’ <code>gralloc4/</code> is a fork of an older version of this code: the same format tables and the same select → derive → allocate shape. This section shows what the newer Arm release does, with every statement linked to its line.</p>
-      <div class="note small"><b>Source links:</b> Arm links (marked <span class="mono">arm:</span>) open your <b>local</b> extracted copy at <code>${esc(A.meta.root)}</code>. That folder is not part of the published site; extract the archive next to <code>site/</code> to make the links work. License: ${esc(A.meta.license)}.</div>
+      <div class="note small"><b>Source links:</b> Arm locations (marked <span class="mono">arm:</span>) are links only when the site runs from a local checkout; they open the extracted copy at <code>${esc(A.meta.root)}</code>. That folder is not part of the published site, so here they are plain file:line references; extract the archive next to <code>site/</code> and open <code>site/index.html</code> locally to make them links. License: ${esc(A.meta.license)}.</div>
       <div class="grid2">
         <div class="panel"><b>What is in the archive</b><div class="kv small" style="margin-top:6px">
           <div>format table rows</div><div>${c.formats_table} ${src(A.table_locs.formats, 'formats[]')}</div>
@@ -159,8 +160,8 @@
   /* --- formats list --- */
   const fq = { q: '', comp: '' };
   function formatsPage() {
-    return `<div class="panel row"><input type="text" id="afq" placeholder="search name / hex value" value="${esc(fq.q)}" style="min-width:220px">
-      <select id="afcomp"><option value="">any layout</option>${['linear', 'AFBC', 'AFRC', 'block-linear'].map((c) => `<option ${fq.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    return `<div class="panel row"><input type="text" id="afq" aria-label="Search Arm formats by name or hex value" placeholder="search name / hex value" value="${esc(fq.q)}" style="min-width:220px">
+      <select id="afcomp" aria-label="Filter by layout"><option value="">any layout</option>${['linear', 'AFBC', 'AFRC', 'block-linear'].map((c) => `<option ${fq.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
       <span id="afcount" class="small muted"></span></div>
       <div class="tablewrap"><table><thead><tr><th>Format</th><th>Value</th><th>Planes</th><th>bpp</th><th>sub-sampling</th><th>layouts in formats[]</th><th>align_w_cpu</th><th>DRM fourcc (libformat key)</th><th>in gchips</th><th>row</th></tr></thead><tbody id="aftbody"></tbody></table></div>
       <p class="small muted">“Layouts” are the <code>.linear / .afbc / .afrc / .block_linear</code> fields of ${src(A.table_locs.formats, 'formats[]')}; libformat must also support the layout for its DRM fourcc. Values marked manual are AOSP HAL values not defined in the archive.</p>`;
@@ -247,9 +248,9 @@
     const multiYuv = f.is_yuv && f.npln > 1;
     const types = [['linear', 'Linear (no modifiers)', f.linear], ['afbc', 'AFBC', f.afbc], ['afrc', 'AFRC', f.afrc], ['block_linear', 'Block-linear 16×16', f.block_linear]];
     const chk = (k, t, tip) => `<label class="chk" title="${esc(tip || '')}"><input type="checkbox" data-afbc="${k}" ${a[k] ? 'checked' : ''}>${t}</label>`;
-    const cu = (k, v) => `<select data-afrc="${k}">${[16, 24, 32].map((n) => `<option ${v === n ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+    const cu = (k, v) => `<select data-afrc="${k}" aria-label="AFRC coding unit size: ${k}">${[16, 24, 32].map((n) => `<option ${v === n ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
     return `<div class="panel"><div class="row"><b>Compression</b>${types.map(([k, t, ok]) => `<label class="chk"><input type="radio" name="acomp" value="${k}" ${c.type === k ? 'checked' : ''}>${t}${ok ? '' : ' <span class="muted small">(table: no)</span>'}</label>`).join('')}</div>
-      ${c.type === 'afbc' ? `<div class="row"><span class="small">superblock</span> <select data-afbc="block">${[['16x16', '16×16 (basic)'], ['32x8', '32×8 (wide)'], ['64x4', '64×4 (extra-wide)'], ['32x8_64x4', '32×8 + 64×4 (multi-plane)']].map(([k, t]) => `<option value="${k}" ${a.block === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      ${c.type === 'afbc' ? `<div class="row"><span class="small">superblock</span> <select data-afbc="block" aria-label="AFBC superblock size">${[['16x16', '16×16 (basic)'], ['32x8', '32×8 (wide)'], ['64x4', '64×4 (extra-wide)'], ['32x8_64x4', '32×8 + 64×4 (multi-plane)']].map(([k, t]) => `<option value="${k}" ${a.block === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
         ${chk('tiled', 'tiled headers')}${chk('split', 'split block')}${chk('db', 'double body')}${chk('sparse', 'sparse')}${chk('ytr', 'YUV transform')}${chk('bch', 'BCH')}${chk('usm', 'USM')}</div>
         <p class="small muted">Modifier bits of the internal format ${src(al(AF.FH, 159, 200))}. Split / sparse / YTR / BCH / USM change the DRM modifier but not the size. AFBC padding is a usage bit (<code>MALI_AFBC_PADDING</code>).</p>` : ''}
       ${c.type === 'afrc' ? `<div class="row"><label class="chk"><input type="checkbox" data-afrc="rot" ${r.rot ? 'checked' : ''}>rotation layout (8×8 paging tile; off = scan 16×4)</label>
@@ -261,7 +262,7 @@
     const radios = (k, title) => `<span class="chk"><b>${title}</b></span>` + ['none', 'rarely', 'often'].map((o) => `<label class="chk"><input type="radio" name="au-${k}" data-u="${k}" value="${o}" ${m[k] === o ? 'checked' : ''}>${o}</label>`).join('');
     const item = (f) => `<label class="chk" title="${esc(f.hex)}"><input type="checkbox" data-flag="${esc(f.name)}" ${m.bits.includes(f.name) ? 'checked' : ''}><span class="mono">${esc(su(f.name))}</span> <span class="muted small">${f.hex}</span></label>`;
     return `<div class="panel" id="aup"><div class="row"><b>Usage</b> <span class="mono">${hx(v)}</span>
-        <select data-preset><option value="">Presets…</option>${Object.keys(PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
+        <select data-preset aria-label="Usage presets"><option value="">Presets…</option>${Object.keys(PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
       <div class="row">${radios('read', 'CPU read:')}</div><div class="row">${radios('write', 'CPU write:')}</div>
       <details><summary>Other usage flags (${m.bits.length} set)</summary><div class="flags">${FLAGS.filter((f) => f.kind === 'standard').map(item).join('')}</div>
         <p class="small"><b>Arm private bits</b> ${src(al(AF.USG, 45, 110))}</p><div class="flags">${FLAGS.filter((f) => f.kind === 'private').map(item).join('')}</div>

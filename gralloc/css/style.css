@@ -163,6 +163,7 @@ tbody tr:hover { background: var(--cb-soft); }
 .info { border-color: var(--cb); background: var(--cb-soft); }
 p, li, .caption, .note, .err, .info, h1, h3 { overflow-wrap: anywhere; }
 .src { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+span.src { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
 
 /* controls */
 input[type=text], input[type=number], select { font: inherit; font-size: 14px; padding: 5px 8px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); color: var(--ink); max-width: 100%; }

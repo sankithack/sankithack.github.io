@@ -13,12 +13,15 @@
   const short = (file) => file.replace(/^gralloc4\/src\//, '').replace(/^gralloc4\//, '');
   // Arm r56p0 locations (repo: 'arm') point at the locally extracted archive, which is not published.
   const ARM_ROOT = '../arm-r56p0/driver/product/wsialloc/';
+  // Only a local checkout (file:// or a local server) has that folder; on the published site the link would 404.
+  const ARM_LOCAL = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   const armShort = (file) => file.replace(/^android\/src\//, '');
   function src(loc, label) {
     if (!loc) return '<span class="badge b-unknown">no source location</span>';
     if (loc.repo === 'arm') {
       const at = `${loc.line}${loc.end ? '-' + loc.end : ''}`;
       const t = label || `arm:${armShort(loc.file)}:${at}`;
+      if (!ARM_LOCAL) return `<span class="src src-arm" tabindex="0" title="Arm r56p0 ${esc(loc.file)}:${at} — the Arm source is not published; open it in your own copy of the r56p0 archive">${esc(t)}</span>`;
       return `<a class="src src-arm" href="${ARM_ROOT}${loc.file}" target="_blank" rel="noopener" title="Arm r56p0 ${esc(loc.file)}:${at} — opens your local copy in arm-r56p0/ (not published)">${esc(t)}</a>`;
     }
     if (loc.repo === 'fw') {
@@ -107,7 +110,7 @@
     }).join('');
     return `<div class="panel" id="${id}">
       <div class="row"><b>Usage</b> <span class="mono">${hex(v)}</span>
-        <select data-preset><option value="">Presets…</option>${Object.keys(PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
+        <select data-preset aria-label="Usage presets"><option value="">Presets…</option>${Object.keys(PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
       <div class="row">${radios('read', 'CPU read:')}</div><div class="row">${radios('write', 'CPU write:')}</div>
       <details ${compact ? '' : 'open'}><summary>Other usage flags (${m.bits.length} set)</summary><div class="flags">${items}</div>
       <p class="small muted">Values: AOSP <code>BufferUsage</code> constants are defined outside this repo; their bit positions are confirmed by the comments in ${src(FD.usages.valid_usage_loc, 'VALID_USAGE')}. CPU READ/WRITE RARELY/OFTEN encodings (2/3, 0x20/0x30) are AOSP values, <b>not confirmed in source</b>. Private bits are parsed from ${src(L(P.USG, 39, 58), 'mali_gralloc_usages.h')}.</p></details></div>`;
@@ -388,11 +391,11 @@
     let body = '';
     if (tab === 'supported') {
       body = `<div class="panel row">
-        <input type="text" id="fq" placeholder="search name / hex value" value="${esc(fstate.q)}" style="min-width:240px">
-        <select id="fcat"><option value="">all categories</option>${CATS.map((c) => `<option ${fstate.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
-        <select id="fpl"><option value="">any planes</option>${[1, 2, 3].map((n) => `<option ${String(fstate.planes) === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select>
-        <select id="fcomp"><option value="">any compression</option>${['AFBC-capable', 'SBWC', 'none'].map((c) => `<option ${fstate.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
-        <select id="fip"><option value="">any IP usage</option>${IPS.map(([k, t]) => `<option value="${k}" ${fstate.ip === k ? 'selected' : ''}>${t} (linear or AFBC)</option>`).join('')}</select>
+        <input type="text" id="fq" aria-label="Search formats by name or hex value" placeholder="search name / hex value" value="${esc(fstate.q)}" style="min-width:240px">
+        <select id="fcat" aria-label="Filter by category"><option value="">all categories</option>${CATS.map((c) => `<option ${fstate.cat === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+        <select id="fpl" aria-label="Filter by plane count"><option value="">any planes</option>${[1, 2, 3].map((n) => `<option ${String(fstate.planes) === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select>
+        <select id="fcomp" aria-label="Filter by compression"><option value="">any compression</option>${['AFBC-capable', 'SBWC', 'none'].map((c) => `<option ${fstate.comp === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+        <select id="fip" aria-label="Filter by IP usage"><option value="">any IP usage</option>${IPS.map(([k, t]) => `<option value="${k}" ${fstate.ip === k ? 'selected' : ''}>${t} (linear or AFBC)</option>`).join('')}</select>
         <span id="fcount" class="small muted"></span></div>
         <div class="tablewrap"><table><thead><tr><th>Format</th><th>Value</th><th>Categories</th><th>Planes</th><th>bpp (linear)</th><th>sub-sampling</th><th>align w/h/cpu</th><th>IP (from formats_ip_support[])</th><th>row</th></tr></thead><tbody id="ftbody"></tbody></table></div>
         <p class="small muted">Categories are derived from <code>is_rgb</code>/<code>is_yuv</code>/<code>afbc</code>, the format name and its section in <code>formats[]</code>. "AFBC-capable" means <code>.afbc = true</code> in the table; whether AFBC is actually used depends on IP capabilities and usage.</p>`;
@@ -550,7 +553,7 @@
     const sel = (params.get('f') || '').split(',').filter((n) => byName.has(n));
     while (sel.length < 2) sel.push(['MALI_GRALLOC_FORMAT_INTERNAL_NV12', 'HAL_PIXEL_FORMAT_EXYNOS_YCbCr_420_SPN', 'MALI_GRALLOC_FORMAT_INTERNAL_RGBA_8888'].find((n) => !sel.includes(n)));
     const opts = (cur) => FD.formats.map((f) => `<option value="${esc(f.name)}" ${f.name === cur ? 'selected' : ''}>${esc(shortName(f.name))}</option>`).join('');
-    const slots = [0, 1, 2].map((i) => `<select data-slot="${i}"><option value="">${i === 2 ? '(optional third)' : '—'}</option>${opts(sel[i])}</select>`).join(' ');
+    const slots = [0, 1, 2].map((i) => `<select data-slot="${i}" aria-label="Format ${i + 1}"><option value="">${i === 2 ? '(optional third)' : '—'}</option>${opts(sel[i])}</select>`).join(' ');
     return `<h1>Compare formats</h1><div class="panel row">${slots}</div>${dimsPicker('dims', true)}${usagePicker(state.calc.usage, 'up', true)}${flagsSummary()}<div id="cmpout"></div>`;
   };
   function compareAfter(params) {
@@ -772,10 +775,11 @@
     if (el) setTimeout(() => { el.scrollIntoView({ block: 'center' }); el.classList.add('flash'); }, 0);
   };
   const AFTER = { formats: formatsAfter, format: formatAfter, compare: compareAfter, usage: usageAfter, settings: settingsAfter, glossary: glossaryAfter };
+  const notFound = () => `<h1>Page not found</h1><p>There is no page at <code>${esc(location.hash)}</code>. Try the <a href="#/">overview</a> or press <kbd>/</kbd> to search.</p>`;
   function render() {
     const { route, arg, params } = parse();
     keyHandler = null;
-    const v = views[route] || views.overview;
+    const v = views[route] || notFound;
     const y = window.scrollY;
     app.innerHTML = v(params, arg);
     if (AFTER[route]) AFTER[route](params, arg);
@@ -789,6 +793,8 @@
       const row = el.parentElement;
       if (row && row.scrollWidth > row.clientWidth) row.scrollLeft = el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2;
     });
+    const h1 = app.querySelector('h1');
+    document.title = (h1 && route !== 'overview' ? h1.textContent.trim() + ' · ' : '') + 'gralloc explorer';
     render.lastRoute = location.hash;
   }
   window.addEventListener('hashchange', render);
@@ -805,7 +811,7 @@
     });
     sync();
   })();
-  document.getElementById('foot').innerHTML = `Data: <code>site/data/*.json</code> generated by <code>tools/extract.py</code> from gchips @ <code>${esc((FD.meta.commit || '').slice(0, 12))}</code>. Source links open android.googlesource.com at that commit. Arm r56p0 data: <code>tools/extract_arm.py</code>; <span class="mono">arm:</span> links open the locally extracted archive. Framework (libui) data: <code>tools/extract_fw.py</code>; <span class="mono">fw:</span> links open AOSP frameworks/native at the pinned commit.`;
+  document.getElementById('foot').innerHTML = `Data: <code>site/data/*.json</code> generated by <code>tools/extract.py</code> from gchips @ <code>${esc((FD.meta.commit || '').slice(0, 12))}</code>. Source links open android.googlesource.com at that commit. Arm r56p0 data: <code>tools/extract_arm.py</code>; <span class="mono">arm:</span> locations are clickable only in a local checkout with the archive extracted (the Arm source is not published). Framework (libui) data: <code>tools/extract_fw.py</code>; <span class="mono">fw:</span> links open AOSP frameworks/native at the pinned commit.`;
   // Extension point for additional views (site/js/storage.js).
   window.GX = { views, AFTER, esc, src, L, P, byName, shortName, badge, fmt, hex, state, saveCalc, render, dimsPicker, bindDims, E, U, V, FD, CF, store,
     usageValue, modelFromValue, calcRun, layoutSVG, planeTable, traceList, resultSummary, PRESETS, usagePicker, bindUsagePicker };
