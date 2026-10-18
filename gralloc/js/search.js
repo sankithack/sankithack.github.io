@@ -14,7 +14,7 @@
     ['Overview', '#/'], ['Learn', '#/learn'], ['Use cases', '#/usecases'], ['Formats', '#/formats'], ['Pixel storage', '#/storage'],
     ['Compare formats', '#/compare'], ['Code flow', '#/flow'], ['Framework (libui → HAL)', '#/framework'], ['Usage flags', '#/usage'],
     ['Glossary', '#/glossary'], ['Build-flag assumptions', '#/settings'],
-    ['Framework: AIMapper v5 functions', '#/framework?s=aimapper'], ['Framework: metadata support', '#/framework?s=metadata'],
+    ['Framework: AIMapper v5 functions', '#/framework?s=aimapper'], ['Framework: metadata support', '#/framework?s=metadata'], ['Framework: metadata storage (shared_metadata)', '#/framework?s=storage'],
     ['Framework: GraphicBuffer parcel layout', '#/framework?s=parcel'], ['Framework: loading the HAL', '#/framework?s=load'],
     ['Arm r56p0 overview', '#/arm'], ['Arm formats', '#/arm/formats'], ['Arm allocation calculator', '#/arm/calc'], ['Arm capabilities (XML)', '#/arm/caps'],
     ['Arm mapper & metadata', '#/arm/mapper'], ['Arm handles & descriptors', '#/arm/handles'], ['Arm build & config', '#/arm/build'],

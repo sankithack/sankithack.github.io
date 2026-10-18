@@ -821,6 +821,10 @@
     render.lastRoute = location.hash;
   }
   window.addEventListener('hashchange', render);
+  // Header height (it wraps to two rows on narrow screens) for scroll-margin on section targets.
+  const hdrH = () => { const h = document.querySelector('header.top'); if (h) document.documentElement.style.setProperty('--hdr-h', h.offsetHeight + 'px'); };
+  window.addEventListener('resize', hdrH);
+  document.addEventListener('DOMContentLoaded', hdrH);
   // Theme toggle: light ⇄ dark. Starts from the saved choice or the OS setting (index.html sets it before paint).
   (function () {
     const btn = document.getElementById('theme');

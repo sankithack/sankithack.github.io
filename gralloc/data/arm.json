@@ -18616,13 +18616,14 @@
     "description": "AIDL IAllocator entry: decode the descriptor blob, then the shared allocate_common().",
     "description_source": "manual (written from reading the code)",
     "next": [
-     "allocate_common"
+     "allocate_common",
+     "decode_desc"
     ],
     "stops": [
      {
       "line": 87,
       "note": "Decode the descriptor bytes.",
-      "call": null,
+      "call": "decode_desc",
       "text": "if (!::arm::mapper::common::grallocDecodeBufferDescriptor(hidl_descriptor, buffer_descriptor))"
      },
      {
@@ -19559,12 +19560,22 @@
     "code": "mapper_error import_buffer(const native_handle_t *raw_handle, imported_handle **out_handle)\n{\n\tauto private_handle = handle_cast<private_handle_t>(raw_handle);\n\tif (private_handle == nullptr)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Invalid buffer handle to import\");\n\t\treturn mapper_error::BAD_BUFFER;\n\t}\n\n\tauto import_handle = make_imported_handle(private_handle);\n\tif (import_handle == nullptr)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"Failed to clone buffer handle\");\n\t\treturn mapper_error::NO_RESOURCES;\n\t}\n\n\tint protection = PROT_READ | PROT_WRITE;\n\tint flags = MAP_SHARED;\n\toff_t page_offset = 0;\n\timport_handle->attr_base =\n\t    mmap(nullptr, import_handle->attr_size, protection, flags, import_handle->share_attr_fd, page_offset);\n\tif (import_handle->attr_base == MAP_FAILED)\n\t{\n\t\treturn mapper_error::NO_RESOURCES;\n\t}\n\n\tauto unmap = android::base::make_scope_guard(\n\t    [&import_handle]() { munmap(import_handle->attr_base, import_handle->attr_size); });\n\n\timport_handle->import_pid = getpid();\n\n\t/* Cloned buffers don't share the same buffer mapping */\n\timport_handle->base = nullptr;\n\timport_handle->cpu_write = 0;\n\n\tif (!RegisteredHandlePool::get_instance().add(import_handle.get()))\n\t{\n\t\tMALI_GRALLOC_LOGW(\"Handle %p already present in pool of registered handles. This can happen if the buffer was \"\n\t\t                  \"freed by a different mapper instance and then re-allocated\",\n\t\t                  import_handle.get());\n\t}\n\n\tassert(import_handle->numFds == PRIVATE_HANDLE_NUM_FDS);\n\tassert(import_handle->numInts == PRIVATE_HANDLE_NUM_INTS);\n\n\tunmap.Disable();\n\t*out_handle = import_handle.release();\n\n\treturn mapper_error::NONE;\n}",
     "description": "Clone the handle, map the shared metadata immediately, remember which process imported it.",
     "description_source": "manual (written from reading the code)",
-    "next": [],
+    "next": [
+     "handle_cast",
+     "make_imported",
+     "pool_add"
+    ],
     "stops": [
+     {
+      "line": 95,
+      "note": "Check the incoming handle.",
+      "call": "handle_cast",
+      "text": "auto private_handle = handle_cast<private_handle_t>(raw_handle);"
+     },
      {
       "line": 102,
       "note": "Clone the handle.",
-      "call": null,
+      "call": "make_imported",
       "text": "auto import_handle = make_imported_handle(private_handle);"
      },
      {
@@ -19584,6 +19595,12 @@
       "note": "Pixel memory is not mapped yet.",
       "call": null,
       "text": "import_handle->base = nullptr;"
+     },
+     {
+      "line": 128,
+      "note": "Remember the handle.",
+      "call": "pool_add",
+      "text": "if (!RegisteredHandlePool::get_instance().add(import_handle.get()))"
      }
     ]
    },
@@ -19831,7 +19848,10 @@
     "code": "static void buffer_sync(imported_handle *hnd, tx_direction direction)\n{\n\tif (direction != TX_NONE)\n\t{\n\t\t++hnd->lock_count;\n\t\thnd->cpu_write = direction == TX_TO_DEVICE || direction == TX_BOTH;\n\t\tint cpu_read = direction == TX_FROM_DEVICE || direction == TX_BOTH;\n\n\t\tint status = allocator_sync_start(hnd, cpu_read, hnd->cpu_write);\n\t\tif (status < 0)\n\t\t{\n\t\t\treturn;\n\t\t}\n\t}\n\telse\n\t{\n\t\tif (hnd->cpu_write)\n\t\t{\n\t\t\t/* Flush the cache only when there is a cpu_write lock. */\n\t\t\tint status = allocator_sync_end(hnd, false, hnd->cpu_write);\n\t\t\tif (status < 0)\n\t\t\t{\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\thnd->lock_count > 0 ? --hnd->lock_count : hnd->lock_count = 0;\n\t\tif (hnd->lock_count == 0)\n\t\t{\n\t\t\thnd->cpu_write = 0;\n\t\t}\n\t}\n}",
     "description": "Lock: lock_count++ and start dma-buf CPU sync. Unlock: flush only if the CPU wrote; clear CPU-write when the last lock ends.",
     "description_source": "manual (written from reading the code)",
-    "next": [],
+    "next": [
+     "sync_start",
+     "sync_end"
+    ],
     "stops": [
      {
       "line": 94,
@@ -19842,13 +19862,13 @@
      {
       "line": 98,
       "note": "dma-buf CPU sync start (always, no build flag).",
-      "call": null,
+      "call": "sync_start",
       "text": "int status = allocator_sync_start(hnd, cpu_read, hnd->cpu_write);"
      },
      {
       "line": 109,
       "note": "Unlock: flush only if the CPU wrote.",
-      "call": null,
+      "call": "sync_end",
       "text": "int status = allocator_sync_end(hnd, false, hnd->cpu_write);"
      }
     ]
@@ -19965,13 +19985,21 @@
     "description": "Remove from the handle pool; if this process imported it, unmap the buffer and the metadata.",
     "description_source": "manual (written from reading the code)",
     "next": [
-     "unmap_buffer"
+     "unmap_buffer",
+     "handle_cast",
+     "pool_remove"
     ],
     "stops": [
      {
+      "line": 146,
+      "note": "Must be an imported handle.",
+      "call": "handle_cast",
+      "text": "auto handle = unique_imported_handle{ handle_cast<imported_handle>(static_cast<native_handle *>(buffer_handle)) };"
+     },
+     {
       "line": 153,
       "note": "Forget the handle.",
-      "call": null,
+      "call": "pool_remove",
       "text": "if (!RegisteredHandlePool::get_instance().remove(handle.get()))"
      },
      {
@@ -21204,7 +21232,8 @@
     "description": "One case per metadata type: fixed values come from the handle, mutable ones from the shared-memory region.",
     "description_source": "manual (written from reading the code)",
     "next": [
-     "plane_layouts"
+     "plane_layouts",
+     "shm_get_dataspace"
     ],
     "stops": [
      {
@@ -21230,6 +21259,12 @@
       "note": "PLANE_LAYOUTS.",
       "call": "plane_layouts",
       "text": "err = get_plane_layouts(handle, &layouts);"
+     },
+     {
+      "line": 242,
+      "note": "DATASPACE from shared metadata.",
+      "call": "shm_get_dataspace",
+      "text": "get_dataspace(import, &dataspace);"
      },
      {
       "line": 265,
@@ -21399,13 +21434,21 @@
     "code": "mapper_error set_metadata(const imported_handle *handle, const metadata_descriptor &metadata, const uint8_t *data,\n                          size_t data_size, metadata_decoder decode_fn)\n{\n\tif (metadata.is_standard_metadata_type())\n\t{\n\t\tmapper_error err = mapper_error::NONE;\n\t\tswitch (metadata.get_standard_metadata_type_value())\n\t\t{\n\t\tcase StandardMetadataType::DATASPACE:\n\t\t{\n\t\t\tDataspace dataspace;\n\t\t\terr = decode_fn(data, data_size, &dataspace);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tset_dataspace(handle, dataspace);\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase StandardMetadataType::CHROMA_SITING:\n\t\t{\n\t\t\tconst auto *format_info = handle->alloc_format.get_base_info();\n\t\t\tif (format_info == nullptr)\n\t\t\t{\n\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tExtendableType chroma_siting;\n\t\t\terr = decode_fn(data, data_size, &chroma_siting);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tif ((chroma_siting.name == GRALLOC4_STANDARD_CHROMA_SITING))\n\t\t\t\t{\n\t\t\t\t\tset_chroma_siting(handle, chroma_siting);\n\t\t\t\t}\n\t\t\t\telse\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase StandardMetadataType::BLEND_MODE:\n\t\t{\n\t\t\tBlendMode blend_mode;\n\t\t\terr = decode_fn(data, data_size, &blend_mode);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tset_blend_mode(handle, blend_mode);\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase StandardMetadataType::SMPTE2086:\n\t\t{\n\t\t\tstd::optional<Smpte2086> smpte2086;\n\t\t\terr = decode_fn(data, data_size, &smpte2086);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tauto error = set_smpte2086(handle, smpte2086);\n\t\t\t\tif (error != android::OK)\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase StandardMetadataType::CTA861_3:\n\t\t{\n\t\t\tstd::optional<Cta861_3> cta861_3;\n\t\t\terr = decode_fn(data, data_size, &cta861_3);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tauto error = set_cta861_3(handle, cta861_3);\n\t\t\t\tif (error != android::OK)\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase StandardMetadataType::SMPTE2094_40:\n\t\t{\n\t\t\tstd::optional<std::vector<uint8_t>> smpte2094_40;\n\t\t\terr = decode_fn(data, data_size, &smpte2094_40);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tauto error = set_smpte2094_40(handle, smpte2094_40);\n\t\t\t\tif (error != android::OK)\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n#if PLATFORM_API_LEVEL > 36\n\t\tcase StandardMetadataType::SMPTE2094_50:\n\t\t{\n\t\t\tstd::optional<std::vector<uint8_t>> smpte2094_50;\n\t\t\terr = decode_fn(data, data_size, &smpte2094_50);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tauto error = set_smpte2094_50(handle, smpte2094_50);\n\t\t\t\tif (error != android::OK)\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n#endif /* PLATFORM_API_LEVEL > 36 */\n\t\tcase StandardMetadataType::SMPTE2094_10:\n\t\t{\n\t\t\tstd::optional<std::vector<uint8_t>> smpte2094_10;\n\t\t\terr = decode_fn(data, data_size, &smpte2094_10);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tauto error = set_smpte2094_10(handle, smpte2094_10);\n\t\t\t\tif (error != android::OK)\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase StandardMetadataType::CROP:\n\t\t{\n\t\t\tstd::vector<Rect> crops;\n\t\t\terr = decode_fn(data, data_size, &crops);\n\t\t\tif (err == mapper_error::NONE)\n\t\t\t{\n\t\t\t\tauto error = set_crop_rect(handle, crops[0]);\n\t\t\t\tif (error != android::OK)\n\t\t\t\t{\n\t\t\t\t\terr = mapper_error::BAD_VALUE;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\t/* The following meta data types cannot be changed after allocation. */\n\t\tcase StandardMetadataType::BUFFER_ID:\n\t\tcase StandardMetadataType::NAME:\n\t\tcase StandardMetadataType::WIDTH:\n\t\tcase StandardMetadataType::HEIGHT:\n\t\tcase StandardMetadataType::LAYER_COUNT:\n\t\tcase StandardMetadataType::PIXEL_FORMAT_REQUESTED:\n\t\tcase StandardMetadataType::USAGE:\n\t\t\treturn mapper_error::BAD_VALUE;\n\t\t/* Changing other metadata types is unsupported. */\n\t\tcase StandardMetadataType::PLANE_LAYOUTS:\n\t\tcase StandardMetadataType::PIXEL_FORMAT_FOURCC:\n\t\tcase StandardMetadataType::PIXEL_FORMAT_MODIFIER:\n\t\tcase StandardMetadataType::ALLOCATION_SIZE:\n\t\tcase StandardMetadataType::PROTECTED_CONTENT:\n\t\tcase StandardMetadataType::COMPRESSION:\n\t\tcase StandardMetadataType::INTERLACED:\n\t\tcase StandardMetadataType::INVALID:\n\t\tdefault:\n\t\t\treturn mapper_error::UNSUPPORTED;\n\t\t}\n\t\treturn ((err != mapper_error::NONE) ? mapper_error::UNSUPPORTED : mapper_error::NONE);\n\t}\n\telse\n\t{\n\t\t/* None of the vendor types support set. */\n\t\treturn mapper_error::UNSUPPORTED;\n\t}\n\treturn mapper_error::NONE;\n}",
     "description": "Only dataspace, chroma siting, blend mode, HDR metadata and crop can be set; identity fields return BAD_VALUE, the rest UNSUPPORTED.",
     "description_source": "manual (written from reading the code)",
-    "next": [],
+    "next": [
+     "shm_set_dataspace"
+    ],
     "stops": [
      {
       "line": 430,
       "note": "Dataspace \u2192 shared memory.",
       "call": null,
       "text": "case StandardMetadataType::DATASPACE:"
+     },
+     {
+      "line": 436,
+      "note": "Write it to shared metadata.",
+      "call": "shm_set_dataspace",
+      "text": "set_dataspace(handle, dataspace);"
      },
      {
       "line": 453,
@@ -21430,6 +21473,491 @@
       "note": "Layout-derived fields are read-only.",
       "call": null,
       "text": "return mapper_error::UNSUPPORTED;"
+     }
+    ]
+   },
+   {
+    "phase": "import",
+    "id": "handle_cast",
+    "title": "handle_cast<T>",
+    "function": "handle_cast<T>",
+    "def": {
+     "file": "android/src/core/buffer.h",
+     "line": 287,
+     "end": 324,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/core/buffer.h",
+     "line": 287,
+     "end": 324,
+     "repo": "arm"
+    },
+    "snippet": "T *handle_cast(native_handle *x)\n{\n\tauto handle = static_cast<private_handle_t *>(x);\n\tif (handle == nullptr)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle (nullptr)\");\n\t\treturn nullptr;\n\t}\n\telse if (handle->version != sizeof(native_handle))\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: version %d\", handle->version);\n\t\treturn nullptr;\n\t}\n\telse if (handle->numFds != PRIVATE_HANDLE_NUM_FDS)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: numFds = %d\", handle->numFds);\n\t\treturn nullptr;\n\t}\n\telse if (handle->numInts != PRIVATE_HANDLE_NUM_INTS)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: numInts = %d\", handle->numInts);\n\t\treturn nullptr;\n\t}\n\telse if (handle->magic != private_handle_t::sMagic)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: magic = %#x\", handle->magic);\n\t\treturn nullptr;\n\t}\n\telse if (handle->type < T::this_type)\n\t{\n\t\tMALI_GRALLOC_LOGW(\"handle not imported\");\n\t\treturn nullptr;\n\t}\n\telse\n\t{\n\t\treturn static_cast<T *>(x);\n\t}\n}",
+    "code_loc": {
+     "file": "android/src/core/buffer.h",
+     "line": 287,
+     "end": 324,
+     "repo": "arm"
+    },
+    "code": "T *handle_cast(native_handle *x)\n{\n\tauto handle = static_cast<private_handle_t *>(x);\n\tif (handle == nullptr)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle (nullptr)\");\n\t\treturn nullptr;\n\t}\n\telse if (handle->version != sizeof(native_handle))\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: version %d\", handle->version);\n\t\treturn nullptr;\n\t}\n\telse if (handle->numFds != PRIVATE_HANDLE_NUM_FDS)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: numFds = %d\", handle->numFds);\n\t\treturn nullptr;\n\t}\n\telse if (handle->numInts != PRIVATE_HANDLE_NUM_INTS)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: numInts = %d\", handle->numInts);\n\t\treturn nullptr;\n\t}\n\telse if (handle->magic != private_handle_t::sMagic)\n\t{\n\t\tMALI_GRALLOC_LOGE(\"bad handle: magic = %#x\", handle->magic);\n\t\treturn nullptr;\n\t}\n\telse if (handle->type < T::this_type)\n\t{\n\t\tMALI_GRALLOC_LOGW(\"handle not imported\");\n\t\treturn nullptr;\n\t}\n\telse\n\t{\n\t\treturn static_cast<T *>(x);\n\t}\n}",
+    "description": "Every mapper call starts here: null, native_handle version, exact fd and int counts, and the magic number; casting to imported_handle also needs type \u2265 imported, i.e. a handle that this process imported.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 292,
+      "note": "Null handle.",
+      "call": null,
+      "text": "MALI_GRALLOC_LOGE(\"bad handle (nullptr)\");"
+     },
+     {
+      "line": 295,
+      "note": "native_handle version.",
+      "call": null,
+      "text": "else if (handle->version != sizeof(native_handle))"
+     },
+     {
+      "line": 300,
+      "note": "Exact fd count.",
+      "call": null,
+      "text": "else if (handle->numFds != PRIVATE_HANDLE_NUM_FDS)"
+     },
+     {
+      "line": 305,
+      "note": "Exact int count.",
+      "call": null,
+      "text": "else if (handle->numInts != PRIVATE_HANDLE_NUM_INTS)"
+     },
+     {
+      "line": 310,
+      "note": "Magic number.",
+      "call": null,
+      "text": "else if (handle->magic != private_handle_t::sMagic)"
+     },
+     {
+      "line": 315,
+      "note": "imported_handle requires a handle imported by this process.",
+      "call": null,
+      "text": "else if (handle->type < T::this_type)"
+     }
+    ]
+   },
+   {
+    "phase": "import",
+    "id": "make_imported",
+    "title": "make_imported_handle",
+    "function": "make_imported_handle",
+    "def": {
+     "file": "android/src/core/buffer.h",
+     "line": 353,
+     "end": 369,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/core/buffer.h",
+     "line": 353,
+     "end": 369,
+     "repo": "arm"
+    },
+    "snippet": "static inline unique_imported_handle make_imported_handle(private_handle_t *raw_handle)\n{\n\tauto *new_handle = native_handle_create(PRIVATE_HANDLE_NUM_FDS, PRIVATE_HANDLE_NUM_INTS + IMPORTED_HANDLE_NUM_INTS);\n\tif (new_handle == nullptr)\n\t{\n\t\treturn nullptr;\n\t}\n\n\tauto import_handle = unique_imported_handle{ new (new_handle) imported_handle(*raw_handle) };\n\n\tif (!import_handle->validate())\n\t{\n\t\treturn nullptr;\n\t}\n\n\treturn import_handle;\n}",
+    "code_loc": {
+     "file": "android/src/core/buffer.h",
+     "line": 353,
+     "end": 369,
+     "repo": "arm"
+    },
+    "code": "static inline unique_imported_handle make_imported_handle(private_handle_t *raw_handle)\n{\n\tauto *new_handle = native_handle_create(PRIVATE_HANDLE_NUM_FDS, PRIVATE_HANDLE_NUM_INTS + IMPORTED_HANDLE_NUM_INTS);\n\tif (new_handle == nullptr)\n\t{\n\t\treturn nullptr;\n\t}\n\n\tauto import_handle = unique_imported_handle{ new (new_handle) imported_handle(*raw_handle) };\n\n\tif (!import_handle->validate())\n\t{\n\t\treturn nullptr;\n\t}\n\n\treturn import_handle;\n}",
+    "description": "Creates a new native_handle with room for the extra imported fields and copy-constructs an imported_handle from the incoming one (its constructor sets type = imported). The copy keeps the private handle's numInts, so the import-only fields are never cloned to another process (comment in buffer.h).",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 355,
+      "note": "Room for the import-only fields.",
+      "call": null,
+      "text": "auto *new_handle = native_handle_create(PRIVATE_HANDLE_NUM_FDS, PRIVATE_HANDLE_NUM_INTS + IMPORTED_HANDLE_NUM_INTS);"
+     },
+     {
+      "line": 361,
+      "note": "Copy; type becomes imported.",
+      "call": null,
+      "text": "auto import_handle = unique_imported_handle{ new (new_handle) imported_handle(*raw_handle) };"
+     },
+     {
+      "line": 363,
+      "note": "share_fd and share_attr_fd must be valid.",
+      "call": null,
+      "text": "if (!import_handle->validate())"
+     }
+    ]
+   },
+   {
+    "phase": "import",
+    "id": "pool_add",
+    "title": "RegisteredHandlePool::add",
+    "function": "RegisteredHandlePool::add",
+    "def": {
+     "file": "android/src/idl_common/mapper/registered_handle_pool.cpp",
+     "line": 23,
+     "end": 27,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/idl_common/mapper/registered_handle_pool.cpp",
+     "line": 23,
+     "end": 27,
+     "repo": "arm"
+    },
+    "snippet": "bool RegisteredHandlePool::add(buffer_handle_t bufferHandle)\n{\n\tstd::lock_guard<std::mutex> lock(mutex);\n\treturn bufPool.insert(bufferHandle).second;\n}",
+    "code_loc": {
+     "file": "android/src/idl_common/mapper/registered_handle_pool.cpp",
+     "line": 23,
+     "end": 27,
+     "repo": "arm"
+    },
+    "code": "bool RegisteredHandlePool::add(buffer_handle_t bufferHandle)\n{\n\tstd::lock_guard<std::mutex> lock(mutex);\n\treturn bufPool.insert(bufferHandle).second;\n}",
+    "description": "Adds the handle to a mutex-protected set. A handle already in the set is only logged by import_buffer.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 26,
+      "note": "false if it was already there.",
+      "call": null,
+      "text": "return bufPool.insert(bufferHandle).second;"
+     }
+    ]
+   },
+   {
+    "phase": "lock",
+    "id": "sync_start",
+    "title": "allocator_sync_start",
+    "function": "allocator_sync_start",
+    "def": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 166,
+     "end": 170,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 166,
+     "end": 170,
+     "repo": "arm"
+    },
+    "snippet": "int allocator_sync_start(const imported_handle *handle, bool read, bool write)\n{\n\tauto allocator = get_global_buffer_allocator();\n\treturn allocator->CpuSyncStart(static_cast<unsigned>(handle->share_fd), make_sync_type(read, write));\n}",
+    "code_loc": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 166,
+     "end": 170,
+     "repo": "arm"
+    },
+    "code": "int allocator_sync_start(const imported_handle *handle, bool read, bool write)\n{\n\tauto allocator = get_global_buffer_allocator();\n\treturn allocator->CpuSyncStart(static_cast<unsigned>(handle->share_fd), make_sync_type(read, write));\n}",
+    "description": "libdmabufheap CpuSyncStart on the buffer's single dma-buf (share_fd). Arm uses one fd for all planes, and the call is always made: no build flag, unlike gchips' GRALLOC_ION_SYNC_ON_LOCK.",
+    "description_source": "manual (written from reading the code)",
+    "next": [
+     "make_sync_type"
+    ],
+    "stops": [
+     {
+      "line": 169,
+      "note": "Begin CPU access to the dma-buf.",
+      "call": "make_sync_type",
+      "text": "return allocator->CpuSyncStart(static_cast<unsigned>(handle->share_fd), make_sync_type(read, write));"
+     }
+    ]
+   },
+   {
+    "phase": "lock",
+    "id": "make_sync_type",
+    "title": "make_sync_type",
+    "function": "make_sync_type",
+    "def": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 146,
+     "end": 164,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 146,
+     "end": 164,
+     "repo": "arm"
+    },
+    "snippet": "static SyncType make_sync_type(bool read, bool write)\n{\n\tif (read && write)\n\t{\n\t\treturn kSyncReadWrite;\n\t}\n\telse if (read)\n\t{\n\t\treturn kSyncRead;\n\t}\n\telse if (write)\n\t{\n\t\treturn kSyncWrite;\n\t}\n\telse\n\t{\n\t\treturn static_cast<SyncType>(0);\n\t}\n}",
+    "code_loc": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 146,
+     "end": 164,
+     "repo": "arm"
+    },
+    "code": "static SyncType make_sync_type(bool read, bool write)\n{\n\tif (read && write)\n\t{\n\t\treturn kSyncReadWrite;\n\t}\n\telse if (read)\n\t{\n\t\treturn kSyncRead;\n\t}\n\telse if (write)\n\t{\n\t\treturn kSyncWrite;\n\t}\n\telse\n\t{\n\t\treturn static_cast<SyncType>(0);\n\t}\n}",
+    "description": "read + write \u2192 read-write, read \u2192 read, write \u2192 write. Neither gives SyncType 0, where gchips' sync_type_for_flags falls back to read-write.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 150,
+      "note": "Both.",
+      "call": null,
+      "text": "return kSyncReadWrite;"
+     },
+     {
+      "line": 162,
+      "note": "Neither: 0.",
+      "call": null,
+      "text": "return static_cast<SyncType>(0);"
+     }
+    ]
+   },
+   {
+    "phase": "unlock",
+    "id": "sync_end",
+    "title": "allocator_sync_end",
+    "function": "allocator_sync_end",
+    "def": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 172,
+     "end": 176,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 172,
+     "end": 176,
+     "repo": "arm"
+    },
+    "snippet": "int allocator_sync_end(const imported_handle *handle, bool read, bool write)\n{\n\tauto allocator = get_global_buffer_allocator();\n\treturn allocator->CpuSyncEnd(static_cast<unsigned>(handle->share_fd), make_sync_type(read, write));\n}",
+    "code_loc": {
+     "file": "android/src/allocator/dma_buf_heaps/dma_buf_heaps.cpp",
+     "line": 172,
+     "end": 176,
+     "repo": "arm"
+    },
+    "code": "int allocator_sync_end(const imported_handle *handle, bool read, bool write)\n{\n\tauto allocator = get_global_buffer_allocator();\n\treturn allocator->CpuSyncEnd(static_cast<unsigned>(handle->share_fd), make_sync_type(read, write));\n}",
+    "description": "libdmabufheap CpuSyncEnd on share_fd. buffer_sync calls it only when the buffer was locked for CPU write.",
+    "description_source": "manual (written from reading the code)",
+    "next": [
+     "make_sync_type"
+    ],
+    "stops": [
+     {
+      "line": 175,
+      "note": "End CPU access (flush).",
+      "call": "make_sync_type",
+      "text": "return allocator->CpuSyncEnd(static_cast<unsigned>(handle->share_fd), make_sync_type(read, write));"
+     }
+    ]
+   },
+   {
+    "phase": "metadata",
+    "id": "shm_get_dataspace",
+    "title": "get_dataspace (shared metadata)",
+    "function": "get_dataspace",
+    "def": {
+     "file": "android/src/idl_common/gralloc_shared/shared_metadata.cpp",
+     "line": 219,
+     "end": 223,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/idl_common/gralloc_shared/shared_metadata.cpp",
+     "line": 219,
+     "end": 223,
+     "repo": "arm"
+    },
+    "snippet": "void get_dataspace(const imported_handle *hnd, std::optional<Dataspace> *dataspace)\n{\n\tauto *metadata = reinterpret_cast<const shared_metadata *>(hnd->attr_base);\n\t*dataspace = metadata->dataspace.to_std_optional();\n}",
+    "code_loc": {
+     "file": "android/src/idl_common/gralloc_shared/shared_metadata.cpp",
+     "line": 219,
+     "end": 223,
+     "repo": "arm"
+    },
+    "code": "void get_dataspace(const imported_handle *hnd, std::optional<Dataspace> *dataspace)\n{\n\tauto *metadata = reinterpret_cast<const shared_metadata *>(hnd->attr_base);\n\t*dataspace = metadata->dataspace.to_std_optional();\n}",
+    "description": "Reads one field of struct shared_metadata straight from hnd->attr_base. import_buffer mapped the metadata region already, so there is no lazy mapping (gchips maps it on first use).",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 221,
+      "note": "Mapped at import.",
+      "call": null,
+      "text": "auto *metadata = reinterpret_cast<const shared_metadata *>(hnd->attr_base);"
+     },
+     {
+      "line": 222,
+      "note": "Never set \u2192 std::nullopt.",
+      "call": null,
+      "text": "*dataspace = metadata->dataspace.to_std_optional();"
+     }
+    ]
+   },
+   {
+    "phase": "metadata",
+    "id": "shm_set_dataspace",
+    "title": "set_dataspace (shared metadata)",
+    "function": "set_dataspace",
+    "def": {
+     "file": "android/src/idl_common/gralloc_shared/shared_metadata.cpp",
+     "line": 225,
+     "end": 229,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/idl_common/gralloc_shared/shared_metadata.cpp",
+     "line": 225,
+     "end": 229,
+     "repo": "arm"
+    },
+    "snippet": "void set_dataspace(const imported_handle *hnd, const Dataspace &dataspace)\n{\n\tauto *metadata = reinterpret_cast<shared_metadata *>(hnd->attr_base);\n\tmetadata->dataspace = aligned_optional(dataspace);\n}",
+    "code_loc": {
+     "file": "android/src/idl_common/gralloc_shared/shared_metadata.cpp",
+     "line": 225,
+     "end": 229,
+     "repo": "arm"
+    },
+    "code": "void set_dataspace(const imported_handle *hnd, const Dataspace &dataspace)\n{\n\tauto *metadata = reinterpret_cast<shared_metadata *>(hnd->attr_base);\n\tmetadata->dataspace = aligned_optional(dataspace);\n}",
+    "description": "Writes the field as an aligned_optional (state + item) in the shared region, visible to every process that imported the buffer.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 228,
+      "note": "Store it, marked occupied.",
+      "call": null,
+      "text": "metadata->dataspace = aligned_optional(dataspace);"
+     }
+    ]
+   },
+   {
+    "phase": "free",
+    "id": "pool_remove",
+    "title": "RegisteredHandlePool::remove",
+    "function": "RegisteredHandlePool::remove",
+    "def": {
+     "file": "android/src/idl_common/mapper/registered_handle_pool.cpp",
+     "line": 29,
+     "end": 35,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/idl_common/mapper/registered_handle_pool.cpp",
+     "line": 29,
+     "end": 35,
+     "repo": "arm"
+    },
+    "snippet": "native_handle_t *RegisteredHandlePool::remove(void *buffer)\n{\n\tauto bufferHandle = static_cast<native_handle_t *>(buffer);\n\n\tstd::lock_guard<std::mutex> lock(mutex);\n\treturn bufPool.erase(bufferHandle) == 1 ? bufferHandle : nullptr;\n}",
+    "code_loc": {
+     "file": "android/src/idl_common/mapper/registered_handle_pool.cpp",
+     "line": 29,
+     "end": 35,
+     "repo": "arm"
+    },
+    "code": "native_handle_t *RegisteredHandlePool::remove(void *buffer)\n{\n\tauto bufferHandle = static_cast<native_handle_t *>(buffer);\n\n\tstd::lock_guard<std::mutex> lock(mutex);\n\treturn bufPool.erase(bufferHandle) == 1 ? bufferHandle : nullptr;\n}",
+    "description": "Removes the handle from the set; a handle that is not there is only logged by free_buffer (e.g. imported by another mapper instance).",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 34,
+      "note": "nullptr if it was not there.",
+      "call": null,
+      "text": "return bufPool.erase(bufferHandle) == 1 ? bufferHandle : nullptr;"
+     }
+    ]
+   },
+   {
+    "phase": "supported",
+    "id": "decode_desc",
+    "title": "grallocDecodeBufferDescriptor",
+    "function": "grallocDecodeBufferDescriptor",
+    "def": {
+     "file": "android/src/idl_common/gralloc_shared/include/idl_common/descriptor.h",
+     "line": 188,
+     "end": 214,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/idl_common/gralloc_shared/include/idl_common/descriptor.h",
+     "line": 188,
+     "end": 212,
+     "repo": "arm"
+    },
+    "snippet": "static bool grallocDecodeBufferDescriptor(const hidl_vec<vecT> &androidDescriptor,\n                                          buffer_descriptor_t &grallocDescriptor)\n{\n\tstatic_assert(sizeof(uint32_t) % sizeof(vecT) == 0, \"Unsupported vector type\");\n\tsize_t pos = 0;\n\n\tconstexpr size_t static_size = (DESCRIPTOR_32BIT_FIELDS * sizeof(uint32_t) / sizeof(vecT)) +\n\t                               (DESCRIPTOR_64BIT_FIELDS * sizeof(uint64_t) / sizeof(vecT)) + NAME_BUFFER_SIZE;\n\n\tif (static_size != androidDescriptor.size())\n\t{\n\t\tMALI_GRALLOC_LOGE(\"hidl_vec size does not match expected buffer descriptor size\");\n\t\treturn false;\n\t}\n\n\tgrallocDescriptor.width = pop_descriptor_uint32(androidDescriptor, &pos);\n\tgrallocDescriptor.height = pop_descriptor_uint32(androidDescriptor, &pos);\n\tgrallocDescriptor.layer_count = pop_descriptor_uint32(androidDescriptor, &pos);\n\tgrallocDescriptor.hal_format = static_cast<uint64_t>(pop_descriptor_uint32(androidDescriptor, &pos));\n\tgrallocDescriptor.producer_usage = pop_descriptor_uint64(androidDescriptor, &pos);\n\tgrallocDescriptor.consumer_usage = grallocDescriptor.producer_usage;\n\tgrallocDescriptor.signature = sizeof(buffer_descriptor_t);\n\tgrallocDescriptor.reserved_size = pop_descriptor_uint64(androidDescriptor, &pos);\n\tgrallocDescriptor.name = pop_descriptor_string(androidDescriptor, &pos);\n",
+    "code_loc": {
+     "file": "android/src/idl_common/gralloc_shared/include/idl_common/descriptor.h",
+     "line": 188,
+     "end": 214,
+     "repo": "arm"
+    },
+    "code": "static bool grallocDecodeBufferDescriptor(const hidl_vec<vecT> &androidDescriptor,\n                                          buffer_descriptor_t &grallocDescriptor)\n{\n\tstatic_assert(sizeof(uint32_t) % sizeof(vecT) == 0, \"Unsupported vector type\");\n\tsize_t pos = 0;\n\n\tconstexpr size_t static_size = (DESCRIPTOR_32BIT_FIELDS * sizeof(uint32_t) / sizeof(vecT)) +\n\t                               (DESCRIPTOR_64BIT_FIELDS * sizeof(uint64_t) / sizeof(vecT)) + NAME_BUFFER_SIZE;\n\n\tif (static_size != androidDescriptor.size())\n\t{\n\t\tMALI_GRALLOC_LOGE(\"hidl_vec size does not match expected buffer descriptor size\");\n\t\treturn false;\n\t}\n\n\tgrallocDescriptor.width = pop_descriptor_uint32(androidDescriptor, &pos);\n\tgrallocDescriptor.height = pop_descriptor_uint32(androidDescriptor, &pos);\n\tgrallocDescriptor.layer_count = pop_descriptor_uint32(androidDescriptor, &pos);\n\tgrallocDescriptor.hal_format = static_cast<uint64_t>(pop_descriptor_uint32(androidDescriptor, &pos));\n\tgrallocDescriptor.producer_usage = pop_descriptor_uint64(androidDescriptor, &pos);\n\tgrallocDescriptor.consumer_usage = grallocDescriptor.producer_usage;\n\tgrallocDescriptor.signature = sizeof(buffer_descriptor_t);\n\tgrallocDescriptor.reserved_size = pop_descriptor_uint64(androidDescriptor, &pos);\n\tgrallocDescriptor.name = pop_descriptor_string(androidDescriptor, &pos);\n\n\treturn true;\n}",
+    "description": "V1 descriptor blob: the size must be exactly 4 \u00d7 uint32 + 2 \u00d7 uint64 + a 128-byte name buffer = 160 bytes (NAME_BUFFER_SIZE, core/buffer_descriptor.h:27); then width, height, layers, format, usage (= producer and consumer), reserved size and the name. Unlike gchips there is no version field. The matching grallocEncodeBufferDescriptor (descriptor.h:165) is not called anywhere under android/ in this archive.",
+    "description_source": "manual (written from reading the code)",
+    "next": [
+     "pop_string"
+    ],
+    "stops": [
+     {
+      "line": 197,
+      "note": "Size must match exactly.",
+      "call": null,
+      "text": "if (static_size != androidDescriptor.size())"
+     },
+     {
+      "line": 208,
+      "note": "One usage for both sides.",
+      "call": null,
+      "text": "grallocDescriptor.consumer_usage = grallocDescriptor.producer_usage;"
+     },
+     {
+      "line": 211,
+      "note": "The name.",
+      "call": "pop_string",
+      "text": "grallocDescriptor.name = pop_descriptor_string(androidDescriptor, &pos);"
+     }
+    ]
+   },
+   {
+    "phase": "supported",
+    "id": "pop_string",
+    "title": "pop_descriptor_string",
+    "function": "pop_descriptor_string",
+    "def": {
+     "file": "android/src/idl_common/gralloc_shared/include/idl_common/descriptor.h",
+     "line": 154,
+     "end": 162,
+     "repo": "arm"
+    },
+    "snippet_loc": {
+     "file": "android/src/idl_common/gralloc_shared/include/idl_common/descriptor.h",
+     "line": 154,
+     "end": 162,
+     "repo": "arm"
+    },
+    "snippet": "static std::array<unsigned char, NAME_BUFFER_SIZE> pop_descriptor_string(const hidl_vec<uint8_t> &vec, size_t *pos)\n{\n\tstd::array<unsigned char, NAME_BUFFER_SIZE> name;\n\tconst uint8_t *element = vec.data() + *pos;\n\tstd::copy(element, element + MAX_NAME_LENGTH, name.data());\n\tname[MAX_NAME_LENGTH] = '\\0';\n\t*pos += NAME_BUFFER_SIZE;\n\treturn name;\n}",
+    "code_loc": {
+     "file": "android/src/idl_common/gralloc_shared/include/idl_common/descriptor.h",
+     "line": 154,
+     "end": 162,
+     "repo": "arm"
+    },
+    "code": "static std::array<unsigned char, NAME_BUFFER_SIZE> pop_descriptor_string(const hidl_vec<uint8_t> &vec, size_t *pos)\n{\n\tstd::array<unsigned char, NAME_BUFFER_SIZE> name;\n\tconst uint8_t *element = vec.data() + *pos;\n\tstd::copy(element, element + MAX_NAME_LENGTH, name.data());\n\tname[MAX_NAME_LENGTH] = '\\0';\n\t*pos += NAME_BUFFER_SIZE;\n\treturn name;\n}",
+    "description": "Copies MAX_NAME_LENGTH (127) bytes into a fixed array and forces the last byte to NUL, so an over-long name is cut rather than rejected.",
+    "description_source": "manual (written from reading the code)",
+    "next": [],
+    "stops": [
+     {
+      "line": 158,
+      "note": "Fixed length copy.",
+      "call": null,
+      "text": "std::copy(element, element + MAX_NAME_LENGTH, name.data());"
+     },
+     {
+      "line": 159,
+      "note": "Always NUL-terminated.",
+      "call": null,
+      "text": "name[MAX_NAME_LENGTH] = '\\0';"
      }
     ]
    }
@@ -21469,11 +21997,16 @@
     "is_supported",
     "derive",
     "protected_heap",
-    "aidl_allocate"
+    "aidl_allocate",
+    "decode_desc",
+    "pop_string"
    ],
    "import": [
     "v5_import",
-    "import_buffer"
+    "import_buffer",
+    "handle_cast",
+    "make_imported",
+    "pool_add"
    ],
    "lock": [
     "v5_lock",
@@ -21483,14 +22016,17 @@
     "validate_lock",
     "map_buffer",
     "allocator_map",
-    "buffer_sync"
+    "buffer_sync",
+    "sync_start",
+    "make_sync_type"
    ],
    "unlock": [
     "v5_unlock",
     "common_unlock",
     "unlock_buffer",
     "gralloc_unlock",
-    "buffer_sync"
+    "buffer_sync",
+    "sync_end"
    ],
    "metadata": [
     "v5_get_std",
@@ -21498,14 +22034,17 @@
     "common_get",
     "get_metadata",
     "plane_layouts",
+    "shm_get_dataspace",
     "v5_set_std",
     "v5_set_metadata",
     "common_set",
-    "set_metadata"
+    "set_metadata",
+    "shm_set_dataspace"
    ],
    "free": [
     "v5_free",
     "free_buffer",
+    "pool_remove",
     "unmap_buffer",
     "allocator_unmap"
    ]

@@ -454,3 +454,6 @@ main.page-in { animation: fadeIn .28s ease-out both; }
   .jcap { max-height: 7.2em; overflow-y: auto; font-size: 13px; min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .stk-box.on { transform: none; } }
+
+/* section targets (#/framework?s=…, table-of-contents links) must clear the sticky header */
+main h2[id], main h3[id] { scroll-margin-top: calc(var(--hdr-h, 104px) + 12px); }
