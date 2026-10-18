@@ -731,21 +731,27 @@
 
   /* ---- settings ---- */
   const FLAG_DOC = {
-    MALI_GPU_SUPPORT_AFBC_BASIC: ['GPU AFBC basic + YUV read + 1010102/16161616 pixel formats', L(P.CAPS, 73)],
-    MALI_GPU_SUPPORT_AFBC_YUV_WRITE: ['GPU can write YUV AFBC (nested in BASIC)', L(P.CAPS, 79)],
-    MALI_GPU_SUPPORT_AFBC_SPLITBLK: ['GPU split block (nested in BASIC)', L(P.CAPS, 83)],
-    MALI_GPU_SUPPORT_AFBC_WIDEBLK: ['GPU wide block (+split) (nested in BASIC)', L(P.CAPS, 87)],
-    MALI_GPU_SUPPORT_AFBC_TILED_HEADERS: ['GPU tiled headers (+split +wide) (nested in BASIC)', L(P.CAPS, 92)],
-    SOC_ZUMA: ['DPU wide-block; BIG uses BigWave caps; camera RAW/YUV stride rules', L('gralloc4/Android.bp', 183)],
-    GRALLOC_DPU_SUPPORT_1010102_AFBC: ['DPU RGBA_1010102 capability', L(P.CAPS, 68)],
-    GRALLOC_ARM_NO_EXTERNAL_AFBC: ['strip AFBC capabilities from every IP', L(P.CAPS, 123)],
-    GRALLOC_HWC_FB_DISABLE_AFBC: ['no AFBC for HW_FB (client target) buffers', L(P.FMTS, 1531)],
+    MALI_GPU_SUPPORT_AFBC_BASIC: ['GPU AFBC basic + YUV read + 1010102/16161616 pixel formats', L(P.CAPS, 73), ['mali_gpu_support_afbc_basic', L('gralloc4/src/capabilities/Android.bp', 73, 75)]],
+    MALI_GPU_SUPPORT_AFBC_YUV_WRITE: ['GPU can write YUV AFBC (nested in BASIC)', L(P.CAPS, 79), ['mali_gpu_support_afbc_yuv_write', L('gralloc4/src/capabilities/Android.bp', 93, 95)]],
+    MALI_GPU_SUPPORT_AFBC_SPLITBLK: ['GPU split block (nested in BASIC)', L(P.CAPS, 83), ['mali_gpu_support_afbc_splitblk', L('gralloc4/src/capabilities/Android.bp', 78, 80)]],
+    MALI_GPU_SUPPORT_AFBC_WIDEBLK: ['GPU wide block (+split) (nested in BASIC)', L(P.CAPS, 87), ['mali_gpu_support_afbc_wideblk', L('gralloc4/src/capabilities/Android.bp', 83, 85)]],
+    MALI_GPU_SUPPORT_AFBC_TILED_HEADERS: ['GPU tiled headers (+split +wide) (nested in BASIC)', L(P.CAPS, 92), ['mali_gpu_support_afbc_tiled_headers', L('gralloc4/src/capabilities/Android.bp', 88, 90)]],
+    SOC_ZUMA: ['DPU wide-block; BIG uses BigWave caps; camera RAW/YUV stride rules', L('gralloc4/Android.bp', 183), ['soc = zuma', L('gralloc4/Android.bp', 180, 183)]],
+    GRALLOC_DPU_SUPPORT_1010102_AFBC: ['DPU RGBA_1010102 capability', L(P.CAPS, 68), ['dpu_support_1010102_afbc', L('gralloc4/src/capabilities/Android.bp', 103, 105)]],
+    GRALLOC_ARM_NO_EXTERNAL_AFBC: ['strip AFBC capabilities from every IP', L(P.CAPS, 123), ['gralloc_arm_no_external_afbc', L('gralloc4/src/capabilities/Android.bp', 98, 100)]],
+    GRALLOC_HWC_FB_DISABLE_AFBC: ['no AFBC for HW_FB (client target) buffers', L(P.FMTS, 1531), ['gralloc_hwc_fb_disable_afbc', L('gralloc4/Android.bp', 170, 172)]],
     prop_debug_vendor_gpu_record_sbwc: ['runtime property debug.vendor.gpu.record_sbwc (default true) for camera→MFC IMPLEMENTATION_DEFINED', L(P.FMTS, 1395)],
   };
   views.settings = () => `<h1>Build-flag assumptions</h1>
-    <p>These soong/board flags are compiled in on real devices but are <b>not set anywhere in this repository</b> (device trees elsewhere decide them). They change capability masks and therefore AFBC selection. Defaults = all off (property: true), i.e. the code as compiled with no board configuration.</p>
-    <div class="panel">${Object.keys(E.DEFAULT_FLAGS).map((k) => `<div><label class="chk"><input type="checkbox" data-bf="${k}" ${state.flags[k] ? 'checked' : ''}><code>${k}</code></label> <span class="small muted">${esc(FLAG_DOC[k][0])}</span> ${src(FLAG_DOC[k][1])}</div>`).join('')}
+    <p>Each flag below is a soong config variable in the <code>arm_gralloc</code> namespace. The <code>Android.bp</code> files in this repository turn it into a <code>-D</code> define (linked as <i>set by</i>), but the <b>value</b> comes from the device's board configuration, which is not in this repository. The flags change capability masks and therefore AFBC selection. Defaults = all off (property: true), i.e. the code as compiled with no board configuration.</p>
+    <div class="panel">${Object.keys(E.DEFAULT_FLAGS).map((k) => `<div><label class="chk"><input type="checkbox" data-bf="${k}" ${state.flags[k] ? 'checked' : ''}><code>${k}</code></label> <span class="small muted">${esc(FLAG_DOC[k][0])}</span> ${src(FLAG_DOC[k][1])}${FLAG_DOC[k][2] ? ` <span class="small muted">· set by <code>${esc(FLAG_DOC[k][2][0])}</code></span> ${src(FLAG_DOC[k][2][1])}` : ''}</div>`).join('')}
     <div class="row" style="margin-top:8px"><button id="bfreset">Reset to defaults</button><button id="bfgpu">Example: Mali GPU with all AFBC features</button></div></div>
+    <h2>Other build switches (not modelled)</h2>
+    <div class="tablewrap"><table><thead><tr><th>Define</th><th>Set by</th><th>Effect in this code</th></tr></thead><tbody>
+      <tr><td><code>GRALLOC_ION_SYNC_ON_LOCK</code></td><td><code>gralloc_ion_sync_on_lock</code> ${src(L('gralloc4/src/core/Android.bp', 45, 47))}</td><td>CPU cache sync on lock/unlock only when set ${src(L(P.ACC, 72))} ${src(L(P.ACC, 84))}. Lock-time only, so it does not change allocation results.</td></tr>
+      <tr><td><code>GRALLOC_MAPPER_4</code> / <code>GRALLOC_MAPPER_5</code></td><td><code>mapper_version</code> ${src(L('gralloc4/src/Android.bp', 54, 71))}</td><td>Builds the HIDL mapper 4.0 or the stable-C mapper (<code>mapper.pixel</code>). The code flow follows mapper 5.</td></tr>
+      <tr><td><code>MALI_DISPLAY_VERSION</code>, <code>GRALLOC_HWC_FORCE_BGRA_8888</code>, <code>GRALLOC_CAMERA_WRITE_RAW16</code></td><td>${src(L('gralloc4/Android.bp', 138, 179))}</td><td>Defined by the build, but no <code>.cpp</code>/<code>.h</code> file in this repository tests them (searched the whole tree; <code>MALI_DISPLAY_VERSION</code> appears only in a comment, ${src(L('gralloc4/src/capabilities/gralloc_capabilities.h', 37))}).</td></tr>
+    </tbody></table></div>
     <p class="small muted">Saved in this browser only.</p>`;
   function settingsAfter() {
     document.querySelectorAll('[data-bf]').forEach((i) => i.addEventListener('change', () => { state.flags[i.dataset.bf] = i.checked; store.set('flags', state.flags); }));
