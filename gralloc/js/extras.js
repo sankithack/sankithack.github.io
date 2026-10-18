@@ -665,7 +665,7 @@
   ];
 
   G.views.learn = (params, arg) => {
-    const n = Math.min(CHAPTERS.length - 1, Math.max(0, Number(arg || 0)));
+    const n = Math.min(CHAPTERS.length - 1, Math.max(0, Math.floor(Number(arg)) || 0));
     const ch = CHAPTERS[n];
     return `<h1>Learn</h1>
       <div class="tabs">${CHAPTERS.map((c, i) => `<a class="tabbtn ${i === n ? 'on' : ''}" href="#/learn/${i}">${i + 1}. ${esc(c.title)}</a>`).join('')}</div>
@@ -674,7 +674,7 @@
       <p class="small muted">Explanations are written by hand; every claim links to the code it comes from, and every number on this page is computed live by the JS port of the allocator (engine.js) with no board flags unless stated.</p>`;
   };
   G.AFTER.learn = (params, arg) => {
-    const n = Math.min(CHAPTERS.length - 1, Math.max(0, Number(arg || 0)));
+    const n = Math.min(CHAPTERS.length - 1, Math.max(0, Math.floor(Number(arg)) || 0));
     if (CHAPTERS[n].after) CHAPTERS[n].after();
   };
 })();

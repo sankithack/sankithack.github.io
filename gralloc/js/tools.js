@@ -22,11 +22,7 @@
   const armHal = (v) => A && A.hal_requests.find((h) => h.hal_value === v);
   const armCaps = (k) => (X && X.CAPS_PRESETS[k] ? X.CAPS_PRESETS[k].caps() : null);
 
-  function parseUsage(s) {
-    s = String(s || '').trim().replace(/_/g, '');
-    if (!s) return null;
-    try { return /^0x/i.test(s) ? BigInt(s) : /^[0-9a-f]+$/i.test(s) && /[a-f]/i.test(s) ? BigInt('0x' + s) : BigInt(s); } catch (e) { return null; }
-  }
+  const parseUsage = G.parseU64;
 
   function runG(fmtVal, w, h, layers, usage) {
     return E.allocate({ width: w, height: h, layer_count: layers, hal_format: fmtVal, usage }, state.flags);
@@ -75,6 +71,7 @@
     const rows = lines.map((l) => l.match(ROW)).filter(Boolean).filter((m) => m[1] !== 'Handle');
     if (!rows.length) { out.innerHTML = ts.dump.trim() ? '<p class="err">No buffer rows recognised. Rows look like <code>0x… | 10125.00 KiB | 1080 (1088) x 2400 | 1 | 1 | 0x b00 | name</code>.</p>' : ''; return; }
     let estTotal = 0, gTotal = 0, aTotal = 0, mism = 0;
+    const bars = [];
     const body = rows.map((m) => {
       const [, handle, sizeStr, w, stride, h, layers, fmtHex, usageHex, name] = m;
       const fv = parseInt(fmtHex, 16), u = BigInt('0x' + usageHex), W = +w, H = +h, L = Math.max(1, +layers);
@@ -82,6 +79,7 @@
       if (est) estTotal += est;
       const g = runG(fv, W, H, L, u), a = ts.arm ? runA(fv, W, H, L, u, ts.caps) : null;
       if (g.ok && g.total) gTotal += g.total;
+      bars.push({ label: name.trim() || handle, total: g.ok ? g.total : 0, parts: g.ok ? planeParts(g.planes, g.total, 'byte_stride') : [] });
       if (a && a.ok) aTotal += a.size;
       const strideOk = g.ok && g.pixel_stride === +stride;
       if (g.ok && !strideOk) mism++;
@@ -94,6 +92,7 @@
         <td class="small">${esc(sizeStr.trim())}</td><td>${res(g, false)}</td>${ts.arm ? `<td>${res(a, true)}</td>` : ''}</tr>`;
     }).join('');
     out.innerHTML = `<p><b>${rows.length}</b> buffers · dump estimate ${fmt(Math.round(estTotal))} B · gchips computes <b>${fmt(gTotal)}</b> B${ts.arm ? ` · Arm computes <b>${fmt(aTotal)}</b> B` : ''}${mism ? ` · ${badge(mism + ' stride mismatch' + (mism > 1 ? 'es' : ''), 'b-bad')} (the buffer may come from a different allocator, other build flags, or a format/usage the allocator rewrote)` : ''}</p>
+      <details class="sbars-wrap" open><summary class="small">gchips size per buffer (to scale, one colour per plane)</summary>${sizeBars(bars)}</details>
       <div class="tablewrap"><table><thead><tr><th>requestor</th><th>size</th><th>format</th><th>usage (producers → consumers)</th><th>dump size</th><th>gchips</th>${ts.arm ? '<th>Arm r56p0</th>' : ''}</tr></thead><tbody>${body}</tbody></table></div>`;
   }
 
@@ -116,6 +115,24 @@
     for (let b = 0n; b < 64n; b++) if ((u & (1n << b)) && !covered.has(b)) loose.push(Number(b));
     return { hits, loose };
   }
+  // 64 cells, bit 63 … 0. Colour = which implementation names the bit; bits that were not set last time pop in.
+  let prevBits = 0n;
+  function bitGrid(u) {
+    const names = (flags) => { const m = new Map(); for (const f of decode(u, flags).hits) for (let b = 0n; b < 64n; b++) if (BigInt(f.value) & (1n << b)) (m.get(b) || m.set(b, []).get(b)).push(f.name); return m; };
+    const gn = names(FD.usages.flags), an = A ? names(A.usages.flags) : new Map();
+    let k = 0;
+    const cells = [];
+    for (let b = 63n; b >= 0n; b--) {
+      const on = (u >> b) & 1n, g = gn.get(b), a = an.get(b);
+      const cls = !on ? '' : g && a ? 'on both' : g ? 'on g' : a ? 'on a' : 'on none';
+      const fresh = on && !((prevBits >> b) & 1n);
+      const tip = `bit ${b}${on ? ' (set)' : ''}${g ? ' · gchips: ' + g.join(', ') : ''}${a ? ' · Arm: ' + a.join(', ') : ''}`;
+      cells.push(`<span class="bit ${cls}${fresh ? ' fresh' : ''}" style="--i:${fresh ? k++ : 0}" title="${esc(tip)}">${b % 4n === 0n ? `<i>${b}</i>` : ''}</span>`);
+    }
+    prevBits = u;
+    return `<div class="bitgrid" role="img" aria-label="64 usage bits, set bits highlighted">${cells.join('')}</div>
+      <p class="small bitkey"><span class="bit on both"></span> named by both <span class="bit on g"></span> gchips only ${A ? '<span class="bit on a"></span> Arm only ' : ''}<span class="bit on none"></span> set, unnamed <span class="bit"></span> clear · hover a cell for its flags</p>`;
+  }
   function usagePage(params) {
     if (params && params.get('u')) ts.u = params.get('u');
     return `<p class="lede">Decode a usage value (hex like <code>0xb00</code>, or decimal) for both implementations: which named flags it contains, which bits nothing names, and the producers and consumers each one derives from it.</p>
@@ -126,7 +143,7 @@
   function usageDraw() {
     const out = document.getElementById('uout');
     const u = parseUsage(ts.u);
-    if (u == null) { out.innerHTML = '<p class="err">Not a number.</p>'; return; }
+    if (u == null) { out.innerHTML = '<p class="err">Not a 64-bit unsigned value. Use hex (0x…) or decimal.</p>'; return; }
     const side = (title, flags, prod, cons, cite, usageHref) => {
       const d = decode(u, flags);
       return `<div class="panel"><h3 style="margin-top:0">${title}</h3>
@@ -138,11 +155,26 @@
         <a class="btn small" href="${usageHref}">open in the usage page</a></div>`;
     };
     const gp = E.listBits(E.get_producers(u), E.PR), gc = E.listBits(E.get_consumers(u), E.CO);
-    out.innerHTML = `<p class="mono">${hx(u)} = ${u.toString()} = 0b${u.toString(2)}</p><div class="grid2">
+    out.innerHTML = `<p class="mono">${hx(u)} = ${u.toString()} = 0b${u.toString(2)}</p>${bitGrid(u)}<div class="grid2">
       ${side('gchips', FD.usages.flags, gp, gc, src({ file: 'gralloc4/src/core/mali_gralloc_formats.cpp', line: 105, end: 240 }, 'get_consumers / get_producers'), `#/usage?u=${hx(u)}`)}
       ${A ? side('Arm r56p0', A.usages.flags, [...AE.producers(u)].join(', ') || 'none', [...AE.consumersOf(u)].join(', ') || 'none', src({ file: 'android/src/core/formats.cpp', line: 44, end: 164, repo: 'arm' }, 'consumers / producers'), '#/arm/usage') : ''}
     </div>`;
   }
+
+  // Horizontal bars, one per item; each bar is split into plane segments and grows in from the left.
+  function sizeBars(items) {
+    const max = Math.max(1, ...items.map((x) => x.total || 0));
+    return `<div class="sbars">${items.map((x, i) => {
+      const segs = (x.parts && x.parts.length ? x.parts : [{ bytes: x.total }]).filter((p) => p.bytes > 0);
+      return `<div class="sbar"><span class="sbar-lab small">${esc(x.label)}</span><span class="sbar-track"><span class="sbar-fill" style="width:${(100 * (x.total || 0)) / max}%;--i:${i}">${segs.map((p, j) => `<span class="sbar-seg p${j % 4}" style="flex:${p.bytes}" title="${esc(p.title || '')}"></span>`).join('')}</span></span><span class="sbar-val small mono">${x.total ? fmt(x.total) + ' B' : '—'}</span></div>`;
+    }).join('')}</div>`;
+  }
+  // plane sizes from offsets: plane i runs to the next plane's offset (or the end of the buffer)
+  // (formats with one fd per plane restart offsets at 0 — then show a single segment)
+  const planeParts = (planes, total, strideKey) => planes.some((p, i) => i && p.offset <= planes[i - 1].offset) ? [{ bytes: total, title: `${planes.length} planes in separate fds` }] : planes.map((p, i) => {
+    const end = i + 1 < planes.length ? planes[i + 1].offset : total;
+    return { bytes: Math.max(0, end - p.offset), title: `plane ${i}: offset ${fmt(p.offset)}, ${fmt(end - p.offset)} B, stride ${fmt(p[strideKey])} B` };
+  });
 
   /* ------------------------------------------------------------------ gchips vs Arm */
   const HAL_OPTS = [...HAL.entries()].filter(([, n]) => n.startsWith('HAL_PIXEL_FORMAT_')).sort((a, b) => a[0] - b[0]);
@@ -162,7 +194,7 @@
   function vsDraw() {
     const s = ts.vs, out = document.getElementById('vsout');
     const u = parseUsage(s.u);
-    if (u == null) { out.innerHTML = '<p class="err">Usage is not a number.</p>'; return; }
+    if (u == null) { out.innerHTML = '<p class="err">Usage: Not a 64-bit unsigned value. Use hex (0x…) or decimal.</p>'; return; }
     const g = runG(s.f, s.w, s.h, s.layers, u), a = runA(s.f, s.w, s.h, s.layers, u, s.caps);
     const row = (label, gv, av) => `<tr class="${gv !== av ? 'diff' : ''}"><td>${label}</td><td class="mono small">${gv}</td><td class="mono small">${av}</td></tr>`;
     const gm = g.ok ? E.modNames(g.alloc_format).join(' | ') || 'none (linear)' : '—';
@@ -179,7 +211,9 @@
       ${row('CPU lockable', g.ok ? (g.lockable ? 'yes' : 'no') : '—', a && a.ok ? (a.lockable ? 'yes' : 'no') : '—')}
       ${row('dma-buf heap', g.ok ? esc(g.heap.name) : '—', a && a.ok ? esc(a.heap.name) : '—')}
       </tbody></table></div>
-      <p class="small">Rows that differ are highlighted. Full detail: <a href="#/usage?u=${hx(u)}&f=${encodeURIComponent(HAL.get(s.f) || '')}&w=${s.w}&h=${s.h}">gchips calculator</a>${A ? ' · <a href="#/arm/calc">Arm calculator</a>' : ''}.</p>`;
+      ${sizeBars([{ label: 'gchips', total: g.ok ? g.total : 0, parts: g.ok ? planeParts(g.planes, g.total, 'byte_stride') : [] }].concat(A ? [{ label: 'Arm r56p0', total: a && a.ok ? a.size : 0, parts: a && a.ok ? planeParts(a.planes, a.size, 'row_stride') : [] }] : []))}
+      <p class="small">Bars are to scale; each colour is one plane (hover for offset and size); anything after the last plane is in that plane's segment.
+      Rows that differ are highlighted. Full detail: <a href="#/usage?u=${hx(u)}&f=${encodeURIComponent(HAL.get(s.f) || '')}&w=${s.w}&h=${s.h}">gchips calculator</a>${A ? ' · <a href="#/arm/calc">Arm calculator</a>' : ''}.</p>`;
   }
 
   /* ------------------------------------------------------------------ page */

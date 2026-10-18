@@ -84,7 +84,7 @@
     ['build', 'Build & config'], ['files', 'Source map'], ['diff', 'vs gchips'], ['usage', 'Usage flags'], ['glossary', 'Terms'], ['flow', 'Code flow']];
   const PAGES = {}, AFTERS = {};
   function sub() {
-    const h = location.hash.replace(/^#\/?/, '').split('?')[0].split('/').map(decodeURIComponent);
+    const h = location.hash.replace(/^#\/?/, '').split('?')[0].split('/').map(G.safeDecode);
     return { page: h[1] || '', arg: h[2] };
   }
   const tabs = (page) => `<div class="tabs">${TABS.map(([k, t]) => `<button data-arm="${k}" class="${(page === k || (page === 'format' && k === 'formats')) ? 'on' : ''}">${t}</button>`).join('')}</div>`;

@@ -26,23 +26,107 @@
 
   function stack() {
     const g = (id) => gStep(id), a = (id) => aStep(id);
-    const box = (title, sub, loc, cls) => `<div class="stk-box ${cls || ''}"><b>${esc(title)}</b>${sub ? `<span class="small">${sub}</span>` : ''}${loc ? `<span class="small">${src(loc)}</span>` : ''}</div>`;
-    const vend = (gs, as, what) => `<div class="stk-vend">${box('gchips: ' + (gs ? gs.function : '—'), what, gs && gs.def, 'hal')}${A ? box('Arm r56p0: ' + (as ? as.function : '—'), what, as && as.def, 'hal') : ''}</div>`;
+    const box = (title, sub, loc, cls, l) => `<div class="stk-box ${cls || ''}"${l ? ` data-l="${l}"` : ''}><b>${esc(title)}</b>${sub ? `<span class="small">${sub}</span>` : ''}${loc ? `<span class="small">${src(loc)}</span>` : ''}</div>`;
+    const vend = (gs, as, what, l) => `<div class="stk-vend">${box('gchips: ' + (gs ? gs.function : '—'), what, gs && gs.def, 'hal', l)}${A ? box('Arm r56p0: ' + (as ? as.function : '—'), what, as && as.def, 'hal', l) : ''}</div>`;
     return `<div class="stk">
       <div class="stk-proc"><div class="stk-lab">Client process (app, SurfaceFlinger, camera HAL, codec…)</div>
-        ${box('GraphicBuffer', 'owns one buffer: allocate, lock/unlock, flatten/unflatten for binder', fwStep('fw_gb_ctor').def, 'fw')}
-        <div class="stk-row">${box('GraphicBufferAllocator', 'singleton; allocate / free + dumpsys list', fwStep('fw_gba_ctor').def, 'fw')}${box('GraphicBufferMapper', 'singleton; import, lock, metadata', fwStep('fw_gbm_ctor').def, 'fw')}</div>
-        <div class="stk-row">${box('Gralloc5Allocator', 'AIDL IAllocator client', fwStep('fw_g5_alloc').def, 'fw')}${box('Gralloc5Mapper', 'calls the AIMapper v5 function table', fwStep('fw_g5m_ctor').def, 'fw')}</div>
-        <div class="stk-arrow">dlopen <code>mapper.&lt;suffix&gt;.so</code> into this process, then <code>AIMapper_loadIMapper</code> ${src(fwStep('fw_load_lib').def)}</div>
-        ${vend(g('v5_load'), a('v5_load'), 'mapper library (in this process)')}
+        ${box('GraphicBuffer', 'owns one buffer: allocate, lock/unlock, flatten/unflatten for binder', fwStep('fw_gb_ctor').def, 'fw', 'gb')}
+        <div class="stk-row">${box('GraphicBufferAllocator', 'singleton; allocate / free + dumpsys list', fwStep('fw_gba_ctor').def, 'fw', 'gba')}${box('GraphicBufferMapper', 'singleton; import, lock, metadata', fwStep('fw_gbm_ctor').def, 'fw', 'gbm')}</div>
+        <div class="stk-row">${box('Gralloc5Allocator', 'AIDL IAllocator client', fwStep('fw_g5_alloc').def, 'fw', 'g5a')}${box('Gralloc5Mapper', 'calls the AIMapper v5 function table', fwStep('fw_g5m_ctor').def, 'fw', 'g5m')}</div>
+        <div class="stk-arrow" data-hop="dl">dlopen <code>mapper.&lt;suffix&gt;.so</code> into this process, then <code>AIMapper_loadIMapper</code> ${src(fwStep('fw_load_lib').def)}</div>
+        ${vend(g('v5_load'), a('v5_load'), 'mapper library (in this process)', 'map')}
       </div>
-      <div class="stk-arrow">binder: <code>IAllocator/default</code>, version ≥ 2 ${src(R.service_name)} ${src(R.min_version)}</div>
+      <div class="stk-arrow" data-hop="binder">binder: <code>IAllocator/default</code>, version ≥ 2 ${src(R.service_name)} ${src(R.min_version)}</div>
       <div class="stk-proc"><div class="stk-lab">Allocator service process</div>
-        ${vend(g('aidl_allocate2'), a('allocate2'), 'IAllocator::allocate2')}
+        ${vend(g('aidl_allocate2'), a('allocate2'), 'IAllocator::allocate2', 'svc')}
       </div>
-      <div class="stk-arrow">dma-buf heaps</div>
-      <div class="stk-proc"><div class="stk-lab">Kernel</div>${vend(g('heap'), a('allocator_allocate'), 'allocate one dma-buf per fd')}</div>
+      <div class="stk-arrow" data-hop="dmabuf">dma-buf heaps</div>
+      <div class="stk-proc"><div class="stk-lab">Kernel</div>${vend(g('heap'), a('allocator_allocate'), 'allocate one dma-buf per fd', 'heap')}</div>
     </div>`;
+  }
+
+  /* ---- call journey: step through one phase on the stack diagram ---- */
+  // Layer of a libui step: by file, and for Gralloc5.cpp by class; free helpers run in their caller's layer.
+  function fwLayer(s, prev) {
+    const f = s.def.file, fn = s.function || '';
+    if (/GraphicBuffer\.cpp$/.test(f)) return 'gb';
+    if (/GraphicBufferAllocator/.test(f)) return 'gba';
+    if (/GraphicBufferMapper/.test(f)) return 'gbm';
+    if (/^Gralloc5Allocator::/.test(fn)) return 'g5a';
+    if (/^Gralloc5Mapper::/.test(fn)) return 'g5m';
+    return prev || 'g5m';
+  }
+  // What each HAL entry crosses: binder to the allocator service, or a call into the in-process mapper library.
+  const MARK_HOPS = { suffix: [['binder', 'svc']], supported: [['binder', 'svc']], allocate: [['binder', 'svc'], ['dmabuf', 'heap']], load: [['dl', 'map']] };
+  function journey(phase) {
+    const out = [], EN = { g: G.CF.entries || {}, a: (A && A.callflow.entries) || {} };
+    let prev = null;
+    for (const id of FW.paths[phase] || []) {
+      if (id[0] === '@') {
+        const m = id.slice(1), gs = gStep(EN.g[m]), as = aStep(EN.a[m]);
+        const vend = `${gs ? `gchips <span class="mono">${esc(gs.function)}</span> ${src(gs.def)}` : ''}${A && as ? ` · Arm <span class="mono">${esc(as.function)}</span> ${src(as.def)}` : ''}`;
+        (MARK_HOPS[m] || [[null, 'map']]).forEach(([hop, l], i) => out.push({ l, hop, html: i === 0 ? `<b>${esc(FW.markers[m])}</b> — ${vend}` : `the allocator gets the memory from a dma-buf heap — ${vend}` }));
+        prev = null;
+        continue;
+      }
+      const s = fwStep(id);
+      if (!s) continue;
+      prev = fwLayer(s, prev);
+      out.push({ l: prev, hop: null, html: `<span class="mono">${esc(s.function || s.title)}</span> ${src(s.def)}<br><span class="small muted">${esc(s.description || '')}</span>` });
+    }
+    return out;
+  }
+  const js = { phase: 'allocate', i: 0, timer: null };
+  function journeyPanel() {
+    return `<div class="panel journey"><div class="row"><b>Watch a call cross the layers</b>
+      <span class="tabs small" id="jphase">${G.CF.phases.map(([ph, label]) => `<button data-jp="${ph}" class="${ph === js.phase ? 'on' : ''}">${esc(label)}</button>`).join('')}</span></div>
+      <div class="row"><button id="jplay" class="primary">▶ Play</button><button id="jprev" aria-label="Previous step">←</button><button id="jnext" aria-label="Next step">→</button><span id="jcount" class="small muted"></span>
+      <a class="small" id="jflow" href="#/flow">open this phase in the code flow</a></div>
+      <div id="jcap" class="jcap" aria-live="polite"></div></div>`;
+  }
+  function journeyBind() {
+    const root = document.querySelector('.journey');
+    if (!root) return;
+    const stop = () => { clearInterval(js.timer); js.timer = null; const b = document.getElementById('jplay'); if (b) b.textContent = '▶ Play'; };
+    // the panel sticks under the (sticky) header; boxes scrolled to must clear both
+    const hdr = document.querySelector('header.top');
+    const place = () => { const t = hdr ? hdr.offsetHeight : 52; root.style.setProperty('--jtop', t + 'px'); document.documentElement.style.setProperty('--jbottom', t + root.offsetHeight + 12 + 'px'); };
+    place();
+    const show = (follow) => {
+      if (!document.body.contains(root)) return stop();
+      const steps = journey(js.phase), s = steps[js.i];
+      document.querySelectorAll('.stk [data-l], .stk [data-hop]').forEach((e) => e.classList.remove('on', 'was'));
+      steps.slice(0, js.i).forEach((p) => document.querySelectorAll(`.stk [data-l="${p.l}"]`).forEach((e) => e.classList.add('was')));
+      if (!s) return;
+      const act = [...document.querySelectorAll(`.stk [data-l="${s.l}"]`)];
+      act.forEach((e) => { e.classList.remove('was'); e.classList.add('on'); });
+      // keep the active layer on screen once the reader has started stepping
+      if (follow && act[0]) act[0].scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (s.hop) document.querySelectorAll(`.stk [data-hop="${s.hop}"]`).forEach((e) => e.classList.add('on'));
+      const cap = document.getElementById('jcap');
+      cap.innerHTML = s.html; cap.classList.remove('anim-in'); void cap.offsetWidth; cap.classList.add('anim-in');
+      document.getElementById('jcount').textContent = `step ${js.i + 1} / ${steps.length}`;
+      const first = (FW.paths[js.phase] || []).find((x) => x[0] !== '@');
+      const fl = first && G.flowLink && G.flowLink('gchips', first);
+      if (fl) document.getElementById('jflow').href = fl;
+    };
+    root.querySelectorAll('[data-jp]').forEach((b) => b.addEventListener('click', () => {
+      js.phase = b.dataset.jp; js.i = 0;
+      root.querySelectorAll('[data-jp]').forEach((x) => x.classList.toggle('on', x === b));
+      show();
+    }));
+    const step = (d) => { const n = journey(js.phase).length; js.i = Math.max(0, Math.min(n - 1, js.i + d)); show(true); };
+    document.getElementById('jnext').addEventListener('click', () => { stop(); step(1); });
+    document.getElementById('jprev').addEventListener('click', () => { stop(); step(-1); });
+    document.getElementById('jplay').addEventListener('click', (e) => {
+      if (js.timer) return stop();
+      if (js.i >= journey(js.phase).length - 1) js.i = -1;
+      e.target.textContent = '⏸ Pause';
+      step(1);
+      js.timer = setInterval(() => { if (js.i >= journey(js.phase).length - 1) return stop(); step(1); }, 1400);
+    });
+    stop();
+    show();
   }
 
   function phases() {
@@ -134,7 +218,7 @@
   G.views.framework = () => `<h1>Android framework → gralloc HAL</h1>
     <p class="lede">How Android's graphics library <b>libui</b> reaches the vendor gralloc: <code>GraphicBuffer</code> → <code>GraphicBufferAllocator</code> / <code>GraphicBufferMapper</code> → <code>Gralloc5Allocator</code> / <code>Gralloc5Mapper</code> → AIDL <code>IAllocator</code> (binder) and the stable-C <code>AIMapper</code> v5 (in-process). Parsed from AOSP frameworks/native ${esc(FW.meta.branch)} @ <code>${esc(FW.meta.commit.slice(0, 12))}</code>; <span class="mono">fw:</span> links open that commit.</p>
     <nav class="toc small">${SECTIONS.map(([k, t]) => `<a href="#/framework" data-sec="${k}">${esc(t)}</a>`).join('')}</nav>
-    <h2 id="fw-stack">The stack</h2>${stack()}
+    <h2 id="fw-stack">The stack</h2>${journeyPanel()}${stack()}
     <h2 id="fw-phases">Phase by phase</h2><p class="small">Every phase of the <a href="#/flow">code flow</a> starts in libui and crosses into the vendor code at these points.</p>${phases()}
     <h2 id="fw-load">Loading the HAL</h2>${loading()}
     <h2 id="fw-aimapper">AIMapper v5 functions</h2><p class="small">All functions of the stable-C mapper table that libui calls or either vendor implements.</p>${iface(R.aimapper, 'AIMapper v5')}
@@ -145,6 +229,7 @@
     <h2 id="fw-notes">Code observations</h2>${notes()}`;
 
   G.AFTER.framework = (params) => {
+    journeyBind();
     document.querySelectorAll('.toc [data-sec]').forEach((a) => a.addEventListener('click', (e) => {
       e.preventDefault();
       const el = document.getElementById('fw-' + a.dataset.sec);
