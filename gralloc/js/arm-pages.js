@@ -31,13 +31,13 @@
           <li>If the CPU reads or writes the buffer, only five format features can pass: ${['FORMAT_R10G10B10A2', 'FORMAT_R10G10B10A10', 'FORMAT_R16G16B16A16_FLOAT', 'FORMAT_RGB16', 'FORMAT_DEPTH_STENCIL'].map((x) => `<code>${x}</code>`).join(', ')} (${src(al(CAPC, 28, 33))}). So <b>CPU access always means linear</b>.</li>
           <li>An IP is “present” unless its XML marks <code>DISABLED</code> RW or it has no XML (${src(al('android/src/capabilities/capabilities.h', 214, 228), 'ip_t::present')}); GPU→DPU AFBC extras need the DPU present.</li>
           <li>Unknown feature names make the whole file invalid (${src(al(XML, 213, 223))}).</li></ul></div>
-        <div class="panel"><b>Preset</b> <select id="cpreset">${Object.entries(CAPS_PRESETS).map(([k, p]) => `<option value="${k}" ${st.capsPreset === k ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}<option value="custom" ${st.capsPreset === 'custom' ? 'selected' : ''}>custom</option></select>
+        <div class="panel"><b>Preset</b> <select id="cpreset" aria-label="Capability preset">${Object.entries(CAPS_PRESETS).map(([k, p]) => `<option value="${k}" ${st.capsPreset === k ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}<option value="custom" ${st.capsPreset === 'custom' ? 'selected' : ''}>custom</option></select>
           <p class="small muted">The README example is the only capability file content in the archive (${src(A.capability_example.loc, 'README.md:' + A.capability_example.loc.line)}); real devices ship their own. Your edits are used by the <a href="#/arm/calc">allocation calculator</a>.</p>
           <pre class="small" style="overflow:auto;max-height:220px">${esc(xmlText(caps))}</pre></div>
       </div>
       <h2>Edit the XML</h2>
       <div class="tablewrap"><table><thead><tr><th>feature</th>${AE.XIPS.map((ip) => `<th><label class="chk"><input type="checkbox" data-ipon="${ip}" ${caps[ip].present ? 'checked' : ''}>${ip}</label></th>`).join('')}<th>meaning (README)</th></tr></thead><tbody>
-      ${feats.map((f) => `<tr><td class="mono small">${esc(f.name)} ${src(f.loc, 'h:' + f.loc.line)}</td>${AE.XIPS.map((ip) => `<td>${caps[ip].present ? `<select data-cap="${ip}|${f.name}">${['', ...PERMS].map((p) => `<option ${caps[ip].f[f.name] === p || (!p && !caps[ip].f[f.name]) ? 'selected' : ''}>${p}</option>`).join('')}</select>` : '<span class="muted small">no XML</span>'}</td>`).join('')}
+      ${feats.map((f) => `<tr><td class="mono small">${esc(f.name)} ${src(f.loc, 'h:' + f.loc.line)}</td>${AE.XIPS.map((ip) => `<td>${caps[ip].present ? `<select data-cap="${ip}|${f.name}" aria-label="${esc(ip)} ${esc(f.name)}">${['', ...PERMS].map((p) => `<option ${caps[ip].f[f.name] === p || (!p && !caps[ip].f[f.name]) ? 'selected' : ''}>${p}</option>`).join('')}</select>` : '<span class="muted small">no XML</span>'}</td>`).join('')}
         <td class="small">${f.description ? esc(f.description) + ' ' + src(f.readme, 'README:' + f.readme.line) : (f.name === 'DISABLED' ? 'IP explicitly not present (used by ip_t::present)' : '<span class="muted">not described in README</span>')}</td></tr>`).join('')}
       </tbody></table></div>
       <h2>Where each feature is checked</h2>
@@ -223,7 +223,7 @@
     const files = A.files;
     const tot = files.reduce((a, f) => a + f.lines, 0), fns = files.reduce((a, f) => a + (f.functions || []).length, 0);
     return `<p class="lede">Every file in the archive (${files.length} files, ${fmt(tot)} lines, ${fns} function definitions found). The one-line notes are written from reading each file; function lists are extracted.</p>
-      <div class="panel row"><input id="fileq" type="text" placeholder="filter by path, note or function" value="${esc(fq.q)}" style="min-width:260px"><span id="filecount" class="small muted"></span></div>
+      <div class="panel row"><input id="fileq" aria-label="Filter files and functions" type="text" placeholder="filter by path, note or function" value="${esc(fq.q)}" style="min-width:260px"><span id="filecount" class="small muted"></span></div>
       <div id="filelist"></div>`;
   };
   AFTERS.files = () => {

@@ -61,9 +61,9 @@
   function dumpsysPage() {
     return `<p class="lede">Paste the <code>GraphicBufferAllocator buffers:</code> block from <code>adb shell dumpsys SurfaceFlinger</code>. Each row is decoded with the format string of ${src(fwl(95, 103), 'GraphicBufferAllocator::dump')}, then the same request is run through the gchips engine${A ? ' (and Arm, if you want)' : ''} to show what the HAL would allocate.</p>
       <div class="panel">
-        <textarea id="dumpin" rows="9" spellcheck="false" placeholder="GraphicBufferAllocator buffers:\n            Handle |         Size |     W (Stride) x H | Layers |   Format |      Usage | Requestor\n...">${esc(ts.dump)}</textarea>
+        <textarea id="dumpin" aria-label="dumpsys SurfaceFlinger output" rows="9" spellcheck="false" placeholder="GraphicBufferAllocator buffers:\n            Handle |         Size |     W (Stride) x H | Layers |   Format |      Usage | Requestor\n...">${esc(ts.dump)}</textarea>
         <div class="row" style="margin-top:8px"><button id="dumpex" title="Built from the dump() format string with gchips layouts — not captured from a device">Load example</button><button id="dumpclr">Clear</button>
-          ${A ? `<label class="small"><input type="checkbox" id="dumparm" ${ts.arm ? 'checked' : ''}> also run Arm r56p0 with</label> <select id="dumpcaps">${Object.entries(X.CAPS_PRESETS).map(([k, p]) => `<option value="${k}" ${k === ts.caps ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}</select>` : ''}</div>
+          ${A ? `<label class="small"><input type="checkbox" id="dumparm" ${ts.arm ? 'checked' : ''}> also run Arm r56p0 with</label> <select id="dumpcaps" aria-label="Arm capability set">${Object.entries(X.CAPS_PRESETS).map(([k, p]) => `<option value="${k}" ${k === ts.caps ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}</select>` : ''}</div>
       </div>
       <p class="small muted">“Load example” writes rows in the dump() format with strides from the gchips engine; it is not output captured from a device.</p>
       <div id="dumpout"></div>
@@ -120,7 +120,7 @@
     if (params && params.get('u')) ts.u = params.get('u');
     return `<p class="lede">Decode a usage value (hex like <code>0xb00</code>, or decimal) for both implementations: which named flags it contains, which bits nothing names, and the producers and consumers each one derives from it.</p>
       <div class="panel row"><input id="uin" type="text" value="${esc(ts.u)}" style="min-width:220px" spellcheck="false" aria-label="usage value">
-        <select id="upre"><option value="">Presets…</option>${Object.keys(G.PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
+        <select id="upre" aria-label="Usage presets"><option value="">Presets…</option>${Object.keys(G.PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select></div>
       <div id="uout"></div>`;
   }
   function usageDraw() {
@@ -155,7 +155,7 @@
         <label class="small">height <input id="vsh" type="number" min="1" value="${s.h}" style="width:90px"></label>
         <label class="small">layers <input id="vsl" type="number" min="1" value="${s.layers}" style="width:60px"></label>
         <label class="small">usage <input id="vsu" type="text" value="${esc(s.u)}" style="width:150px" spellcheck="false"></label>
-        <select id="vspre"><option value="">usage presets…</option>${Object.keys(G.PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select>
+        <select id="vspre" aria-label="Usage presets"><option value="">usage presets…</option>${Object.keys(G.PRESETS).map((k) => `<option>${esc(k)}</option>`).join('')}</select>
         ${A ? `<label class="small">Arm capabilities <select id="vscaps">${Object.entries(X.CAPS_PRESETS).map(([k, p]) => `<option value="${k}" ${k === s.caps ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}</select></label>` : ''}
       </div><div id="vsout"></div>`;
   }

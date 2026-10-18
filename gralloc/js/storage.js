@@ -500,7 +500,7 @@
     if (!sel.length) sel.push('MALI_GRALLOC_FORMAT_INTERNAL_NV12');
     if (st.scanMode === 'memory') { const f0 = byName.get(sel[0]); const m0 = memCellFor(f0, models(f0)); if (m0) { st.px = m0.x0; st.py = m0.y0; } }
     const opts = (cur) => FD.formats.map((f) => `<option value="${esc(f.name)}" ${f.name === cur ? 'selected' : ''}>${esc(shortName(f.name))}</option>`).join('');
-    const slots = [0, 1, 2].map((i) => `<select data-sslot="${i}"><option value="">${i === 0 ? '—' : '(compare with…)'}</option>${opts(sel[i])}</select>`).join(' ');
+    const slots = [0, 1, 2].map((i) => `<select data-sslot="${i}" aria-label="Format ${i + 1}"><option value="">${i === 0 ? '—' : '(compare with…)'}</option>${opts(sel[i])}</select>`).join(' ');
     const quick = [['NV12 vs NV21 vs YV12', 'MALI_GRALLOC_FORMAT_INTERNAL_NV12,MALI_GRALLOC_FORMAT_INTERNAL_NV21,MALI_GRALLOC_FORMAT_INTERNAL_YV12'],
       ['RGBA vs BGRA vs RGBX', 'MALI_GRALLOC_FORMAT_INTERNAL_RGBA_8888,MALI_GRALLOC_FORMAT_INTERNAL_BGRA_8888,MALI_GRALLOC_FORMAT_INTERNAL_RGBX_8888'],
       ['8-bit vs 10-bit 4:2:0', 'MALI_GRALLOC_FORMAT_INTERNAL_NV12,MALI_GRALLOC_FORMAT_INTERNAL_P010,HAL_PIXEL_FORMAT_EXYNOS_YCbCr_420_SPN_S10B'],
@@ -514,7 +514,7 @@
       <div class="panel"><div class="row">${slots}</div>
         <div class="row small" style="margin-top:6px"><span class="muted">Quick comparisons:</span> ${quick.map(([t, v]) => `<a href="#/storage?f=${v}">${t}</a>`).join(' · ')}</div></div>
       <div class="panel row"><label>Example image <select id="ssrc">${SOURCES.map(([k, t]) => `<option value="${k}" ${st.src === k ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-        <input type="file" id="sfile" accept="image/*" style="display:${st.src === 'upload' ? 'inline' : 'none'}">
+        <input type="file" id="sfile" aria-label="Upload an image" accept="image/*" style="display:${st.src === 'upload' ? 'inline' : 'none'}">
         ${st.src === 'upload' && uploaded ? `<span class="small">your image is ${fmt(uploaded.naturalWidth)} × ${fmt(uploaded.naturalHeight)} px</span>
           <button id="sfit" title="Set the example grid to this image's aspect ratio and the buffer to its real size">Use image size</button>` : ''}
         ${num('gw', 2, MAX_GW, 'grid')} × ${num('gh', 1, MAX_GH, '')} <span class="muted">|</span> ${num('px', 0, 99999, 'Probe pixel x')} ${num('py', 0, 99999, 'y')}
