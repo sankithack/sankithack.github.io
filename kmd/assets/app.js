@@ -24,6 +24,15 @@
   function subLink(id) { var s = SUBS[id]; return s ? '<a href="#/sub/' + id + '">' + esc(s.title) + "</a>" : esc(id); }
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
   function plain(html) { var d = document.createElement("div"); d.innerHTML = html || ""; return (d.textContent || "").replace(/\s+/g, " ").trim(); }
+  var READ = {}; try { READ = JSON.parse(store("kmd-read") || "{}") || {}; } catch (e) { READ = {}; }
+  function isRead(k) { return !!READ[k]; }
+  function setRead(k, v) { if (v) READ[k] = 1; else delete READ[k]; store("kmd-read", JSON.stringify(READ)); renderNav(); markNav(); }
+  function readBtn(k) { return '<button class="btn readbtn' + (isRead(k) ? " on" : "") + '" data-read="' + esc(k) + '" aria-pressed="' + (isRead(k) ? "true" : "false") + '">' + (isRead(k) ? "✓ Read" : "Mark as read") + "</button>"; }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest(".readbtn"); if (!b) return;
+    var k = b.getAttribute("data-read"), v = !isRead(k); setRead(k, v);
+    [].forEach.call(document.querySelectorAll('.readbtn[data-read="' + k + '"]'), function (x) { x.classList.toggle("on", v); x.setAttribute("aria-pressed", v ? "true" : "false"); x.textContent = v ? "✓ Read" : "Mark as read"; });
+  });
   function debounce(fn, ms) { var t; return function () { var a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(null, a); }, ms); }; }
 
   // ------------------------------------------------------------------ indexes
@@ -87,9 +96,9 @@
   // ------------------------------------------------------------------ nav
   function renderNav() {
     var h = [];
-    function a(href, label, extra) { h.push('<a href="' + href + '"' + (extra || "") + ">" + label + "</a>"); }
+    function a(href, label, extra) { var k = href.replace(/^#\//, ""); h.push('<a href="' + href + '"' + (extra || "") + ">" + label + (isRead(k) ? ' <span class="chk" aria-label="read">✓</span>' : "") + "</a>"); }
     h.push('<div class="grp">Start</div>');
-    a("#/", "Overview"); a("#/learn", "How to read · learning order"); a("#/dataflow", "Data flow");
+    a("#/", "Overview"); a("#/learn", "How to read · learning order"); a("#/dataflow", "Data flow"); a("#/cookbook", "Debug & modify cookbook");
     h.push('<div class="grp">Flows</div>');
     C.flows.forEach(function (f) { a("#/flow/" + f.id, esc(f.title.split(":")[0].replace(/ and .*/, "")) + tagHtml(f.tag), ' class="' + onlyCls(f.tag).trim() + '"'); });
     h.push('<div class="grp">Subsystems</div>');
@@ -231,7 +240,7 @@
   function setTitle(t) { document.title = (t ? t + " · " : "") + "Mali KMD Explorer"; }
 
   function archSvg() {
-    var A = C.arch, h = ['<svg class="arch" viewBox="0 0 ' + A.w + " " + A.h + '" role="img" aria-label="Architecture diagram">',
+    var A = C.arch, h = ['<svg class="arch" viewBox="0 0 ' + A.w + " " + A.h + '" role="group" aria-label="Architecture diagram: click a box to open its subsystem">',
       '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>'];
     A.layers.forEach(function (l) { h.push('<g class="layer"><rect x="2" y="' + l.y + '" width="' + (A.w - 4) + '" height="' + l.h + '" rx="10"/><text x="12" y="' + (l.y + 16) + '">' + esc(l.label) + "</text></g>"); });
     var B = {}; A.boxes.forEach(function (b) { B[b.id] = b; });
@@ -264,7 +273,7 @@
       '<p class="lede">Generated from <code>' + esc(m.src_root) + "</code> (release <b>" + esc(m.release) + "</b>). Every <code>file:line</code> on this site was computed from the source.</p>",
       '<div class="stats">',
       ["files", "lines", "functions", "structs", "call_edges", "ioctls", "kconfig", "locks", "registers"].map(function (k) { return '<span class="stat"><b>' + (c[k] || 0).toLocaleString() + "</b>" + k.replace("_", " ") + "</span>"; }).join(""),
-      "</div>", C.pages.overview, '<div class="journey card"><div class="ctrl"><b>Journey player</b> <select id="jflow">' +
+      "</div>", C.pages.overview, '<div class="journey card"><div class="ctrl"><b>Journey player</b> <select id="jflow" aria-label="Flow to replay">' +
         C.flows.map(function (f) { return '<option value="' + f.id + '">' + esc(f.title) + "</option>"; }).join("") +
         '</select><button class="btn" id="jplay">▶ Play</button><button class="btn" id="jstep">Step →</button><span class="muted small" id="jcap">Pick a flow and press Play to watch it move across the architecture.</span></div>' + archSvg() + "</div>",
       '<p class="small muted">Click a box to open that subsystem. Boxes tinted yellow are JM-only and blue are CSF-only. Arrows show the main call direction.</p>',
@@ -327,11 +336,32 @@
   function pLearn() {
     setTitle("How to read");
     var h = ["<h1>How to read this site · learning order</h1>", C.pages.howto, "<h2>Suggested learning order</h2>"];
+    var tot = 0, rd = 0, Q = {}; try { Q = JSON.parse(store("kmd-quiz") || "{}") || {}; } catch (e) { Q = {}; }
+    C.learn.forEach(function (s) { s.links.forEach(function (l) { if (/^(sub|flow)\//.test(l[0])) { tot++; if (isRead(l[0])) rd++; } }); });
+    h.push('<div class="card progress"><b>Your progress</b> <span class="muted small">(saved in this browser)</span><div class="bar"><span style="width:' + (tot ? Math.round(100 * rd / tot) : 0) + '%"></span></div><span class="small">' + rd + " of " + tot + ' subsystem and flow pages marked as read</span> <button class="btn" id="resetProg">Reset</button></div>');
     C.learn.forEach(function (s) {
       h.push('<div class="card" style="margin:10px 0"><h3 style="margin-top:0">' + esc(s.title) + '</h3><p class="muted">' + esc(s.why) + "</p><p>" +
-        s.links.map(function (l) { return '<a class="pill" href="#/' + l[0] + '">' + esc(l[1]) + "</a>"; }).join(" ") + "</p></div>");
+        s.links.map(function (l) { var q = /^sub\//.test(l[0]) && Q[l[0].slice(4)]; return '<a class="pill' + (isRead(l[0]) ? " done" : "") + '" href="#/' + l[0] + '">' + (isRead(l[0]) ? "✓ " : "") + esc(l[1]) + (q ? " · quiz " + q[0] + "/" + q[1] : "") + "</a>"; }).join(" ") + "</p></div>");
     });
     page(h.join(""));
+    $("#resetProg").onclick = function () { READ = {}; store("kmd-read", "{}"); store("kmd-quiz", "{}"); renderNav(); pLearn(); };
+  }
+
+  // ---- cookbook
+  function pCookbook(sel) {
+    setTitle("Debug & modify cookbook");
+    var h = ["<h1>Debug &amp; modify cookbook</h1>", '<p class="lede">Practical recipes for working on this driver. Every code reference below is resolved against the source at build time.</p>'];
+    [["debug", "Debugging"], ["modify", "Modifying the driver"]].forEach(function (g) {
+      h.push("<h2>" + g[1] + '</h2><div class="cards">');
+      C.cookbook.filter(function (r) { return r.kind === g[0]; }).forEach(function (r) { h.push('<a class="card" href="#/cookbook/' + r.id + '"><h3>' + esc(r.title) + (isRead("cookbook/" + r.id) ? ' <span class="chk">✓</span>' : "") + "</h3>" + r.goal + "</a>"); });
+      h.push("</div>");
+    });
+    C.cookbook.forEach(function (r) {
+      h.push('<section class="recipe card" id="rc-' + r.id + '"><h2>' + esc(r.title) + ' <span class="tag t-common">' + (r.kind === "debug" ? "debug" : "modify") + "</span></h2>" +
+        '<div class="goal"><b>Goal:</b> ' + r.goal.replace(/^<p>|<\/p>$/g, "") + "</div>" + r.body + "<p>" + readBtn("cookbook/" + r.id) + "</p></section>");
+    });
+    page(h.join(""));
+    if (sel) { var el = document.getElementById("rc-" + sel); if (el) { el.scrollIntoView({ block: "start" }); el.classList.add("flashsel"); } }
   }
 
   // ---- subsystem page
@@ -362,7 +392,7 @@
     var files = F.map(function (f, i) { return i; }).filter(function (i) { return F[i].s === id; });
     var h = ['<div class="crumbs"><a href="#/">Overview</a> › Subsystem</div>',
       '<h1><span class="dot" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + esc(s.color) + '"></span> ' + esc(s.title) + tagHtml(s.tag) + "</h1>",
-      '<p class="lede">' + esc(s.short) + "</p>"];
+      '<p class="lede">' + esc(s.short) + " " + readBtn("sub/" + id) + "</p>"];
     if (s.tag === "JM" || s.tag === "CSF") h.push('<div class="callout warn">Compiled only when ' + (s.tag === "CSF" ? "<code>CONFIG_MALI_CSF_SUPPORT=y</code> (MALI_USE_CSF=1)" : "<code>CONFIG_MALI_CSF_SUPPORT</code> is not set (MALI_USE_CSF=0)") + ".</div>");
     h.push("<h2>Purpose</h2>", s.purpose);
     if (s.how) h.push("<h2>How it works</h2>", s.how);
@@ -421,6 +451,8 @@
         qd.classList.add("answered"); qd.setAttribute("data-ok", v === a ? "1" : "0");
         var all = main.querySelectorAll(".quiz .q"), done = main.querySelectorAll(".quiz .q.answered"), ok = main.querySelectorAll(".quiz .q[data-ok='1']");
         $("#qscore").textContent = "Score: " + ok.length + " / " + done.length + " answered (" + all.length + " questions)";
+        try { var Q = JSON.parse(store("kmd-quiz") || "{}") || {}; Q[id] = [ok.length, all.length]; store("kmd-quiz", JSON.stringify(Q)); } catch (e2) {}
+        if (done.length === all.length && ok.length === all.length && !isRead("sub/" + id)) setRead("sub/" + id, true);
       });
     });
   }
@@ -474,8 +506,8 @@
     setTitle(f.title);
     var cur = stepArg != null ? Math.max(0, Math.min(f.steps.length - 1, stepArg)) : 0;
     var view = store("kmd-flowview") === "code" ? "code" : "diagram";
-    var h = ['<div class="crumbs"><a href="#/">Overview</a> › Flow</div><h1>' + esc(f.title) + tagHtml(f.tag) + "</h1>", f.summary,
-      '<div class="flowbar"><div class="tabs" role="tablist"><button data-v="diagram">Sequence diagram</button><button data-v="code">Code flow ▶</button></div>' +
+    var h = ['<div class="crumbs"><a href="#/">Overview</a> › Flow</div><h1>' + esc(f.title) + tagHtml(f.tag) + "</h1>", f.summary, "<p>" + readBtn("flow/" + id) + "</p>",
+      '<div class="flowbar"><div class="tabs" role="tablist" aria-label="View"><button role="tab" data-v="diagram">Sequence diagram</button><button role="tab" data-v="code">Code flow ▶</button></div>' +
       '<button class="btn" id="prev">← Prev</button><button class="btn" id="next">Next →</button><button class="btn" id="play">▶ Play</button><span class="muted small" id="stepno"></span></div>',
       '<div id="vdiagram"><div class="seqwrap"><div><div id="seq"></div><p class="small muted">Click an arrow or use ← → keys. Columns are the actors; each arrow is one step and points to the actor being called or receiving data. Steps tagged for the other back-end are dimmed and skipped by the filter.</p></div>',
       '<div class="stepbox card" id="stepbox"></div></div></div>',
@@ -490,7 +522,7 @@
     var timer = null, cf = null;
     function stepDetail(s) {
       var where = s.file ? (s.fn != null ? fnLink(s.fn, s.name + "()") + " · " : "") + cite(fileByPath[s.file], s.line) : "";
-      return "<h3>" + (cur + 1) + ". " + esc(s.title) + tagHtml(s.tag) + "</h3>" + '<div class="where">' + where + "</div>" + s.text +
+      return '<h2 class="steph">' + (cur + 1) + ". " + esc(s.title) + tagHtml(s.tag) + "</h2>" + '<div class="where">' + where + "</div>" + s.text +
         (s.data ? '<div class="databox"><b>Data</b>' + s.data + "</div>" : "");
     }
     function show(k, scroll, animate) {
@@ -526,7 +558,7 @@
     };
     function setView(v) {
       view = v; store("kmd-flowview", v);
-      [].forEach.call(main.querySelectorAll(".flowbar .tabs button"), function (b) { b.classList.toggle("on", b.getAttribute("data-v") === v); });
+      [].forEach.call(main.querySelectorAll(".flowbar .tabs button"), function (b) { var on = b.getAttribute("data-v") === v; b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
       $("#vdiagram").hidden = v !== "diagram"; $("#vcode").hidden = v !== "code";
       if (v === "code" && !cf) {
         $("#cfcode").innerHTML = '<div class="loading">Loading source files…</div>';
@@ -895,7 +927,7 @@
     var h = ["<h1>Data structure explorer</h1>", '<p class="lede">All ' + ST.length + " structs, unions and enums parsed from the source, with field explanations taken from kernel-doc comments. The diagram shows how the main objects point to each other.</p>",
       keyStructDiagram(), "<h2>Main structures</h2><div class=\"cards\">"];
     KEY_STRUCTS.forEach(function (n) { (stByName[n] || []).forEach(function (id) { var s = ST[id]; h.push('<a class="card' + onlyCls(s[5]) + '" href="#/struct/' + id + '"><h3><code>' + esc(s[0]) + "</code>" + tagHtml(s[5] === "common" ? "" : s[5]) + "</h3><p>" + esc(s[6] || "") + "</p></a>"); }); });
-    h.push('</div><h2>All</h2><div class="filterbar"><input id="sf" placeholder="Filter by name…" value="' + esc(q || "") + '"><select id="sk"><option value="">all kinds</option><option>struct</option><option>union</option><option>enum</option></select><select id="ss"><option value="">all subsystems</option>' +
+    h.push('</div><h2>All</h2><div class="filterbar"><input id="sf" placeholder="Filter by name…" value="' + esc(q || "") + '"><select id="sk" aria-label="Kind"><option value="">all kinds</option><option>struct</option><option>union</option><option>enum</option></select><select id="ss" aria-label="Subsystem"><option value="">all subsystems</option>' +
       C.subs.map(function (s) { return '<option value="' + s.id + '">' + esc(s.title) + "</option>"; }).join("") + '</select></div><div id="slist"></div>');
     page(h.join(""));
     function upd() {
@@ -1001,7 +1033,7 @@
   }
   function pFunctions() {
     setTitle("Functions");
-    var h = ["<h1>Functions</h1>", '<p class="lede">' + FN.length + ' function definitions. Filter by name or subsystem; JM/CSF toggle applies.</p><div class="filterbar"><input id="ff" placeholder="Filter by name (substring)…"><select id="fs"><option value="">all subsystems</option>' +
+    var h = ["<h1>Functions</h1>", '<p class="lede">' + FN.length + ' function definitions. Filter by name or subsystem; JM/CSF toggle applies.</p><div class="filterbar"><input id="ff" placeholder="Filter by name (substring)…"><select id="fs" aria-label="Subsystem"><option value="">all subsystems</option>' +
       C.subs.map(function (s) { return '<option value="' + s.id + '">' + esc(s.title) + "</option>"; }).join("") + '</select><label class="small"><input type="checkbox" id="fx"> include static</label></div><div id="flist"></div>'];
     page(h.join(""));
     function upd() {
@@ -1019,19 +1051,19 @@
     var fi = fileByPath[path]; if (fi == null) return notFound("No such file: " + path);
     var f = F[fi];
     setTitle(short(path));
-    var h = ['<div class="codehead"><span class="path">' + esc(path) + "</span>" + tagHtml(f.t === "common" ? "" : f.t) + ' <a href="#/file/' + esc(path) + '">file info</a> · ' + subLink(f.s) + ' <span class="muted small">' + f.n + " lines</span></div>",
+    var h = ['<div class="codehead"><h1 class="path">' + esc(path) + "</h1>" + tagHtml(f.t === "common" ? "" : f.t) + ' <a href="#/file/' + esc(path) + '">file info</a> · ' + subLink(f.s) + ' <span class="muted small">' + f.n + " lines</span></div>",
       '<div class="codeview"><div class="src" id="src"><div class="loading">Loading…</div></div><div class="panel card" id="cpanel"></div></div>'];
     page(h.join(""), true);
     var outline = fnsInFile(fi);
     function panel(ln) {
       var cur = ln ? enclosingFn(fi, ln) : null, p = [];
       if (cur != null) {
-        p.push("<h4>In function</h4>" + fnLink(cur) + '<div class="small muted">' + esc(FN[cur][6] || "") + "</div>");
-        p.push("<h4>Callers (" + callers[cur].length + ")</h4>" + callers[cur].slice(0, 40).map(function (i) { return '<a href="' + codeHref(F[FN[i][1]].p, FN[i][2]) + '" title="' + esc(short(F[FN[i][1]].p)) + '">' + esc(FN[i][0]) + "</a>"; }).join(""));
-        p.push("<h4>Calls (" + X.calls[cur].length + ")</h4>" + X.calls[cur].slice(0, 60).map(function (i) { return '<a href="' + codeHref(F[FN[i][1]].p, FN[i][2]) + '" title="' + esc(short(F[FN[i][1]].p)) + '">' + esc(FN[i][0]) + "</a>"; }).join(""));
+        p.push("<h2>In function</h2>" + fnLink(cur) + '<div class="small muted">' + esc(FN[cur][6] || "") + "</div>");
+        p.push("<h2>Callers (" + callers[cur].length + ")</h2>" + callers[cur].slice(0, 40).map(function (i) { return '<a href="' + codeHref(F[FN[i][1]].p, FN[i][2]) + '" title="' + esc(short(F[FN[i][1]].p)) + '">' + esc(FN[i][0]) + "</a>"; }).join(""));
+        p.push("<h2>Calls (" + X.calls[cur].length + ")</h2>" + X.calls[cur].slice(0, 60).map(function (i) { return '<a href="' + codeHref(F[FN[i][1]].p, FN[i][2]) + '" title="' + esc(short(F[FN[i][1]].p)) + '">' + esc(FN[i][0]) + "</a>"; }).join(""));
       }
-      p.push("<h4>Outline (" + outline.length + " functions)</h4>" + outline.map(function (i) { return '<a class="' + (i === cur ? "cur" : "") + '" href="' + codeHref(path, FN[i][2]) + '">' + esc(FN[i][0]) + "</a>"; }).join(""));
-      if (f.sts.length) p.push("<h4>Types</h4>" + f.sts.map(function (i) { return '<a href="#/struct/' + i + '">' + esc(ST[i][1] + " " + ST[i][0]) + "</a>"; }).join(""));
+      p.push("<h2>Outline (" + outline.length + " functions)</h2>" + outline.map(function (i) { return '<a class="' + (i === cur ? "cur" : "") + '" href="' + codeHref(path, FN[i][2]) + '">' + esc(FN[i][0]) + "</a>"; }).join(""));
+      if (f.sts.length) p.push("<h2>Types</h2>" + f.sts.map(function (i) { return '<a href="#/struct/' + i + '">' + esc(ST[i][1] + " " + ST[i][0]) + "</a>"; }).join(""));
       $("#cpanel").innerHTML = p.join("");
     }
     loadSrc(fi, function (text) {
@@ -1206,7 +1238,7 @@
     setTitle("Registers");
     var vers = {}; IF.regs.forEach(function (r) { vers[r.be + " " + r.ver] = 1; });
     var h = ["<h1>GPU register reference</h1>", '<p class="lede">' + IF.regs.length + ' register-map entries parsed from <code>hw_access/regmap/mali_kbase_regmap_{jm,csf}.c</code>. Each <code>kbase_regmap_vX_Y_init()</code> adds the registers introduced by GPU architecture version X.Y; offsets are from the start of the GPU register window. Accessed via ' + fnLink(pickDef("kbase_reg_read32")) + ".</p>",
-      '<div class="filterbar"><input id="rf" placeholder="Filter register name…"><select id="rv"><option value="">all versions</option>' + Object.keys(vers).sort().map(function (v) { return "<option>" + esc(v) + "</option>"; }).join("") + '</select></div><div id="rlist"></div>'];
+      '<div class="filterbar"><input id="rf" placeholder="Filter register name…"><select id="rv" aria-label="Back-end and architecture version"><option value="">all versions</option>' + Object.keys(vers).sort().map(function (v) { return "<option>" + esc(v) + "</option>"; }).join("") + '</select></div><div id="rlist"></div>'];
     page(h.join(""));
     function upd() {
       var q = $("#rf").value.toUpperCase(), v = $("#rv").value, rows = IF.regs.filter(function (r) { return (!q || r.name.indexOf(q) >= 0) && (!v || r.be + " " + r.ver === v) && beOk(r.be); });
@@ -1266,17 +1298,26 @@
     C.flows.forEach(function (f) { S.push({ n: f.title, k: "flow", h: "#/flow/" + f.id, x: "", w: 6 }); });
     Object.keys(X.locks).forEach(function (n) { S.push({ n: n, k: "lock", h: "#/locks/" + encodeURIComponent(n), x: X.locks[n].ex[0] || "", w: 1 }); });
     MAC.forEach(function (m, i) { S.push({ n: m[0], k: "macro", h: codeHref(F[m[1]].p, m[2]), x: short(F[m[1]].p) + ":" + m[2], w: 0 }); });
-    S.forEach(function (e) { e.l = e.n.toLowerCase(); e.a = (e.aka || "").toLowerCase(); });
+    FN.forEach(function (f, i) { S[i].d = norm(f[6] || ""); });
+    C.cookbook.forEach(function (r) { S.push({ n: r.title, k: "recipe", h: "#/cookbook/" + r.id, x: r.kind === "debug" ? "debugging recipe" : "how to modify", w: 6 }); });
+    S.forEach(function (e) { e.l = e.n.toLowerCase(); e.nn = norm(e.n); e.c = e.nn.replace(/ /g, ""); e.a = norm(e.aka || ""); e.f = e.full ? norm(e.full) : ""; });
     SEARCH = S;
   }
+  function norm(t) { return String(t).replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().replace(/[_\-.\/:()*,]+/g, " ").replace(/\s+/g, " ").trim(); }
   function search(q, limit) {
     if (!SEARCH) buildSearch();
-    q = q.trim().toLowerCase(); if (!q) return [];
-    var res = [];
+    var raw = q.trim().toLowerCase(), nq = norm(q); if (!nq) return [];
+    var toks = nq.split(" "), compact = nq.replace(/ /g, ""), res = [];
     SEARCH.forEach(function (e) {
       var s = -1;
-      if (e.l === q) s = 100; else if (e.l.indexOf(q) === 0) s = 70; else if (e.l.indexOf(q) > 0) s = 40;
-      else if (e.a && e.a.indexOf(q) >= 0) s = 50; else if (e.full && e.full.toLowerCase().indexOf(q) >= 0) s = 20;
+      if (e.l === raw || e.nn === nq) s = 100;
+      else if (e.l.indexOf(raw) === 0 || e.nn.indexOf(nq) === 0) s = 75;
+      else if (e.l.indexOf(raw) > 0 || e.nn.indexOf(nq) > 0) s = 55;
+      else if (compact.length > 3 && e.c.indexOf(compact) >= 0) s = 50;
+      else if (toks.every(function (t) { return e.nn.indexOf(t) >= 0; })) s = 45 - (toks.length > 1 && !inOrder(e.nn, toks) ? 6 : 0);
+      else if (e.a && toks.every(function (t) { return e.a.indexOf(t) >= 0; })) s = 42;
+      else if (e.f && toks.every(function (t) { return e.f.indexOf(t) >= 0; })) s = 20;
+      else if (e.d && toks.length > 1 && toks.every(function (t) { return e.d.indexOf(t) >= 0; })) s = 15;
       if (s < 0) return;
       if (!beOk(e.t)) s -= 30;
       res.push([s + e.w * 3 - e.l.length / 50, e]);
@@ -1284,11 +1325,21 @@
     res.sort(function (a, b) { return b[0] - a[0]; });
     return res.slice(0, limit || 50).map(function (r) { return r[1]; });
   }
+  function inOrder(str, toks) { var p = 0; for (var i = 0; i < toks.length; i++) { var j = str.indexOf(toks[i], p); if (j < 0) return false; p = j + toks[i].length; } return true; }
+  function hiName(name, q) {
+    var toks = norm(q).split(" ").filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+    if (!toks.length) return esc(name);
+    var low = name.toLowerCase(), mark = new Array(name.length).fill(false);
+    toks.forEach(function (t) { var i = low.indexOf(t); while (i >= 0) { for (var k = i; k < i + t.length; k++) mark[k] = true; i = low.indexOf(t, i + t.length); } });
+    var out = "", on = false;
+    for (var i = 0; i < name.length; i++) { if (mark[i] !== on) { out += mark[i] ? "<mark>" : "</mark>"; on = mark[i]; } out += esc(name[i]); }
+    return out + (on ? "</mark>" : "");
+  }
   var qIn = $("#q"), dd = $("#dd"), ddSel = -1;
   function ddRender() {
     var r = search(qIn.value, 14); ddSel = -1;
     if (!qIn.value.trim()) { dd.classList.remove("open"); return; }
-    dd.innerHTML = r.map(function (e, i) { return '<a href="' + esc(e.h) + '" data-i="' + i + '"><span class="kind">' + esc(e.k) + "</span><span>" + esc(e.n) + tagHtml(e.t && e.t !== "common" && e.t !== "test" ? e.t : "") + '</span><span class="ex">' + esc(e.x || "") + "</span></a>"; }).join("") +
+    dd.innerHTML = r.map(function (e, i) { return '<a href="' + esc(e.h) + '" data-i="' + i + '"><span class="kind">' + esc(e.k) + "</span><span>" + hiName(e.n, qIn.value) + tagHtml(e.t && e.t !== "common" && e.t !== "test" ? e.t : "") + '</span><span class="ex">' + esc(e.x || "") + "</span></a>"; }).join("") +
       '<a href="#/search/' + encodeURIComponent(qIn.value) + '"><span class="kind">all</span><span>See all results for “' + esc(qIn.value) + "”</span></a>";
     dd.classList.add("open");
   }
@@ -1306,6 +1357,8 @@
   window.addEventListener("resize", function () { if (resizeHandler) resizeHandler(); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "/" && document.activeElement !== qIn && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); qIn.focus(); qIn.select(); return; }
+    if (e.key === "?" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { toggleHelp(); return; }
+    if (e.key === "Escape") { var hp = $("#help"); if (hp) hp.remove(); }
     if (keyHandler && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) keyHandler(e);
   });
   function pSearch(q) {
@@ -1313,8 +1366,17 @@
     var r = search(q, 400), groups = {};
     r.forEach(function (e) { (groups[e.k] = groups[e.k] || []).push(e); });
     var h = ['<h1>Search: “' + esc(q) + "”</h1><p class=\"muted\">" + r.length + " results</p>"];
-    Object.keys(groups).forEach(function (k) { h.push("<h2>" + esc(k) + " (" + groups[k].length + ")</h2>" + groups[k].map(function (e) { return '<div><a href="' + esc(e.h) + '"><code>' + esc(e.n) + "</code></a>" + tagHtml(e.t && e.t !== "common" && e.t !== "test" ? e.t : "") + ' <span class="muted small">' + esc(e.x || "") + "</span></div>"; }).join("")); });
+    Object.keys(groups).forEach(function (k) { h.push("<h2>" + esc(k) + " (" + groups[k].length + ")</h2>" + groups[k].map(function (e) { return '<div><a href="' + esc(e.h) + '"><code>' + hiName(e.n, q) + "</code></a>" + tagHtml(e.t && e.t !== "common" && e.t !== "test" ? e.t : "") + ' <span class="muted small">' + esc(e.x || "") + "</span></div>"; }).join("")); });
     page(h.join(""));
+  }
+  function toggleHelp() {
+    var hp = $("#help"); if (hp) { hp.remove(); return; }
+    var d = document.createElement("div"); d.id = "help"; d.className = "helpov"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Keyboard shortcuts");
+    d.innerHTML = '<div class="card"><h2 style="margin-top:0">Keyboard shortcuts</h2><dl class="kv"><dt><kbd>/</kbd></dt><dd>Search</dd><dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd></dt><dd>Pick a search result</dd>' +
+      "<dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next step on a flow page</dd><dt><kbd>?</kbd></dt><dd>Show / hide this help</dd><dt><kbd>Esc</kbd></dt><dd>Close search or this help</dd></dl>" +
+      '<p class="small muted">Click any line number in the code viewer to see the enclosing function\'s callers and callees. Dotted-underlined words are glossary terms.</p><button class="btn" id="helpClose">Close</button></div>';
+    document.body.appendChild(d);
+    d.addEventListener("click", function (e) { if (e.target === d || e.target.id === "helpClose") d.remove(); });
   }
   function notFound(msg) { page("<h1>Not found</h1><p>" + esc(msg || "That page does not exist.") + ' <a href="#/">Back to overview</a></p>'); }
 
@@ -1327,6 +1389,7 @@
     try {
       if (hash === "/" || hash === "") pOverview();
       else if (hash === "/learn") pLearn();
+      else if (hash === "/cookbook" || (m = hash.match(/^\/cookbook\/([\w-]+)$/))) pCookbook(m ? m[1] : null);
       else if ((m = hash.match(/^\/sub\/([\w-]+)$/))) pSub(m[1]);
       else if ((m = hash.match(/^\/flow\/([\w-]+)(?:\/(\d+))?$/))) pFlow(m[1], m[2] ? +m[2] - 1 : null);
       else if (hash === "/dataflow" || (m = hash.match(/^\/dataflow\/([\w-]+)$/))) { pDataflow(); if (m) { var el = document.getElementById("df-" + m[1]); if (el) el.scrollIntoView(); } }
