@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mali KMD Explorer</title>
+<meta name="description" content="Password-protected.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230550ae'/%3E%3Cpath d='M8 23V10l8 7 8-7v13' fill='none' stroke='%23fff' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<script>
+try { var t = localStorage.getItem("kmd-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+<style id="sitegate-style">
+#sitegate{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:24px 16px;overflow:auto;
+  background:#F4F6F8;color:#15202B;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--sg-line:#AEBBC7;--sg-accent:#2347D6;--sg-on:#fff;--sg-soft:#4A5866;--sg-bad:#C02B3A;--sg-field:#fff}
+@media (prefers-color-scheme:dark){#sitegate{background:#0E141B;color:#E4EAF0;--sg-line:#3A4A5B;--sg-accent:#8EA6FF;--sg-on:#0E141B;--sg-soft:#A9B6C2;--sg-bad:#FF7A85;--sg-field:#151D26}}
+html[data-theme="light"] #sitegate{background:#F4F6F8;color:#15202B;--sg-line:#AEBBC7;--sg-accent:#2347D6;--sg-on:#fff;--sg-soft:#4A5866;--sg-bad:#C02B3A;--sg-field:#fff}
+html[data-theme="dark"] #sitegate{background:#0E141B;color:#E4EAF0;--sg-line:#3A4A5B;--sg-accent:#8EA6FF;--sg-on:#0E141B;--sg-soft:#A9B6C2;--sg-bad:#FF7A85;--sg-field:#151D26}
+#sitegate.checking .sg-card{visibility:hidden}
+#sitegate .sg-card{width:min(380px,100%);display:grid;gap:10px}
+#sitegate h1{font-size:1.6rem;line-height:1.15;margin:0}
+#sitegate p{margin:0;color:var(--sg-soft)}
+#sitegate label{font-weight:700;font-size:.92rem;margin-top:8px}
+#sitegate .sg-row{display:flex;gap:8px}
+#sitegate input{flex:1;min-width:0;height:44px;padding:0 12px;font:inherit;color:inherit;background:var(--sg-field);border:1.5px solid var(--sg-line);border-radius:6px}
+#sitegate button{height:44px;padding:0 16px;font:inherit;font-weight:700;border-radius:6px;cursor:pointer;border:1.5px solid var(--sg-line);background:transparent;color:inherit}
+#sitegate .sg-submit{background:var(--sg-accent);border-color:var(--sg-accent);color:var(--sg-on);margin-top:4px}
+#sitegate .sg-submit:disabled{opacity:.6;cursor:progress}
+#sitegate :focus-visible{outline:3px solid var(--sg-accent);outline-offset:2px}
+#sitegate .sg-error{color:var(--sg-bad);font-weight:700}
+#sitegate .sg-note{font-size:.85rem}
+</style>
+</head>
+<body>
+<main id="sitegate" class="checking">
+  <form class="sg-card" id="sitegate-form" autocomplete="on">
+    <h1>Mali KMD Explorer</h1>
+    <p>This site is password-protected.</p>
+    <label for="sitegate-pw">Password</label>
+    <div class="sg-row">
+      <input id="sitegate-pw" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button type="button" id="sitegate-show" aria-pressed="false" aria-controls="sitegate-pw">Show</button>
+    </div>
+    <p class="sg-error" id="sitegate-error" role="alert" hidden>That password is not correct. Check it and try again.</p>
+    <button type="submit" class="sg-submit" id="sitegate-submit">Unlock</button>
+    <p class="sg-note">The site stays unlocked until you close this tab.</p>
+  </form>
+  <noscript><p>Unlocking needs JavaScript. Turn it on and reload this page.</p></noscript>
+</main>
+<script type="text/plain" id="sitegate-body">lotv3KugMkPHKZt0YVj4AaLRv2eKZBY9YnrvfS7VJYU1x4DSA0B+AVs/gmXDsIb9PHL15gnOvLzfwaIFg2Ey4o//glQkF1wJqH04HNYxM9vTAtt75VbVTu4tW6gph9CzfdWpJBt3iCe0tDDorMEym9C2LVsgHirDgbnYp/glp/oBv7frG0yxXKuv9Ah2nJcIuXbDVtoXA38EetAr1fF191jQxmFLH/lbFyVl0jCxynsDqp+iwwLINzSKEFfDXnppagAW8OnmXnROkYfy96ABuy4hIftM0TlsHWr3yStZnmGeSaCb4GQt+kOl0UC8RtFWwtuB5SoBlqh8+BVZDarFSox/0dqZC1vZDAMQD4GbtoPgvRnnN+ZaGckrKPmmGT/GixuCI4wdekUH7onmgtij/Eutf1wfgbx7h1o2HJSFAX4VsZZXr98NEFN/Wh25oPPRY09Iw7p2ZGHtjA1Lu/siOdO/jAZ4bFFswFx94+S6PlietzS9bOBjFvLRhlWv/8eZ2CbZPYj4WKLmMw8maCnllKyIa2CN+ZtNkDsQhLm7jk+Jv6ll1Ei984aE1Oqq0ar3UVMSgwcBr+Mu4NvusUmC4+OkBc/g4VKbQA/9nuFY2q+9R9IIP6SsYS7csz8WolpKFOMOcxpY7VUW9HKwPrnOOWp4gOrY/GFcQRnaTZDjQZ4nCJaAaCIsNsjs47k0rLTxADex+jNL6h0VMuFwoiNdInCscfWJ29QGOXVumgSOf/i0NDR5JkjrXG+GcsT/LJtnIMlaPMVswTcDa8bo170BA1kaAD4TIZctyFuENbEMsfxqD1lZrhJek5zsVqsf4CVopOFElT+B0kp8FzCQiU23gznNoSwBHOBxK3+KWr6n7jEk3eVTEkqMtQWzlCSBknr9HW6F2y9RXLGHpe/E7wHiK3NXYVb37gyfDFG5Xhdw+D2wf/gj0xmfkOjs4NF8lChQaomS0FvTgklImwe+ynaq+wLsRY8RHiI6+Bx7EulMXKSIDxozCuxsYIQe3qXUlrWTZGk8//MA2u4HHHTHEdMAL5ft9WVz/fPLO4KO9RBqY+I8Qjx+xi7OpE3s6Ii8qNKz+oC8zLF3g9UV4lAXpPG9EjBKm1pnD7PsNjNyiwnUgO8wdtk41ezjwix+cy8H3FoZv4g7T4PhK0jwAcHD8EDpwnCHliHeEF82lUokkyBI65NL+6Iy0cY3pQ56PZU4SJjS4hQ/GLPUqtErAGX9MXJ9uXAzs5gcZ4LMpll143H1mt61DPls59eSr6mj2EmZVwA5a4X40CRtaQxHYBXvkWdGe+VXMQwzayciHZ6qY2SPQ2ORmJHZlKhNphqLrJJj5kYtIcn/G7gr1hbds5oWqSR3Tg8a/zoHs3RP5Ln3C9mVTJsyryoWto9IhKwPMX2t3RV3guH1nfrqWtF3M4sCaSESMWbbjsK3FRv77Lf8q9B2L3jWBRjOEwfrkXJOb1Pwx/2FT568EDH37GBxgv7eTOW6J91iTdPwIMs0Wvb8aFx34YHLI8iLgD+/DYh2TkP8OX8T2UIMVh0+xQsjxQPVa2DBiXmAbwAZqNHHhRuOZTk2LqDpzeKU9yMkAmOt</script>
+<script src="sitegate/lock.js"></script>
+<script src="sitegate/gate.js"></script>
+</body>
+</html>

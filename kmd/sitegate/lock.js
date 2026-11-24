@@ -1,0 +1,1 @@
+window.SITEGATE_LOCK = {"salt":"0ouSOiBo8pNGhAMa90EREA==","iterations":310000,"check":"2rug3fp4b44MpHPH6gSpWPf7mbZBBh75EkfZV/LUIPmiymoIDs4xfFYF8kfPbhZM1LQw7ITO","checkText":"sitegate:Mali KMD Explorer"};

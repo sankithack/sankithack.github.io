@@ -1,0 +1,1 @@
+window.SITEGATE_LOCK = {"salt":"/hfKRAggQvM6ZtZ151/kRQ==","iterations":310000,"check":"gtSSmanhgyHKp8IHude/Or+jEAwAhQlUIhgu2hugmLVHZg+BdE+edDiYeebvpjgY5vvhq9A=","checkText":"sitegate:Vulkan from Zero"};
