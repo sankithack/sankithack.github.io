@@ -301,10 +301,19 @@ th { font-weight: 700; color: var(--text-2); border-bottom: 2px solid var(--bord
 }
 .icon-btn:hover { background: var(--bg-hover); }
 .icon-btn svg { width: 18px; height: 18px; }
-.menu-btn { display: none; }
+.menu-btn .ic-menu { display: none; }
+.menu-btn[aria-expanded="false"] .ic-panel-fill { opacity: 0; }
 
 /* ---------- Layout ---------- */
-.layout { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: calc(100vh - var(--topbar-h)); }
+.layout {
+  display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: calc(100vh - var(--topbar-h));
+  transition: grid-template-columns .2s ease;
+}
+/* Sidebar folded away on wide screens: the reading column gets the whole width. */
+@media (min-width: 921px) {
+  html[data-nav="hidden"] .layout { grid-template-columns: 0 minmax(0, 1fr); }
+  html[data-nav="hidden"] .sidebar { visibility: hidden; padding-inline: 0; border-right: 0; }
+}
 .sidebar {
   position: sticky; top: var(--topbar-h);
   height: calc(100vh - var(--topbar-h));
@@ -341,6 +350,7 @@ th { font-weight: 700; color: var(--text-2); border-bottom: 2px solid var(--bord
 .side-links a { color: var(--text-2); text-decoration: none; padding: .15rem 0; }
 .side-links a:hover { color: var(--text); text-decoration: underline; }
 .side-links a[aria-current="page"] { color: var(--accent-text); font-weight: 700; }
+.side-links .soon { color: var(--text-3); padding: .15rem 0; cursor: default; }
 
 .toc-part { margin: 0 0 1.2rem; }
 .toc-part > h2 {
@@ -356,6 +366,8 @@ th { font-weight: 700; color: var(--text-2); border-bottom: 2px solid var(--bord
   color: var(--text-2); text-decoration: none; line-height: 1.35;
 }
 .toc-link:hover { background: var(--bg-hover); color: var(--text); }
+.toc-link.soon { color: var(--text-3); cursor: default; grid-template-columns: 1.7rem 1fr; }
+.toc-link.soon:hover { background: none; color: var(--text-3); }
 .toc-link .num { font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-3); }
 .toc-link .check {
   width: 1rem; height: 1rem; border-radius: 50%; border: 1.5px solid var(--border-strong);
@@ -375,7 +387,8 @@ th { font-weight: 700; color: var(--text-2); border-bottom: 2px solid var(--bord
 /* ---------- Responsive ---------- */
 @media (max-width: 1080px) { :root { --sidebar-w: 16.5rem; } }
 @media (max-width: 920px) {
-  .menu-btn { display: inline-grid; }
+  .menu-btn .ic-menu { display: block; }
+  .menu-btn .ic-panel { display: none; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .sidebar {
     position: fixed; left: 0; top: var(--topbar-h); bottom: 0; width: min(20rem, 86vw); height: auto; z-index: 35;

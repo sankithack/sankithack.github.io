@@ -59,6 +59,22 @@
     });
   }
 
+  // Start downloading a script now; loadWrapper() later finds it in the cache.
+  function prefetch(src) {
+    var l = document.createElement("link");
+    l.rel = "preload"; l.as = "script"; l.href = src;
+    document.head.appendChild(l);
+  }
+
+  // The gate stays up, as a plain loading screen, until the page's own scripts have
+  // built it (sidebar, animations), so the reader never sees a half-built page jump.
+  function reveal() {
+    var gate = document.getElementById("sitegate");
+    if (!gate) return;
+    gate.classList.add("done");
+    setTimeout(function () { if (gate.parentNode) gate.remove(); }, 220);
+  }
+
   function start(bodyHtml) {
     // Separate the body's markup from its scripts, keeping the scripts' order.
     var tpl = document.createElement("template");
@@ -68,14 +84,21 @@
       s.remove();
       return info;
     });
+    // Download every script at once; they still run one by one, in order.
+    scripts.forEach(function (sc) { if (sc.src) prefetch(sc.src); });
     var gate = document.getElementById("sitegate");
-    if (gate) gate.remove();
+    if (gate) { gate.classList.add("loading"); gate.setAttribute("aria-busy", "true"); }
     document.body.insertBefore(tpl.content, document.body.firstChild);
+    var safety = setTimeout(reveal, 6000);  // never hide a page for long, even if a script stalls
     return scripts.reduce(function (chain, sc) {
       return chain.then(function () { return sc.src ? loadWrapper(sc.src) : runCode(sc.code); });
     }, Promise.resolve()).then(function () {
       queue.splice(0).forEach(function (f) { f(); });
-    });
+    }).then(function () {
+      clearTimeout(safety);
+      // site.js may scroll to a #hash after building the page; reveal on the next frame.
+      requestAnimationFrame(reveal);
+    }, function (e) { clearTimeout(safety); reveal(); throw e; });
   }
 
   function unlock(rawBits) {

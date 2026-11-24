@@ -1,1 +1,1 @@
-window.SITEGATE_LOCK = {"salt":"/hfKRAggQvM6ZtZ151/kRQ==","iterations":310000,"check":"gtSSmanhgyHKp8IHude/Or+jEAwAhQlUIhgu2hugmLVHZg+BdE+edDiYeebvpjgY5vvhq9A=","checkText":"sitegate:Vulkan from Zero"};
+window.SITEGATE_LOCK = {"salt":"iNTVkZqBxWd2YsAgs5/fcw==","iterations":310000,"check":"T97DtGR2HSytLCVF5mC9kNhT38RdTSidE9Gj2J5Iul2bMVZSokVAYQ4qX/4YDnVlTQXW7u0=","checkText":"sitegate:Vulkan from Zero"};

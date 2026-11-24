@@ -121,16 +121,41 @@ figcaption { font-size: var(--fs-small); color: var(--text-2); margin-top: .55re
   background-size: 24px 24px;
 }
 .anim-stage svg, .anim-stage canvas { display: block; width: 100%; height: auto; }
+/* The picture never grows taller than the screen leaves room for, so the picture,
+   the controls under it and the start of the caption fit in one view. */
+.anim { --stage-max-h: clamp(11rem, calc(100svh - 24rem), 25rem); }
+/* The whole player narrows to the picture, so a short picture doesn't sit in a wide empty frame,
+   but never below 44rem: narrower, the caption wraps onto extra lines and pushes itself off screen. */
+.anim[style*="--ar"] { max-width: min(var(--wide), max(44rem, calc(var(--stage-max-h) * var(--ar) + 1.2rem + 2px))) !important; }
+.anim-stage > svg, .anim-stage > canvas {
+  width: min(100%, calc(var(--stage-max-h) * var(--ar, 2)));
+  margin-inline: auto;
+}
 .anim-stage:focus-visible { outline-offset: -3px; }
+/* Example picker: a row of choices between the title and the stage. */
+.anim-examples {
+  display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+  padding: .5rem 1rem; border-bottom: 1px solid var(--border); font-size: var(--fs-small);
+}
+.anim-examples .ex-label { color: var(--text-3); margin-right: .2rem; }
+.anim-examples button {
+  border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-2);
+  border-radius: 99px; padding: .2rem .75rem; font: inherit; cursor: pointer;
+}
+.anim-examples button:hover { color: var(--text); border-color: var(--accent); }
+.anim-examples button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.anim-examples button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The picker row takes height; give it back from the picture so everything still fits one screen. */
+.anim.has-examples { --stage-max-h: clamp(11rem, calc(100svh - 26.5rem), 25rem); }
 .anim-caption {
   min-height: 4.6em; padding: .85rem 1.1rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border); background: var(--bg-elev);
   font-size: 1.02rem; line-height: 1.55;
 }
 .anim-caption .step-label { display: block; font-size: var(--fs-tiny); color: var(--text-3); margin-bottom: .15rem; }
 .anim-controls {
   display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
-  padding: .6rem 1rem; border-top: 1px solid var(--border); font-size: var(--fs-small);
+  padding: .55rem 1rem .5rem; border-top: 1px solid var(--border); font-size: var(--fs-small);
 }
 .anim-controls button {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -140,13 +165,14 @@ figcaption { font-size: var(--fs-small); color: var(--text-2); margin-top: .55re
 }
 .anim-controls button:hover:not(:disabled) { background: var(--bg-hover); }
 .anim-controls button:disabled { opacity: .4; cursor: default; }
-.anim-controls button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); min-width: 6rem; justify-content: center; }
+.anim-controls button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); min-width: 6rem; justify-content: center; margin-right: .5rem; }
 .anim-controls button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.1); }
 .anim-controls button svg { width: 13px; height: 13px; fill: currentColor; }
 .anim-controls .count { margin-left: auto; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .anim-controls select { height: 2.25rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-elev); padding: 0 .4rem; }
 /* Timeline of named steps */
-.anim-progress { display: flex; gap: 2px; padding: 0 1rem .8rem; }
+.anim-progress { display: flex; gap: 2px; padding: 0 1rem .6rem; }
+.anim-after { border-top: 1px solid var(--border); }
 .anim-progress button {
   flex: 1 1 0; min-width: 0; border: 0; padding: .45rem .25rem 0; cursor: pointer;
   background: none; color: var(--text-3); font-size: var(--fs-tiny); text-align: left;
@@ -204,8 +230,11 @@ figcaption { font-size: var(--fs-small); color: var(--text-2); margin-top: .55re
 .cv-legend .l-note { background: var(--accent); border-radius: 50%; }
 .cv-body { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; min-height: 10rem; }
 .cv-body.no-notes { grid-template-columns: minmax(0, 1fr); }
+/* The code box never grows taller than the screen, so the clicked line and its
+   explanation (beside it, or docked under it on narrow screens) are seen together. */
+.codeview { --cv-max-h: clamp(14rem, calc(100svh - 18rem), 26rem); }
 .cv-code {
-  position: relative; max-height: 34rem; overflow: auto;
+  position: relative; max-height: var(--cv-max-h); overflow: auto;
   font-family: var(--font-mono); font-size: .8rem; line-height: 1.6; color: var(--code-text); tab-size: 4;
 }
 .cv-code.tall { max-height: none; }
@@ -227,7 +256,7 @@ figcaption { font-size: var(--fs-small); color: var(--text-2); margin-top: .55re
   color: var(--text-3); background: var(--bg-sunk); border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border);
 }
 .cv-gap:hover { color: var(--text); }
-.cv-notes { border-left: 1px solid var(--border); background: var(--bg-elev); padding: .95rem 1.05rem; font-size: .92rem; line-height: 1.55; max-height: 34rem; overflow: auto; }
+.cv-notes { border-left: 1px solid var(--border); background: var(--bg-elev); padding: .95rem 1.05rem; font-size: .92rem; line-height: 1.55; max-height: var(--cv-max-h); overflow: auto; }
 .cv-notes h4 { margin: 0 0 .5rem; font-size: .95rem; color: var(--text-2); }
 .cv-notes .note-code { display: block; font-family: var(--font-mono); font-size: .76rem; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .35rem .5rem; margin-bottom: .6rem; white-space: pre-wrap; word-break: break-word; }
 .cv-notes .note-body p { margin: 0 0 .6em; }
@@ -239,9 +268,15 @@ figcaption { font-size: var(--fs-small); color: var(--text-2); margin-top: .55re
 .cv-foot { display: flex; gap: .8rem; justify-content: space-between; flex-wrap: wrap; padding: .45rem .85rem; border-top: 1px solid var(--border); background: var(--bg-elev); font-size: .78rem; color: var(--text-2); }
 .cv-foot code { font-size: .74rem; }
 .cv-toast { color: var(--ok); font-weight: 700; }
+/* Narrow screens: the explanation docks under the code inside the same screen-high box;
+   the code gives up the room the explanation needs, and Previous/Next stay pinned. */
 @media (max-width: 1180px) {
-  .cv-body { grid-template-columns: minmax(0, 1fr); }
-  .cv-notes { border-left: 0; border-top: 1px solid var(--border); max-height: none; }
+  .cv-body { display: flex; flex-direction: column; max-height: var(--cv-max-h); }
+  .cv-body .cv-code { flex: 1 1 auto; min-height: 9rem; max-height: none; }
+  .cv-notes { flex: 0 0 auto; border-left: 0; border-top: 2px solid var(--accent); max-height: min(15rem, 42svh); padding-bottom: 0; }
+  .cv-notes h4 { margin-bottom: .35rem; }
+  .cv-notes .note-nav { position: sticky; bottom: 0; margin: .6rem -1.05rem 0; padding: .5rem 1.05rem .7rem; background: var(--bg-elev); border-top: 1px solid var(--border); }
+  .cv-notes > .placeholder { margin-top: 0; }
 }
 
 /* Syntax tokens */
@@ -337,10 +372,24 @@ pre.code { font-size: .84rem; }
 .chapter-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem auto 0; }
 .chapter-nav a { display: block; padding: .9rem 1.1rem; border-radius: var(--radius); border: 1px solid var(--border-strong); background: var(--bg-elev); text-decoration: none; color: var(--text); }
 .chapter-nav a:hover { border-color: var(--accent); }
+.chapter-nav .soon { display: block; padding: .9rem 1.1rem; border-radius: var(--radius); border: 1px dashed var(--border-strong); color: var(--text-3); }
 .chapter-nav .dir { display: block; font-size: var(--fs-small); color: var(--text-3); }
 .chapter-nav .t { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
 .chapter-nav .next { text-align: right; grid-column: 2; }
 @media (max-width: 560px) { .chapter-nav { grid-template-columns: 1fr; } .chapter-nav .next { grid-column: 1; } }
+
+/* ---------- Tabs ---------- */
+.tabs { margin: 1.2rem auto 1.6rem; }
+.tab-list { display: flex; gap: .25rem; border-bottom: 1px solid var(--border-strong); }
+.tab-list [role="tab"] {
+  padding: .5rem 1rem; border: 1px solid transparent; border-bottom: 0; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: none; color: var(--text-2); font-weight: 700; cursor: pointer; margin-bottom: -1px;
+}
+.tab-list [role="tab"]:hover { color: var(--text); }
+.tab-list [role="tab"][aria-selected="true"] { background: var(--bg-elev); border-color: var(--border-strong); color: var(--text); box-shadow: inset 0 3px 0 var(--accent); }
+.tab-panel { border: 1px solid var(--border-strong); border-top: 0; border-radius: 0 0 var(--radius-sm) var(--radius-sm); background: var(--bg-elev); padding: .6rem 1.2rem .4rem; }
+.tab-panel > ol, .tab-panel > ul { padding-left: 1.2rem; }
+.tab-panel pre { margin-inline: 0; }
 
 /* ---------- Misc ---------- */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
@@ -361,3 +410,14 @@ pre.code { font-size: .84rem; }
 .cmp-table td:first-child { font-weight: 700; white-space: nowrap; }
 .table-wrap { overflow-x: auto; margin: 0 auto 1.2rem; }
 .table-wrap table { margin: 0; }
+
+/* Phones: one compact row of controls; the Play button keeps its word, the rest show icons
+   (each button already carries an aria-label and a tooltip). No keyboard hint on touch screens. */
+@media (max-width: 560px) {
+  .anim-head .anim-hint { display: none; }
+  .anim-controls { gap: .3rem; padding-inline: .6rem; }
+  .anim-controls button:not(.primary) { padding: 0 .6rem; }
+  .anim-controls button:not(.primary) span { display: none; }
+  .anim-controls button.primary { min-width: 5rem; }
+  .anim-progress { padding-inline: .6rem; }
+}
