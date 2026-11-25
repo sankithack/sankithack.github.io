@@ -421,3 +421,8 @@ pre.code { font-size: .84rem; }
   .anim-controls button.primary { min-width: 5rem; }
   .anim-progress { padding-inline: .6rem; }
 }
+
+/* Two screenshots side by side for comparison ("with" and "without"); stacked on narrow screens. */
+.figure-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; align-items: start; margin: 1.4rem 0; }
+.figure-pair figure { margin: 0; }
+.figure-pair img { display: block; width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border); }
